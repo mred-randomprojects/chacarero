@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { Vector3 } from "three";
+import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import type { CameraView } from "./cameraViews";
 import { orbitView, tiltView, zoomView } from "./cameraViews";
 
@@ -25,6 +25,7 @@ function easeInOut(x: number): number {
 export function CameraRig({ goTo }: CameraRigProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera);
+  const domElement = useThree((s) => s.gl.domElement);
   const flight = useRef<{ t: number; from: CameraView; to: CameraView } | null>(null);
   const lastId = useRef<number | null>(null);
 
@@ -87,6 +88,39 @@ export function CameraRig({ goTo }: CameraRigProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [camera]);
 
+  // Alt/Option + click re-centres: the point under the cursor becomes the
+  // orbit target, and the camera slides over keeping its height and offset.
+  useEffect(() => {
+    const raycaster = new Raycaster();
+    const ground = new Plane(new Vector3(0, 1, 0), 0);
+    const onPointerDown = (event: PointerEvent) => {
+      if (!event.altKey || event.button !== 0) return;
+      const orbit = controls.current;
+      if (!orbit) return;
+      const rect = domElement.getBoundingClientRect();
+      const ndc = new Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      const hit = new Vector3();
+      if (!raycaster.ray.intersectPlane(ground, hit)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const from: CameraView = {
+        position: [camera.position.x, camera.position.y, camera.position.z],
+        target: [orbit.target.x, orbit.target.y, orbit.target.z],
+      };
+      const dx = hit.x - orbit.target.x;
+      const dz = hit.z - orbit.target.z;
+      flight.current = {
+        t: 0,
+        from,
+        to: { position: [camera.position.x + dx, camera.position.y, camera.position.z + dz], target: [hit.x, 0, hit.z] },
+      };
+    };
+    // Capture phase so OrbitControls never sees the click as the start of a rotate.
+    domElement.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => domElement.removeEventListener("pointerdown", onPointerDown, { capture: true });
+  }, [camera, domElement]);
+
   useFrame((_, delta) => {
     const current = flight.current;
     const orbit = controls.current;
@@ -104,7 +138,9 @@ export function CameraRig({ goTo }: CameraRigProps) {
   return (
     <OrbitControls
       ref={controls}
-      enablePan={false}
+      enablePan
+      screenSpacePanning={false}
+      panSpeed={0.8}
       minDistance={10}
       maxDistance={70}
       maxPolarAngle={Math.PI * 0.45}

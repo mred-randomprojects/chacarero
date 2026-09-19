@@ -1,22 +1,5 @@
 import type { GameState } from "../game";
-import {
-  JAIL_BAIL,
-  buy,
-  canRaiseCash,
-  chooseDraw,
-  choosePay,
-  currentPlayer,
-  declareBankruptcy,
-  decline,
-  deedName,
-  endTurn,
-  getDeed,
-  getPlayer,
-  payBail,
-  pesos,
-  settlePayment,
-  useJailCard,
-} from "../game";
+import { JAIL_BAIL, currentPlayer, payBail, pesos, useJailCard } from "../game";
 
 /** Applies an engine action and returns the new state, or null if it was refused. */
 export type Act = (action: (state: GameState) => GameState) => GameState | null;
@@ -29,7 +12,6 @@ export interface ActionBarProps {
   readonly onShakeStart: () => void;
   readonly onShakeEnd: () => void;
   readonly act: Act;
-  readonly onNewGame: () => void;
 }
 
 interface DiceButtonProps {
@@ -72,101 +54,18 @@ function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
   );
 }
 
-/** Bottom bar: whose turn it is and the buttons the current phase allows. */
-export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShakeEnd, act, onNewGame }: ActionBarProps) {
+/** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
+export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShakeEnd, act }: ActionBarProps) {
   const player = currentPlayer(state);
   const { phase } = state;
-
-  const buttons = (() => {
-    if (busy && !shaking) return <span className="waiting">{state.phase.type === "awaitingRoll" || state.phase.type === "awaitingJailDecision" ? "Tirando…" : "Moviendo…"}</span>;
-    switch (phase.type) {
-      case "awaitingRoll":
-        return (
-          <>
-            <DiceButton label="Tirar los dados" shaking={shaking} disabled={!canRoll && !shaking} onShakeStart={onShakeStart} onShakeEnd={onShakeEnd} />
-            <span className="hint">Mantené apretado para mezclar (o la barra espaciadora)</span>
-          </>
-        );
-      case "awaitingJailDecision":
-        return (
-          <>
-            <DiceButton label="Tirar (doble para salir)" shaking={shaking} disabled={!canRoll && !shaking} onShakeStart={onShakeStart} onShakeEnd={onShakeEnd} />
-            <button type="button" disabled={player.cash < JAIL_BAIL} onClick={() => act(payBail)}>
-              Pagar fianza {pesos(JAIL_BAIL)}
-            </button>
-            {player.getOutOfJailCards > 0 && (
-              <button type="button" onClick={() => act(useJailCard)}>
-                Usar tarjeta
-              </button>
-            )}
-          </>
-        );
-      case "awaitingBuyDecision": {
-        const deed = getDeed(phase.deedId);
-        return (
-          <>
-            <button type="button" className="primary" disabled={player.cash < deed.price} onClick={() => act(buy)}>
-              Comprar {deedName(deed)} por {pesos(deed.price)}
-            </button>
-            <button type="button" onClick={() => act(decline)}>
-              No comprar
-            </button>
-          </>
-        );
-      }
-      case "awaitingPayOrDraw":
-        return (
-          <>
-            <button type="button" className="primary" onClick={() => act(choosePay)}>
-              Pagar {pesos(phase.amount)}
-            </button>
-            <button type="button" onClick={() => act(chooseDraw)}>
-              Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"}
-            </button>
-          </>
-        );
-      case "awaitingPayment": {
-        const missing = phase.amount - player.cash;
-        const to = phase.to.type === "bank" ? "al Banco" : `a ${getPlayer(state, phase.to.playerId).name}`;
-        const stuck = !canRaiseCash(state, player.id);
-        return (
-          <>
-            <span className="debt">
-              Debés {pesos(phase.amount)} {to}
-              {missing > 0 ? ` — te faltan ${pesos(missing)}. Vendé o hipotecá desde el panel de cada propiedad.` : "."}
-            </span>
-            <button type="button" className="primary" disabled={missing > 0} onClick={() => act(settlePayment)}>
-              Pagar
-            </button>
-            <button type="button" className="danger" disabled={!stuck || missing <= 0} onClick={() => act(declareBankruptcy)}>
-              Declarar quiebra
-            </button>
-          </>
-        );
-      }
-      case "turnEnd":
-        return (
-          <button type="button" className="primary" onClick={() => act(endTurn)}>
-            Terminar turno
-          </button>
-        );
-      case "gameOver":
-        return (
-          <>
-            <span className="winner">🏆 ¡Ganó {getPlayer(state, phase.winnerId).name}!</span>
-            <button type="button" className="primary" onClick={onNewGame}>
-              Nueva partida
-            </button>
-          </>
-        );
-    }
-  })();
+  const rolling = phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
 
   return (
     <div className="actions">
       <div className="who">
         <span className="dot" style={{ background: player.color }} />
         <strong>{player.name}</strong>
+        {player.inJail && <span className="status">preso</span>}
         <Dice dice={state.dice} />
       </div>
       {state.lastCard && (
@@ -175,7 +74,37 @@ export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShake
           {state.lastCard.text}
         </div>
       )}
-      <div className="buttons">{buttons}</div>
+      {rolling && (
+        <div className="buttons">
+          {busy && !shaking ? (
+            <span className="waiting">Tirando…</span>
+          ) : (
+            <>
+              <DiceButton
+                label={phase.type === "awaitingJailDecision" ? "Tirar (doble para salir)" : "Tirar los dados"}
+                shaking={shaking}
+                disabled={!canRoll && !shaking}
+                onShakeStart={onShakeStart}
+                onShakeEnd={onShakeEnd}
+              />
+              {phase.type === "awaitingJailDecision" && (
+                <>
+                  <button type="button" disabled={player.cash < JAIL_BAIL} onClick={() => act(payBail)}>
+                    Pagar fianza {pesos(JAIL_BAIL)}
+                  </button>
+                  {player.getOutOfJailCards > 0 && (
+                    <button type="button" onClick={() => act(useJailCard)}>
+                      Usar tarjeta
+                    </button>
+                  )}
+                </>
+              )}
+              <span className="hint">Mantené apretado para mezclar (o la barra espaciadora)</span>
+            </>
+          )}
+        </div>
+      )}
+      {!rolling && phase.type !== "gameOver" && <span className="waiting">{busy ? "Moviendo…" : "Esperando decisión…"}</span>}
     </div>
   );
 }

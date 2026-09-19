@@ -22,7 +22,10 @@ export function CameraBar({ followTurn, onToggleFollow, onMySeat, onOverview, on
       <button type="button" className={followTurn ? "active" : ""} onClick={onToggleFollow} title="Girar la cámara al jugador de turno">
         {followTurn ? "Sigue el turno" : "Cámara fija"}
       </button>
-      <span className="hint">← → ↑ ↓ girar · + − zoom · 1-6 lugar de cada jugador · M mi lugar · 0 general · T arriba · L propiedades · espacio dados</span>
+      <span className="hint">
+        ⌥+clic centrar · botón derecho desplazar · ← → ↑ ↓ girar · + − zoom · 1-6 lugar de cada jugador · M mi lugar · 0 general · T arriba · L
+        propiedades · espacio dados
+      </span>
     </div>
   );
 }

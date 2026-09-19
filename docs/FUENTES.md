@@ -32,13 +32,13 @@ Discrepancias resueltas por mayoría de fuentes:
 | Buenos Aires Norte, precio | 7.400 | 7.600 (FrancoL42) | 7.400 en Wikipedia, nahuelubal y el tablero |
 | Córdoba Centro, alquileres | 450 / 2.400 / 6.800 / 16.000 / 19.500 / 23.000 | — | Es más barato que Córdoba Sur; las dos transcripciones coinciden, así que se respeta aunque parezca raro |
 
+**Verificado con una caja física (Maxi, septiembre 2026):**
+
+- El precio de la estancia es **igual al valor de una chacra**, y hace falta
+  tener las 4 chacras primero (`estanciaCost` en `src/game/deeds.ts`).
+
 **Sin verificar contra una escritura física:**
 
-- El precio de la estancia. Ninguna fuente lo transcribe; el reglamento solo
-  dice que se paga "el valor de la estancia que indica la escritura" además de
-  las 4 chacras. Acá se asume **igual al valor de una chacra**
-  (`estanciaCost` en `src/game/deeds.ts`). Si tenés la caja a mano, una foto
-  del dorso de cualquier escritura lo resuelve.
 - Hipotecas de ferrocarriles y compañías: asumidas como la mitad del precio,
   igual que los campos.
 

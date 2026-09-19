@@ -10,9 +10,11 @@ import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
 import type { Act } from "./ui/ActionBar";
 import { ActionBar } from "./ui/ActionBar";
+import { Announcer } from "./ui/Announcer";
 import { CameraBar } from "./ui/CameraBar";
 import { LogPanel } from "./ui/LogPanel";
 import { PlayersPanel } from "./ui/PlayersPanel";
+import { Prompt } from "./ui/Prompt";
 import { PropertiesList } from "./ui/PropertiesList";
 import { Setup } from "./ui/Setup";
 import { SquarePanel } from "./ui/SquarePanel";
@@ -45,6 +47,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  /** True when the player pinned a square themselves (pauses countdowns); auto-selection after a move does not. */
+  const [pinnedByUser, setPinnedByUser] = useState(false);
   const [shaking, setShaking] = useState(false);
   const [throwing, setThrowing] = useState<DiceThrow | null>(null);
   const throwCounter = useRef(0);
@@ -102,8 +106,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the player changing
   }, [currentPlayerId, followTurn, game === null]);
 
-  const start = useCallback((players: readonly NewPlayer[]) => {
-    setGame(createGame({ players }));
+  const start = useCallback((players: readonly NewPlayer[], startingCash: number) => {
+    setGame(createGame({ players, startingCash }));
     setSelected(null);
     setBusy(false);
     setThrowing(null);
@@ -120,6 +124,7 @@ export default function App() {
         if (moved(game, next)) {
           setBusy(true);
           setSelected(next.lastMove?.to ?? null);
+          setPinnedByUser(false);
         }
         return next;
       } catch (e) {
@@ -159,7 +164,16 @@ export default function App() {
   const onPawnArrive = useCallback(() => setBusy(false), []);
 
   const onSelect = useCallback((index: number) => {
-    setSelected((current) => (current === index ? null : index));
+    setSelected((current) => {
+      const next = current === index ? null : index;
+      setPinnedByUser(next !== null);
+      return next;
+    });
+  }, []);
+
+  const closePanel = useCallback(() => {
+    setSelected(null);
+    setPinnedByUser(false);
   }, []);
 
   // Keyboard: space shakes/throws, digits sit at a player's seat, 0/T/M views, L list.
@@ -174,7 +188,7 @@ export default function App() {
       }
       if (event.key === "Escape") {
         setShowList(false);
-        setSelected(null);
+        closePanel();
         return;
       }
       const key = event.key.toLowerCase();
@@ -200,7 +214,7 @@ export default function App() {
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [game, seats, startShake, releaseDice, flyTo, flyToSeat, currentSide]);
+  }, [game, seats, startShake, releaseDice, flyTo, flyToSeat, currentSide, closePanel]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -250,18 +264,13 @@ export default function App() {
         pinned={selected !== null}
         busy={busy}
         act={act}
-        onClose={() => setSelected(null)}
+        onClose={closePanel}
       />
-      <ActionBar
-        state={game}
-        busy={busy}
-        shaking={shaking}
-        canRoll={canRoll}
-        onShakeStart={startShake}
-        onShakeEnd={releaseDice}
-        act={act}
-        onNewGame={() => setGame(null)}
-      />
+      <ActionBar state={game} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} act={act} />
+      <div className="stage">
+        <Announcer state={game} paused={busy} />
+        <Prompt state={game} busy={busy} inspecting={pinnedByUser || showList} act={act} onNewGame={() => setGame(null)} />
+      </div>
       <CameraBar
         followTurn={followTurn}
         onToggleFollow={() => setFollowTurn((v) => !v)}
@@ -269,7 +278,17 @@ export default function App() {
         onOverview={() => flyTo(OVERVIEW)}
         onTopDown={() => flyTo(TOP_DOWN)}
       />
-      {showList && <PropertiesList state={game} onClose={() => setShowList(false)} onSelect={(index) => { setSelected(index); setShowList(false); }} />}
+      {showList && (
+        <PropertiesList
+          state={game}
+          onClose={() => setShowList(false)}
+          onSelect={(index) => {
+            setSelected(index);
+            setPinnedByUser(true);
+            setShowList(false);
+          }}
+        />
+      )}
       {error && <div className="toast">{error}</div>}
     </div>
   );

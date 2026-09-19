@@ -4,6 +4,7 @@ import type { DeedId, Holding } from "../game";
 import { DEEDS, SQUARES, getDeed } from "../game";
 import type { PlateInfo } from "./cardTextures";
 import { deedCardTexture, namePlateTexture } from "./cardTextures";
+import { MoneyTray } from "./MoneyTray";
 import type { SeatFrame } from "./seats";
 import { seatPoint, seatYaw } from "./seats";
 import { boardToWorld } from "./tileGeometry";
@@ -20,6 +21,9 @@ export interface PlayerAreaProps {
 
 const PLATE_W = 4.4;
 const PLATE_H = 1.375;
+/** The plate sits left of centre; the money tray fills the space to its right. */
+const PLATE_RIGHT = -2.9;
+const TRAY_START = 0.0;
 const CARD_W = 1.15;
 const CARD_H = 1.63;
 const CARD_GAP = 0.12;
@@ -49,10 +53,11 @@ export function PlayerArea({ playerId, frame, plate, holdings, y, onHover, onSel
 
   return (
     <group>
-      <mesh rotation={rotation} position={boardToWorld(seatPoint(frame, 0, -1.05), y)}>
+      <mesh rotation={rotation} position={boardToWorld(seatPoint(frame, PLATE_RIGHT, -1.05), y)}>
         <planeGeometry args={[PLATE_W, PLATE_H]} />
         <meshStandardMaterial map={plateTexture} roughness={1} />
       </mesh>
+      {!plate.bankrupt && <MoneyTray frame={frame} cash={plate.cash} startRight={TRAY_START} up={-1.05} y={y} />}
       {owned.map((deed, i) => {
         const holding = holdings[deed.id];
         if (!holding) return null;

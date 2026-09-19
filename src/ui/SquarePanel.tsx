@@ -8,7 +8,7 @@ import {
   canMortgage,
   canSellBuilding,
   canUnmortgage,
-  currentPlayer,
+  activePlayer,
   describeSquare,
   getDeed,
   getPlayer,
@@ -117,9 +117,10 @@ interface OwnerActionsProps {
 
 /** Build / sell / mortgage buttons, shown when the current player owns the deed. */
 function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
-  const player = currentPlayer(state);
+  if (state.phase.type === "gameOver" || state.phase.type === "auction") return null;
+  const player = activePlayer(state);
   const holding = state.holdings[deed.id];
-  if (!holding || holding.ownerId !== player.id || state.phase.type === "gameOver") return null;
+  if (!holding || holding.ownerId !== player.id) return null;
   const chacra = canBuildChacra(state, player, deed.id);
   const estancia = canBuildEstancia(state, player, deed.id);
   const sell = canSellBuilding(state, player, deed.id);

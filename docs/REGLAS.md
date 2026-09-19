@@ -29,7 +29,9 @@ tradicional (ver [FUENTES.md](FUENTES.md)).
 1. Tirá los dados y avanzá esa cantidad de casilleros desde donde estés.
 2. Resolvé el casillero donde caíste (ver más abajo).
 3. Si sacaste doble, volvés a tirar. Al **tercer doble seguido** vas preso
-   directamente a la Comisaría y perdés lo que hubieras cobrado en ese turno.
+   directamente a la Comisaría y **devolvés al Banco todo lo que te pagó en
+   ese turno** (Salida, premios, tarjetas). Si ya lo gastaste, quedás en deuda
+   y tenés que vender o hipotecar.
 
 Cada vez que pasás o caés en la **Salida**, el Banco te paga **$5.000**.
 
@@ -38,8 +40,11 @@ Cada vez que pasás o caés en la **Salida**, el Banco te paga **$5.000**.
 ### Campos, ferrocarriles y compañías
 
 - Si la propiedad no tiene dueño podés comprársela al Banco por el valor que
-  figura en el tablero. No es obligatorio, pero conviene comprar todo lo que
-  puedas. Al comprar recibís la escritura.
+  figura en el tablero. Al comprar recibís la escritura.
+- Si no la comprás, **sale a remate**: ofertan todos los jugadores (vos
+  también), empezando por el siguiente, de a $100 como mínimo. Se la lleva la
+  oferta más alta cuando nadie más quiere subir; si nadie oferta, queda en el
+  Banco.
 - Si tiene dueño, le pagás el alquiler que marca la escritura. **El dueño tiene
   que reclamarlo antes de que se vuelvan a tirar los dados**; si no, lo pierde.
 - Ferrocarriles: $500 con uno, $1.000 con dos, $2.000 con tres, $4.000 con los
@@ -87,9 +92,8 @@ No pasa nada. Al turno siguiente seguís normal.
 - Se construye parejo: entre dos zonas de la misma provincia nunca puede haber
   más de una chacra de diferencia. Máximo 4 chacras por zona.
 - Con 4 chacras en una zona podés pasar a **estancia**: devolvés las 4 chacras
-  y pagás el valor de la estancia. Una estancia por zona como máximo. Si tenés
-  la plata, podés comprar la estancia directamente pagando las chacras más la
-  estancia.
+  y pagás el valor de la estancia (igual al de una chacra). Una estancia por
+  zona como máximo.
 - Si al Banco se le acaban las chacras o estancias, tiene prioridad quien está
   de turno.
 - Las chacras y estancias se pueden revender al Banco solo por la **mitad** de
@@ -107,12 +111,17 @@ No pasa nada. Al turno siguiente seguís normal.
   momento y, si no la levanta enseguida, otro 10 % cuando lo haga.
 - Nadie puede prestarle plata a otro jugador ni hacer alianzas.
 
-## Quiebra
+## Deudas y quiebra
 
-Si no te alcanza para pagar, primero vendés chacras y estancias al Banco,
-después hipotecás y por último entregás escrituras al acreedor. Si aun así no
-llegás, quedaste en quiebra y salís del juego. Las escrituras que van a parar
-al Banco se rematan al mejor postor.
+Si no te alcanza para pagar (un alquiler, un impuesto, una tarjeta, el
+cumpleaños de otro), el juego se frena hasta que juntes la plata: vendés
+chacras y estancias al Banco (a mitad de precio) o hipotecás. Esto vale
+también cuando le debés a alguien en el turno de otro. Si ya no te queda nada
+para vender ni hipotecar, quedaste en quiebra: todo lo tuyo pasa al acreedor
+(las construcciones se liquidan al Banco y la plata va al acreedor). Si el
+acreedor es el Banco, tus escrituras se rematan una por una.
+
+Las escrituras hipotecadas se heredan hipotecadas.
 
 ## Para acortar la partida
 

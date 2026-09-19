@@ -697,3 +697,140 @@ button.danger {
 .log:empty {
   display: none;
 }
+
+/* ---------- stage: announcements and decision prompts ---------- */
+
+.stage {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.stage > * {
+  pointer-events: auto;
+}
+
+.announcer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(29, 26, 23, 0.92);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  animation: banner-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.prompt {
+  padding: 14px 18px 12px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  border-left: 8px solid var(--green);
+  animation: banner-in 0.3s ease-out;
+}
+
+.prompt.urgent {
+  border-left-color: var(--red);
+}
+
+.prompt.auction {
+  border-left-color: var(--gold);
+}
+
+.prompt.quiet {
+  border-left-color: #b9b2a3;
+  opacity: 0.94;
+}
+
+.prompt h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.prompt p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.prompt .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.prompt .buttons button.primary {
+  font-size: 1.05rem;
+}
+
+.countdown {
+  position: relative;
+  margin-top: 10px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.countdown-bar {
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.countdown span {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.actions .status {
+  color: var(--red);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .stage {
+    width: calc(100% - 32px);
+  }
+
+  .banner {
+    font-size: 1rem;
+  }
+}
