@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { DeedId, Holding } from "../game";
-import { DEEDS, SQUARES } from "../game";
-import type { HexLayout, TileLayout, Vec2 } from "./hexLayout";
+import { DEEDS } from "../game";
+import { layoutIndexFor, local, yaw } from "./buildingSpots";
+import type { HexLayout } from "./hexLayout";
 import { boardToWorld } from "./tileGeometry";
 
 export interface BuildingsProps {
@@ -14,36 +15,6 @@ export interface BuildingsProps {
 const CHACRA_COLOR = "#5cc8f2";
 const ESTANCIA_COLOR = "#f2c21c";
 const MORTGAGE_COLOR = "#6b6b6b";
-
-/** Board-space point `right` units along the tile's right axis and `up` along its up axis from its centre. */
-function local(tile: TileLayout, right: number, up: number): Vec2 {
-  return {
-    x: tile.center.x + tile.right.x * right + tile.up.x * up,
-    y: tile.center.y + tile.right.y * right + tile.up.y * up,
-  };
-}
-
-/**
- * Rotation about Y that aligns a box's local +x with the tile's `right` vector.
- * Board (x, y) maps to world (x, -z), and a yaw θ sends +x to (cos θ, 0, -sin θ).
- */
-function yaw(tile: TileLayout): number {
-  return Math.atan2(tile.right.y, tile.right.x);
-}
-
-const DEED_SQUARES = new Map<DeedId, number>();
-for (const square of SQUARES) {
-  if (square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania") {
-    DEED_SQUARES.set(square.deedId, square.index);
-  }
-}
-
-/** Ring index of the square holding a deed. */
-function layoutIndexFor(deedId: DeedId): number {
-  const index = DEED_SQUARES.get(deedId);
-  if (index === undefined) throw new Error(`No square for ${deedId}`);
-  return index;
-}
 
 /**
  * Ownership strips and buildings on top of the tiles: a bar in the owner's

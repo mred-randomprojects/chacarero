@@ -38,6 +38,8 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
   const lastId = useRef<number | null>(null);
   /** Camera offset from the target while chasing; null when not chasing. */
   const chase = useRef<Vector3 | null>(null);
+  /** Seconds left of chasing after the pawn stopped, so the camera settles on it. */
+  const settle = useRef(0);
   const grab = useRef<{ point: Vector3; moved: boolean; startX: number; startY: number } | null>(null);
 
   const here = useCallback((): CameraView => {
@@ -68,6 +70,7 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
     offset.setLength(CHASE_DISTANCE);
     offset.y = CHASE_HEIGHT;
     chase.current = offset;
+    settle.current = 0.7;
   }, [followPawn, camera]);
 
   // Relative moves (orbit, tilt, zoom) start from wherever the camera is now.
@@ -180,12 +183,16 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
     const orbit = controls.current;
     if (!orbit) return;
     const offset = chase.current;
-    if (offset && pawnTracker.moving) {
-      const k = 1 - Math.exp(-delta * 7);
-      orbit.target.lerp(pawnTracker.position, k);
-      camera.position.lerp(new Vector3().addVectors(orbit.target, offset), k);
-      orbit.update();
-      return;
+    if (offset) {
+      if (pawnTracker.moving) settle.current = 0.7;
+      else settle.current -= delta;
+      if (pawnTracker.moving || settle.current > 0) {
+        const k = 1 - Math.exp(-delta * 7);
+        orbit.target.lerp(pawnTracker.position, k);
+        camera.position.lerp(new Vector3().addVectors(orbit.target, offset), k);
+        orbit.update();
+        return;
+      }
     }
     const current = flight.current;
     if (!current) return;

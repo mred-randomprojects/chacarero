@@ -319,3 +319,28 @@ export function createSlotTexture(label: string, symbol: string, background: str
   texture.colorSpace = SRGBColorSpace;
   return texture;
 }
+
+/** "BANCO" plate for the middle of the felt. */
+export function createBankTexture(): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 480;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas not supported");
+  ctx.fillStyle = "#f7f2e4";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#2a2622";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#1f5e2e";
+  ctx.font = `800 84px ${TILE_FONT}`;
+  ctx.fillText("BANCO", canvas.width / 2, 70);
+  ctx.fillStyle = "#5a544c";
+  ctx.font = `600 26px ${TILE_FONT}`;
+  ctx.fillText("DE LA CHACRA", canvas.width / 2, 125);
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
+}

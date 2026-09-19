@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { soundsForTransition } from "./audio/gameSounds";
-import type { SoundName } from "./audio/sfx";
 import { sfx } from "./audio/sfx";
 import type { GameState, NewPlayer } from "./game";
-import { createGame, currentPlayer, getSquare, roll } from "./game";
+import { createGame, currentPlayer, getSquare, rollDice } from "./game";
 import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, seatView, squareView } from "./scene/cameraViews";
 import type { DiceThrow } from "./scene/Dice";
-import { routeFor } from "./scene/pawnPath";
 import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
 import type { Act } from "./ui/ActionBar";
 import { ActionBar } from "./ui/ActionBar";
-import { Announcer } from "./ui/Announcer";
+import { Banner } from "./ui/Banner";
 import { CameraBar } from "./ui/CameraBar";
 import { LogPanel } from "./ui/LogPanel";
 import { PlayersPanel } from "./ui/PlayersPanel";
@@ -25,13 +23,14 @@ import { loadSettings, saveSettings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { Setup } from "./ui/Setup";
 import { SquarePanel } from "./ui/SquarePanel";
+import { usePlayback } from "./ui/usePlayback";
 
 const ERROR_MS = 3_500;
 
 declare global {
   interface Window {
-    /** Dev-only hook to inspect or replace the game state from the console. */
-    __chacarero?: { getGame: () => GameState | null; setGame: (state: GameState) => void };
+    /** Dev-only hook to inspect or replace the game state from the console, or run an action through the UI. */
+    __chacarero?: { getGame: () => GameState | null; setGame: (state: GameState) => void; act: (action: (state: GameState) => GameState) => void };
   }
 }
 
@@ -51,7 +50,6 @@ function isTyping(event: KeyboardEvent): boolean {
 
 export default function App() {
   const [game, setGame] = useState<GameState | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -65,19 +63,29 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [goTo, setGoTo] = useState<Flight | null>(null);
   const goToCounter = useRef(0);
-  /** Which pawn is walking and along which route; bumps `routeId` per action. */
-  const [walk, setWalk] = useState<{ playerId: string; route: readonly number[]; jump: boolean; id: number } | null>(null);
-  const routeCounter = useRef(0);
-  /** Sounds decided by a state change but held back until the pawn/dice finish. */
-  const pendingSounds = useRef<SoundName[]>([]);
+  const playback = usePlayback(game, { bannerSeconds: settings.bannerSeconds });
+  const { view, walk, enqueue, reset, skip, onPawnArrive } = playback;
+  const busy = playback.busy || throwing !== null;
+  /** Set by `act` so the game effect can tell replayed changes from injected ones. */
+  const fromAct = useRef(false);
 
+  const actRef = useRef<Act>(() => null);
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    window.__chacarero = { getGame: () => game, setGame };
+    window.__chacarero = { getGame: () => game, setGame, act: (action) => void actRef.current(action) };
     return () => {
       delete window.__chacarero;
     };
   }, [game]);
+
+  // A state that did not come through `act` (dev hook, new game) is shown as is.
+  useEffect(() => {
+    if (fromAct.current) {
+      fromAct.current = false;
+      return;
+    }
+    if (game) reset(game);
+  }, [game, reset]);
 
   useEffect(() => {
     saveSettings(settings);
@@ -106,14 +114,6 @@ export default function App() {
     return () => clearTimeout(id);
   }, [error]);
 
-  // Flush held-back sounds once the animation that hid them is over.
-  useEffect(() => {
-    if (busy) return;
-    const sounds = pendingSounds.current;
-    pendingSounds.current = [];
-    sounds.forEach((name, i) => setTimeout(() => sfx.play(name), i * 140));
-  }, [busy]);
-
   const seats = useMemo<readonly SeatView[]>(() => {
     if (!game) return [];
     const sides = seatSides(game.players.length);
@@ -123,20 +123,20 @@ export default function App() {
       plate: {
         name: p.name,
         color: p.color,
-        cash: p.cash,
+        cash: view.cash[p.id] ?? p.cash,
         inJail: p.inJail,
         jailCards: p.getOutOfJailCards,
         bankrupt: p.bankrupt,
         isCurrent: i === game.currentPlayerIndex,
       },
     }));
-  }, [game]);
+  }, [game, view.cash]);
 
   const currentSide = game ? (seats[game.currentPlayerIndex]?.side ?? 0) : 0;
 
-  const flyTo = useCallback((view: CameraView, seconds?: number) => {
+  const flyTo = useCallback((cameraView: CameraView, seconds?: number) => {
     goToCounter.current += 1;
-    setGoTo(seconds === undefined ? { id: goToCounter.current, view } : { id: goToCounter.current, view, seconds });
+    setGoTo(seconds === undefined ? { id: goToCounter.current, view: cameraView } : { id: goToCounter.current, view: cameraView, seconds });
   }, []);
 
   const flyToSeat = useCallback((side: number) => flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, side)), [flyTo]);
@@ -153,32 +153,25 @@ export default function App() {
   const start = useCallback((players: readonly NewPlayer[], startingCash: number) => {
     setGame(createGame({ players, startingCash }));
     setSelected(null);
-    setBusy(false);
     setThrowing(null);
     setShaking(false);
-    setWalk(null);
     sfx.play("open");
   }, []);
 
-  /** Applies an engine action; a thrown precondition becomes a toast instead of a crash. */
+  /** Applies an engine action; its events are replayed one by one, and a thrown precondition becomes a toast. */
   const act = useCallback<Act>(
     (action) => {
       if (!game) return null;
       try {
         const next = action(game);
+        fromAct.current = true;
         setGame(next);
-        const sounds = soundsForTransition(game, next);
-        const mover = next.moves[0]?.playerId;
-        const route = mover ? routeFor(next.moves, mover) : null;
-        if (mover && route) {
-          routeCounter.current += 1;
-          setWalk({ playerId: mover, route: route.route, jump: route.jump, id: routeCounter.current });
-          setBusy(true);
-          setSelected(next.moves.at(-1)?.to ?? null);
+        soundsForTransition(game, next).forEach((name, i) => setTimeout(() => sfx.play(name), i * 140));
+        enqueue(game, next);
+        const landing = next.moves.at(-1)?.to;
+        if (landing !== undefined) {
+          setSelected(landing);
           setPinnedByUser(false);
-          pendingSounds.current.push(...sounds);
-        } else {
-          sounds.forEach((name, i) => setTimeout(() => sfx.play(name), i * 140));
         }
         return next;
       } catch (e) {
@@ -186,10 +179,12 @@ export default function App() {
         return null;
       }
     },
-    [game],
+    [game, enqueue],
   );
 
-  const canRoll = game !== null && !busy && !throwing && (game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision");
+  actRef.current = act;
+
+  const canRoll = game !== null && !busy && (game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision");
 
   const startShake = useCallback(() => {
     if (!canRoll) return;
@@ -202,7 +197,6 @@ export default function App() {
     sfx.play("diceThrow");
     throwCounter.current += 1;
     setThrowing({ id: throwCounter.current, values: [rollDie(), rollDie()] });
-    setBusy(true);
   }, [shaking]);
 
   const onDiceSettled = useCallback(
@@ -210,14 +204,10 @@ export default function App() {
       if (!throwing || throwing.id !== id || !game) return;
       const values = throwing.values;
       setThrowing(null);
-      const next = act((s) => roll(s, undefined, values));
-      const walked = next !== null && next.moves.length > 0 && routeFor(next.moves, next.moves[0]?.playerId ?? "") !== null;
-      if (!walked) setBusy(false);
+      act((s) => rollDice(s, undefined, values));
     },
     [throwing, game, act],
   );
-
-  const onPawnArrive = useCallback(() => setBusy(false), []);
 
   const onSelect = useCallback((index: number) => {
     setSelected((current) => {
@@ -232,14 +222,18 @@ export default function App() {
     setPinnedByUser(false);
   }, []);
 
-  // Keyboard: space shakes/throws, digits sit at a player's seat, 0/T/M views, L list, coma settings.
+  // Keyboard: space shakes/throws (or skips a replay), digits sit at a player's seat, 0/T/M views, L list, coma settings.
   useEffect(() => {
     if (!game) return;
     const onDown = (event: KeyboardEvent) => {
       if (isTyping(event)) return;
-      if (event.key === " ") {
+      if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
-        if (!event.repeat) startShake();
+        if (playback.busy) {
+          skip();
+          return;
+        }
+        if (event.key === " " && !event.repeat) startShake();
         return;
       }
       if (event.key === "Escape") {
@@ -271,7 +265,7 @@ export default function App() {
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [game, seats, startShake, releaseDice, flyTo, flyToSeat, currentSide, closePanel]);
+  }, [game, seats, startShake, releaseDice, flyTo, flyToSeat, currentSide, closePanel, playback.busy, skip]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -294,6 +288,7 @@ export default function App() {
   if (!game) return <Setup onStart={start} />;
 
   const shown = selected ?? hovered;
+  const openList = () => setShowList(true);
 
   return (
     <div className="app">
@@ -305,18 +300,18 @@ export default function App() {
         onFocus={focusSquare}
         pawns={pawns}
         seats={seats}
-        holdings={game.holdings}
+        holdings={view.holdings}
         colorOf={colorOf}
         onPawnArrive={onPawnArrive}
         goTo={goTo}
-        followPawn={settings.followPawn && busy && walk !== null && !throwing}
+        followPawn={settings.followPawn && walk !== null}
         diceSide={currentSide}
         shaking={shaking}
         throwing={throwing}
         onDiceSettled={onDiceSettled}
       />
       <div className="left-column">
-        <PlayersPanel state={game} onShowList={() => setShowList(true)} />
+        <PlayersPanel state={game} cash={view.cash} onShowList={openList} />
         <LogPanel state={game} />
       </div>
       <SquarePanel
@@ -329,7 +324,7 @@ export default function App() {
       />
       <ActionBar state={game} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} act={act} />
       <div className="stage">
-        <Announcer state={game} paused={busy} seconds={settings.bannerSeconds} />
+        <Banner state={game} event={playback.current} onSkip={skip} />
         <Prompt
           state={game}
           busy={busy}
@@ -337,6 +332,7 @@ export default function App() {
           countdownScale={settings.countdownScale}
           act={act}
           onNewGame={() => setGame(null)}
+          onManage={openList}
         />
       </div>
       <CameraBar
@@ -350,6 +346,8 @@ export default function App() {
       {showList && (
         <PropertiesList
           state={game}
+          act={act}
+          busy={busy}
           onClose={() => setShowList(false)}
           onSelect={(index) => {
             setSelected(index);

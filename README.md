@@ -13,9 +13,13 @@ El modo multijugador online (servidor WebSocket) es el siguiente paso.
 
 ## Controles
 
-- **Dados**: mantené apretado el botón (o la barra espaciadora) para mezclar,
-  soltá para tirar. Los dados vuelan al centro del tablero y quedan mostrando
-  el resultado.
+- **El turno, paso a paso**: mantené apretado el botón (o la barra
+  espaciadora) para mezclar los dados, soltá para tirar; después movés el
+  peón con un clic; si caés en Suerte o Destino la tarjeta se levanta de la
+  mesa y la aplicás cuando la leíste. Cada cosa que pasa se anuncia de a una
+  y se ve en la mesa: los billetes vuelan de una pila a otra, las escrituras
+  van del Banco a tu lado, las chacras caen sobre el campo. `Enter` o un clic
+  en el aviso apura el paso.
 - **Cámara**: arrastrá para girar, rueda para acercar (hasta pegar la nariz a
   los billetes). `⌥ Option/Alt + arrastrar` agarra la mesa y la desliza;
   `⌥ + clic` centra la vista en ese punto; doble clic en un casillero o en una
@@ -24,8 +28,8 @@ El modo multijugador online (servidor WebSocket) es el siguiente paso.
   jugador de turno, `0` vista general, `T` desde arriba. La cámara sigue al
   peón mientras camina y se sienta con el jugador de turno (ambas cosas se
   apagan en Ajustes).
-- **Ajustes** (`,` o el engranaje): duración de los avisos, tiempo para
-  decidir (o sin límite), volumen, y qué hace la cámara sola.
+- **Ajustes** (`,` o el engranaje): ritmo de los avisos, tiempo para decidir
+  (o sin límite), volumen, y qué hace la cámara sola.
 - **Sonido**: dados que se mezclan y rebotan, pasos del peón, cartas, plata,
   martillo del remate, la puerta de la Comisaría y una fanfarria al ganar.
   Muestras CC0 de [Kenney](https://kenney.nl).

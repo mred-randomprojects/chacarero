@@ -1,6 +1,7 @@
 import type { GameState } from "../game";
 import {
   MIN_BID_INCREMENT,
+  acknowledgeCard,
   bid,
   canRaiseCash,
   chooseDraw,
@@ -12,6 +13,7 @@ import {
   endTurn,
   getDeed,
   getPlayer,
+  movePawn,
   passBid,
   pesos,
   settlePayment,
@@ -29,12 +31,16 @@ export interface PromptProps {
   readonly countdownScale: number;
   readonly act: Act;
   readonly onNewGame: () => void;
+  /** Opens the properties list so the player can sell or mortgage before deciding. */
+  readonly onManage: () => void;
 }
 
 const BUY_SECONDS = 20;
 const PAY_OR_DRAW_SECONDS = 12;
 const AUCTION_SECONDS = 15;
 const TURN_END_SECONDS = 8;
+const MOVE_SECONDS = 5;
+const CARD_SECONDS = 10;
 
 function Countdown({ remaining, total }: { readonly remaining: number | null; readonly total: number }) {
   if (remaining === null) return null;
@@ -51,7 +57,7 @@ function Countdown({ remaining, total }: { readonly remaining: number | null; re
  * pay-or-draw, debts, auctions and ending the turn. Decisions with a sensible
  * default run on a countdown so nobody waits on an absent player.
  */
-export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame }: PromptProps) {
+export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame, onManage }: PromptProps) {
   const { phase } = state;
   const player = currentPlayer(state);
   // A new key restarts the countdown; the log length changes with every action.
@@ -68,10 +74,49 @@ export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame
   const auctionLeft = useCountdown(auctionKey, AUCTION_SECONDS * scale, inspecting, () => act(passBid));
   const endKey = visible && timed && phase.type === "turnEnd" ? stamp : null;
   const endLeft = useCountdown(endKey, TURN_END_SECONDS * scale, inspecting, () => act(endTurn));
+  const moveKey = visible && timed && phase.type === "awaitingMove" ? stamp : null;
+  const moveLeft = useCountdown(moveKey, MOVE_SECONDS * scale, inspecting, () => act(movePawn));
+  const cardKey = visible && timed && phase.type === "awaitingCardAck" ? stamp : null;
+  const cardLeft = useCountdown(cardKey, CARD_SECONDS * scale, inspecting, () => act(acknowledgeCard));
 
   if (!visible) return null;
 
   switch (phase.type) {
+    case "awaitingMove": {
+      const dice = state.dice ?? [0, 0];
+      const total = dice[0] + dice[1];
+      return (
+        <div className="prompt">
+          <h3>
+            <span className="dot" style={{ background: player.color }} /> {player.name} sacó {dice[0]} + {dice[1]} = {total}
+          </h3>
+          <p>{dice[0] === dice[1] ? "¡Doble! Después de mover, tirás otra vez." : "Mové el peón para ver dónde caés."}</p>
+          <div className="buttons">
+            <button type="button" className="primary" onClick={() => act(movePawn)}>
+              Mover {total} casilleros
+            </button>
+          </div>
+          <Countdown remaining={moveLeft} total={MOVE_SECONDS * scale} />
+        </div>
+      );
+    }
+    case "awaitingCardAck": {
+      const { card } = phase;
+      return (
+        <div className={`prompt ${card.deck}`}>
+          <h3>
+            <span className="dot" style={{ background: player.color }} /> {card.deck === "suerte" ? "Suerte" : "Destino"}
+          </h3>
+          <p className="card-text">{card.text}</p>
+          <div className="buttons">
+            <button type="button" className="primary" onClick={() => act(acknowledgeCard)}>
+              Aplicar
+            </button>
+          </div>
+          <Countdown remaining={cardLeft} total={CARD_SECONDS * scale} />
+        </div>
+      );
+    }
     case "awaitingBuyDecision": {
       const deed = getDeed(phase.deedId);
       return (
@@ -79,13 +124,19 @@ export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame
           <h3>
             <span className="dot" style={{ background: player.color }} /> {player.name}, caíste en {deedName(deed)}
           </h3>
-          <p>Está libre. ¿La comprás por {pesos(deed.price)}? Si no, sale a remate.</p>
+          <p>
+            Está libre. ¿La comprás por {pesos(deed.price)}? Si no, sale a remate.
+            {player.cash < deed.price ? ` Tenés ${pesos(player.cash)}: podés hipotecar o vender antes (tecla L).` : ""}
+          </p>
           <div className="buttons">
             <button type="button" className="primary" disabled={player.cash < deed.price} onClick={() => act(buy)}>
               Comprar por {pesos(deed.price)}
             </button>
             <button type="button" onClick={() => act(decline)}>
               No comprar
+            </button>
+            <button type="button" onClick={onManage}>
+              Mis propiedades
             </button>
           </div>
           <Countdown remaining={buyLeft} total={BUY_SECONDS * scale} />
@@ -128,6 +179,9 @@ export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame
           <div className="buttons">
             <button type="button" className="primary" disabled={missing > 0} onClick={() => act(settlePayment)}>
               Pagar
+            </button>
+            <button type="button" onClick={onManage}>
+              Vender / hipotecar
             </button>
             <button type="button" className="danger" disabled={!stuck || missing <= 0} onClick={() => act(declareBankruptcy)}>
               Declarar quiebra
@@ -180,6 +234,9 @@ export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame
           <div className="buttons">
             <button type="button" className="primary" onClick={() => act(endTurn)}>
               Terminar turno
+            </button>
+            <button type="button" onClick={onManage}>
+              Mis propiedades
             </button>
           </div>
           <Countdown remaining={endLeft} total={TURN_END_SECONDS * scale} />

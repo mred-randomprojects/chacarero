@@ -1,5 +1,5 @@
 import { CanvasTexture, SRGBColorSpace } from "three";
-import type { Deed, Holding } from "../game";
+import type { Card, Deed, Holding } from "../game";
 import { PROVINCE_COLORS, PROVINCE_NAMES, ZONE_NAMES, pesos } from "../game";
 import { TILE_FONT } from "./tileTexture";
 
@@ -159,4 +159,81 @@ export function namePlateTexture(info: PlateInfo): CanvasTexture {
   ctx.lineWidth = info.isCurrent ? 12 : 4;
   ctx.strokeRect(0, 0, PLATE_W, PLATE_H);
   return texture(element);
+}
+
+const chanceCache = new Map<string, CanvasTexture>();
+
+/** Word-wraps `text` into lines that fit `maxWidth` at the current font. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** A Suerte/Destino card, face up: deck header and the full text. */
+export function chanceCardTexture(card: Card): CanvasTexture {
+  const cached = chanceCache.get(card.id);
+  if (cached) return cached;
+  const w = 480;
+  const h = 300;
+  const [element, ctx] = canvas(w, h);
+  const suerte = card.deck === "suerte";
+  ctx.fillStyle = "#f7f2e4";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = suerte ? "#e8891c" : "#1f7a3a";
+  ctx.fillRect(0, 0, w, 64);
+  fit(ctx, suerte ? "SUERTE" : "DESTINO", w / 2, 33, 38, w - 40, 800, "#ffffff");
+  ctx.fillStyle = "#1d1a17";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  let size = 30;
+  let lines: string[];
+  do {
+    ctx.font = `600 ${size}px ${TILE_FONT}`;
+    lines = wrap(ctx, card.text, w - 60);
+    size -= 2;
+  } while (lines.length * (size + 8) > h - 100 && size > 14);
+  const lineHeight = size + 10;
+  let y = 64 + (h - 64 - lines.length * lineHeight) / 2 + lineHeight / 2;
+  for (const line of lines) {
+    ctx.fillText(line, w / 2, y);
+    y += lineHeight;
+  }
+  ctx.strokeStyle = "#2a2622";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, w, h);
+  const tex = texture(element);
+  chanceCache.set(card.id, tex);
+  return tex;
+}
+
+/** The face-down back of a Suerte/Destino card. */
+export function chanceBackTexture(deck: "suerte" | "destino"): CanvasTexture {
+  const key = `back-${deck}`;
+  const cached = chanceCache.get(key);
+  if (cached) return cached;
+  const w = 480;
+  const h = 300;
+  const [element, ctx] = canvas(w, h);
+  ctx.fillStyle = deck === "suerte" ? "#e8891c" : "#1f7a3a";
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "#f7f2e4";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(14, 14, w - 28, h - 28);
+  fit(ctx, deck === "suerte" ? "!" : "?", w / 2, h / 2 - 20, 150, w, 800, "#f7f2e4");
+  fit(ctx, deck === "suerte" ? "SUERTE" : "DESTINO", w / 2, h - 50, 44, w - 40, 800, "#f7f2e4");
+  const tex = texture(element);
+  chanceCache.set(key, tex);
+  return tex;
 }

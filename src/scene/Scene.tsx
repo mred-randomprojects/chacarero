@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
+import type { Anchors } from "./anchors";
 import type { BoardProps } from "./Board";
-import { BOARD_LAYOUT, Board, SLAB_MARGIN } from "./Board";
+import { BOARD_LAYOUT, Board, SLAB_MARGIN, TABLE_Y } from "./Board";
+import { Effects } from "./Effects";
 import type { CameraRigProps } from "./CameraRig";
 import { CameraRig } from "./CameraRig";
 import { OVERVIEW } from "./cameraViews";
@@ -23,6 +26,10 @@ export interface SceneProps extends BoardProps, CameraRigProps {
  */
 export function Scene({ goTo, followPawn, diceSide, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
+  const anchors = useMemo<Anchors>(
+    () => ({ layout: BOARD_LAYOUT, slabMargin: SLAB_MARGIN, sides: new Map(board.seats.map((seat) => [seat.playerId, seat.side])), tableY: TABLE_Y }),
+    [board.seats],
+  );
   return (
     <Canvas
       shadows
@@ -50,6 +57,7 @@ export function Scene({ goTo, followPawn, diceSide, shaking, throwing, onDiceSet
       {fontsReady && (
         <>
           <Board {...board} />
+          <Effects anchors={anchors} />
           <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
         </>
       )}

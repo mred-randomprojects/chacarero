@@ -2,6 +2,8 @@ import { useEffect, useMemo } from "react";
 import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
 import type { DeedId, Holding } from "../game";
 import { SQUARES, getDeed } from "../game";
+import { BANK_DEEDS, BANK_MONEY, BANK_PLATE } from "./anchors";
+import { billTexture } from "./billTextures";
 import { Buildings } from "./Buildings";
 import type { PlateInfo } from "./cardTextures";
 import type { HexLayout, Vec2 } from "./hexLayout";
@@ -10,7 +12,7 @@ import { Pawn } from "./Pawn";
 import { PlayerArea } from "./PlayerArea";
 import { seatFrame } from "./seats";
 import { Tile } from "./Tile";
-import { createSlotTexture, createTitleTexture } from "./tileTexture";
+import { createBankTexture, createSlotTexture, createTitleTexture } from "./tileTexture";
 
 export const BOARD_LAYOUT: HexLayout = computeHexLayout({ innerRadius: 10, tileDepth: 2.4, cornerExtension: 0.9 });
 
@@ -83,6 +85,7 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
   const titleTexture = useMemo(() => createTitleTexture(14, 4.4), []);
   const suerteTexture = useMemo(() => createSlotTexture("SUERTE", "!", "#e8891c"), []);
   const destinoTexture = useMemo(() => createSlotTexture("DESTINO", "?", "#1f7a3a"), []);
+  const bankTexture = useMemo(() => createBankTexture(), []);
 
   useEffect(
     () => () => {
@@ -91,8 +94,9 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
       titleTexture.dispose();
       suerteTexture.dispose();
       destinoTexture.dispose();
+      bankTexture.dispose();
     },
-    [slabGeometry, feltGeometry, titleTexture, suerteTexture, destinoTexture],
+    [slabGeometry, feltGeometry, titleTexture, suerteTexture, destinoTexture, bankTexture],
   );
 
   return (
@@ -139,6 +143,22 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
       <mesh rotation={FLAT} position={[4.6, DECOR_Y, 4.2]}>
         <planeGeometry args={[3.2, 2]} />
         <meshStandardMaterial map={destinoTexture} roughness={1} />
+      </mesh>
+
+      {/* The bank: a plate, a pile of bills and the deed pile, where flights start and end. */}
+      <mesh rotation={FLAT} position={[BANK_PLATE.x, DECOR_Y, -BANK_PLATE.y]}>
+        <planeGeometry args={[3, 1]} />
+        <meshStandardMaterial map={bankTexture} roughness={1} />
+      </mesh>
+      {[5000, 1000, 100].map((value, i) => (
+        <mesh key={value} rotation={[-Math.PI / 2, 0, (i - 1) * 0.12]} position={[BANK_MONEY.x + (i - 1) * 0.3, DECOR_Y + 0.012 * (i + 1), -BANK_MONEY.y + (i - 1) * 0.2]} castShadow>
+          <planeGeometry args={[0.68, 0.34]} />
+          <meshStandardMaterial map={billTexture(value as 5000 | 1000 | 100)} roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[BANK_DEEDS.x, DECOR_Y + 0.04, -BANK_DEEDS.y]} castShadow>
+        <boxGeometry args={[1.15, 0.08, 1.63]} />
+        <meshStandardMaterial color="#e9e2cf" roughness={1} />
       </mesh>
 
       {layout.tiles.map((tile) => {

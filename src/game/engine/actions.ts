@@ -84,6 +84,11 @@ function partyName(state: GameState, party: Party): string {
   return party.type === "bank" ? "el Banco" : getPlayer(state, party.playerId).name;
 }
 
+/** "al Banco" / "a Beto". */
+function toParty(state: GameState, party: Party): string {
+  return party.type === "bank" ? "al Banco" : `a ${getPlayer(state, party.playerId).name}`;
+}
+
 function player(id: string): Party {
   return { type: "player", playerId: id };
 }
@@ -117,7 +122,7 @@ function transfer(state: GameState, fromId: string, amount: number, to: Creditor
     const creditor = getPlayer(next, to.playerId);
     next = updatePlayer(next, to.playerId, { cash: creditor.cash + amount });
   }
-  const text = `${from.name} paga ${pesos(amount)} a ${partyName(state, to)} (${reason}).`;
+  const text = `${from.name} paga ${pesos(amount)} ${toParty(state, to)} (${reason}).`;
   return emit(next, { type: "transfer", from: player(fromId), to, amount, text }, fromId);
 }
 
@@ -455,7 +460,7 @@ export function endTurn(input: GameState): GameState {
   next = { ...next, currentPlayerIndex: index, turn: state.turn + 1, lastCard: null, rollAgain: false };
   const upcoming = currentPlayer(next);
   next = updatePlayer(next, upcoming.id, { bankIncomeThisTurn: 0 });
-  next = log(next, `Turno de ${upcoming.name}.`, upcoming.id);
+  next = emit(next, { type: "turn", playerId: upcoming.id, text: `Turno de ${upcoming.name}.` }, upcoming.id);
   return setPhase(next, upcoming.inJail ? { type: "awaitingJailDecision" } : { type: "awaitingRoll" });
 }
 

@@ -16,7 +16,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  bannerSeconds: 4.5,
+  bannerSeconds: 3,
   countdownScale: 1,
   soundVolume: 0.8,
   muted: false,

@@ -77,7 +77,7 @@ export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShake
       {rolling && (
         <div className="buttons">
           {busy && !shaking ? (
-            <span className="waiting">Tirando…</span>
+            <span className="waiting">Mirá la mesa…</span>
           ) : (
             <>
               <DiceButton
@@ -104,7 +104,7 @@ export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShake
           )}
         </div>
       )}
-      {!rolling && phase.type !== "gameOver" && <span className="waiting">{busy ? "Moviendo…" : "Esperando decisión…"}</span>}
+      {!rolling && phase.type !== "gameOver" && <span className="waiting">{busy ? "Mirá la mesa…" : "Esperando decisión…"}</span>}
     </div>
   );
 }

@@ -107,7 +107,8 @@ export type GameEvent =
   | { readonly type: "mortgage"; readonly deedId: DeedId; readonly mortgaged: boolean; readonly text: string }
   | { readonly type: "card"; readonly playerId: string; readonly deck: Deck; readonly cardId: string; readonly text: string }
   | { readonly type: "jail"; readonly playerId: string; readonly text: string }
-  | { readonly type: "bankrupt"; readonly playerId: string; readonly text: string };
+  | { readonly type: "bankrupt"; readonly playerId: string; readonly text: string }
+  | { readonly type: "turn"; readonly playerId: string; readonly text: string };
 
 export interface GameState {
   readonly players: readonly Player[];
