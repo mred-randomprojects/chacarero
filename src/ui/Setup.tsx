@@ -6,13 +6,14 @@ export const PLAYER_COLORS = ["#1d4ed8", "#dc2626", "#16a34a", "#f59e0b", "#7c3a
 
 export interface SetupProps {
   readonly onStart: (players: readonly NewPlayer[], startingCash: number) => void;
+  readonly onBack: () => void;
 }
 
 /** The rulebook says $35.000 and "with fewer than five players it pays to hand out more". */
 const CASH_OPTIONS = [STARTING_CASH, 50_000, 70_000] as const;
 
 /** Pre-game screen: how many play and what they are called. */
-export function Setup({ onStart }: SetupProps) {
+export function Setup({ onStart, onBack }: SetupProps) {
   const [names, setNames] = useState<string[]>(["", ""]);
   const [cash, setCash] = useState<number>(STARTING_CASH);
 
@@ -70,6 +71,9 @@ export function Setup({ onStart }: SetupProps) {
           Empezar
         </button>
         <p className="hint">Modo mesa: todos juegan en esta pantalla, por turnos.</p>
+        <button type="button" className="link" onClick={onBack}>
+          Volver
+        </button>
       </div>
     </div>
   );

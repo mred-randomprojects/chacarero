@@ -1,8 +1,6 @@
 import type { Deed, GameState, Square } from "../game";
 import {
   PROVINCE_COLORS,
-  buildChacra,
-  buildEstancia,
   canBuildChacra,
   canBuildEstancia,
   canMortgage,
@@ -12,22 +10,20 @@ import {
   describeSquare,
   getDeed,
   getPlayer,
-  mortgage,
   mortgageProceeds,
   pesos,
-  sellBuilding,
   sellValue,
-  unmortgage,
   unmortgageCost,
 } from "../game";
-import type { Act } from "./ActionBar";
+import type { Dispatch } from "./ActionBar";
 
 export interface SquarePanelProps {
   readonly state: GameState;
+  readonly you: string | null;
   readonly square: Square | null;
   readonly pinned: boolean;
   readonly busy: boolean;
-  readonly act: Act;
+  readonly dispatch: Dispatch;
   readonly onClose: () => void;
 }
 
@@ -110,15 +106,17 @@ function DeedDetails({ deed }: { readonly deed: Deed }) {
 
 interface OwnerActionsProps {
   readonly state: GameState;
+  readonly you: string | null;
   readonly deed: Deed;
   readonly busy: boolean;
-  readonly act: Act;
+  readonly dispatch: Dispatch;
 }
 
-/** Build / sell / mortgage buttons, shown when the current player owns the deed. */
-function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
+/** Build / sell / mortgage buttons, shown when the player who must act owns the deed (and is at this screen). */
+function OwnerActions({ state, you, deed, busy, dispatch }: OwnerActionsProps) {
   if (state.phase.type === "gameOver" || state.phase.type === "auction") return null;
   const player = activePlayer(state);
+  if (you !== null && player.id !== you) return null;
   const holding = state.holdings[deed.id];
   if (!holding || holding.ownerId !== player.id) return null;
   const chacra = canBuildChacra(state, player, deed.id);
@@ -135,23 +133,23 @@ function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
     <div className="owner-actions">
       {deed.kind === "campo" && (
         <>
-          <button type="button" disabled={busy || !chacra.ok} title={chacra.ok ? "" : chacra.reason} onClick={() => act((s) => buildChacra(s, deed.id))}>
+          <button type="button" disabled={busy || !chacra.ok} title={chacra.ok ? "" : chacra.reason} onClick={() => dispatch({ type: "buildChacra", deedId: deed.id })}>
             Chacra +{pesos(deed.chacraCost)}
           </button>
-          <button type="button" disabled={busy || !estancia.ok} title={estancia.ok ? "" : estancia.reason} onClick={() => act((s) => buildEstancia(s, deed.id))}>
+          <button type="button" disabled={busy || !estancia.ok} title={estancia.ok ? "" : estancia.reason} onClick={() => dispatch({ type: "buildEstancia", deedId: deed.id })}>
             Estancia +{pesos(deed.estanciaCost)}
           </button>
-          <button type="button" disabled={busy || !sell.ok} title={sell.ok ? "" : sell.reason} onClick={() => act((s) => sellBuilding(s, deed.id))}>
+          <button type="button" disabled={busy || !sell.ok} title={sell.ok ? "" : sell.reason} onClick={() => dispatch({ type: "sellBuilding", deedId: deed.id })}>
             Vender {holding.estancia ? "estancia" : "chacra"} {sell.ok ? `(${pesos(sellValue(deed, holding))})` : ""}
           </button>
         </>
       )}
       {holding.mortgaged ? (
-        <button type="button" disabled={busy || !unmort.ok} title={unmort.ok ? "" : unmort.reason} onClick={() => act((s) => unmortgage(s, deed.id))}>
+        <button type="button" disabled={busy || !unmort.ok} title={unmort.ok ? "" : unmort.reason} onClick={() => dispatch({ type: "unmortgage", deedId: deed.id })}>
           Levantar hipoteca ({pesos(unmortgageCost(deed.id))})
         </button>
       ) : (
-        <button type="button" disabled={busy || !mort.ok} title={mort.ok ? "" : mort.reason} onClick={() => act((s) => mortgage(s, deed.id))}>
+        <button type="button" disabled={busy || !mort.ok} title={mort.ok ? "" : mort.reason} onClick={() => dispatch({ type: "mortgage", deedId: deed.id })}>
           Hipotecar (+{pesos(mortgageProceeds(deed.id))})
         </button>
       )}
@@ -167,7 +165,7 @@ function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
 }
 
 /** Side panel describing the hovered or selected square, with owner actions. */
-export function SquarePanel({ state, square, pinned, busy, act, onClose }: SquarePanelProps) {
+export function SquarePanel({ state, you, square, pinned, busy, dispatch, onClose }: SquarePanelProps) {
   if (!square) {
     return (
       <aside className="panel panel-empty">
@@ -206,7 +204,7 @@ export function SquarePanel({ state, square, pinned, busy, act, onClose }: Squar
         </p>
       )}
       <p className="description">{describeSquare(square)}</p>
-      {deed && <OwnerActions state={state} deed={deed} busy={busy} act={act} />}
+      {deed && <OwnerActions state={state} you={you} deed={deed} busy={busy} dispatch={dispatch} />}
       {deed && <DeedDetails deed={deed} />}
     </aside>
   );

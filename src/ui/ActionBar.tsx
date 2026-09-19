@@ -1,17 +1,18 @@
-import type { GameState } from "../game";
-import { JAIL_BAIL, currentPlayer, payBail, pesos, useJailCard } from "../game";
+import type { ActionRequest, GameState } from "../game";
+import { JAIL_BAIL, currentPlayer, pesos } from "../game";
+import { canAct } from "./perspective";
 
-/** Applies an engine action and returns the new state, or null if it was refused. */
-export type Act = (action: (state: GameState) => GameState) => GameState | null;
+export type Dispatch = (action: ActionRequest) => void;
 
 export interface ActionBarProps {
   readonly state: GameState;
+  readonly you: string | null;
   readonly busy: boolean;
   readonly shaking: boolean;
   readonly canRoll: boolean;
   readonly onShakeStart: () => void;
   readonly onShakeEnd: () => void;
-  readonly act: Act;
+  readonly dispatch: Dispatch;
 }
 
 interface DiceButtonProps {
@@ -55,10 +56,11 @@ function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
 }
 
 /** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
-export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShakeEnd, act }: ActionBarProps) {
+export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, dispatch }: ActionBarProps) {
   const player = currentPlayer(state);
   const { phase } = state;
   const rolling = phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
+  const mine = canAct(state, you, { type: "rollDice" });
 
   return (
     <div className="actions">
@@ -78,6 +80,8 @@ export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShake
         <div className="buttons">
           {busy && !shaking ? (
             <span className="waiting">Mirá la mesa…</span>
+          ) : !mine ? (
+            <span className="waiting">{player.name} tiene los dados…</span>
           ) : (
             <>
               <DiceButton
@@ -89,11 +93,11 @@ export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShake
               />
               {phase.type === "awaitingJailDecision" && (
                 <>
-                  <button type="button" disabled={player.cash < JAIL_BAIL} onClick={() => act(payBail)}>
+                  <button type="button" disabled={busy || player.cash < JAIL_BAIL} onClick={() => dispatch({ type: "payBail" })}>
                     Pagar fianza {pesos(JAIL_BAIL)}
                   </button>
                   {player.getOutOfJailCards > 0 && (
-                    <button type="button" onClick={() => act(useJailCard)}>
+                    <button type="button" disabled={busy} onClick={() => dispatch({ type: "spendJailCard" })}>
                       Usar tarjeta
                     </button>
                   )}

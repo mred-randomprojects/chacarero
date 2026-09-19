@@ -24,7 +24,7 @@ import {
   sellBuilding,
   settlePayment,
   unmortgage,
-  useJailCard,
+  spendJailCard,
 } from "./actions";
 import { canBuildChacra, mortgageProceeds, rentFor, unmortgageCost } from "./rules";
 
@@ -208,7 +208,7 @@ describe("jail", () => {
   it("uses a get-out-of-jail card and returns it to the deck", () => {
     let state = withPlayer(jailed(), "ana", { getOutOfJailCards: 1 });
     state = withDecks(state, state.decks.suerte.filter((id) => id !== "suerte-02"), state.decks.destino);
-    state = useJailCard(state);
+    state = spendJailCard(state);
     expect(currentPlayer(state).inJail).toBe(false);
     expect(currentPlayer(state).getOutOfJailCards).toBe(0);
     expect(state.decks.suerte.at(-1)).toBe("suerte-02");
@@ -558,7 +558,7 @@ describe("edge cases", () => {
     expect(state.decks.suerte).toEqual([]);
     expect(state.decks.destino).toEqual([]);
     state = { ...withPlayer(state, "ana", { inJail: true, position: 14 }), phase: { type: "awaitingJailDecision" } };
-    state = useJailCard(state);
+    state = spendJailCard(state);
     expect(currentPlayer(state).getOutOfJailCards).toBe(1);
     expect(state.decks.suerte).toHaveLength(1);
   });

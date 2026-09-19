@@ -19,7 +19,7 @@ export const ActionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("choosePay") }),
   z.object({ type: z.literal("chooseDraw") }),
   z.object({ type: z.literal("payBail") }),
-  z.object({ type: z.literal("useJailCard") }),
+  z.object({ type: z.literal("spendJailCard") }),
   z.object({ type: z.literal("endTurn") }),
   z.object({ type: z.literal("bid"), amount: z.number().int().positive() }),
   z.object({ type: z.literal("passBid") }),

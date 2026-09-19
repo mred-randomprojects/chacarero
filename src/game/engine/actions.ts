@@ -427,7 +427,7 @@ export function payBail(input: GameState): GameState {
   return setPhase(next, { type: "awaitingRoll" });
 }
 
-export function useJailCard(input: GameState): GameState {
+export function spendJailCard(input: GameState): GameState {
   const state = begin(input);
   expectPhase(state, "awaitingJailDecision");
   const current = currentPlayer(state);

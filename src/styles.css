@@ -939,3 +939,112 @@ button.danger {
   white-space: nowrap;
   text-align: right;
 }
+
+/* ---------- menu & lobby ---------- */
+
+.setup-card input[type="text"] {
+  width: 100%;
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.setup .count input[type="text"] {
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.menu-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.menu-row .primary {
+  flex: 1;
+  font-size: 1.1rem;
+  padding: 10px;
+}
+
+.code-input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+}
+
+.setup .error {
+  color: var(--red);
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+
+button.link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.lobby .code {
+  font-size: 1.6rem;
+  letter-spacing: 0.15em;
+  color: var(--ink);
+}
+
+.invite {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.invite input {
+  flex: 1;
+  font-size: 0.85rem !important;
+  color: var(--muted);
+}
+
+.lobby .names li.away {
+  opacity: 0.55;
+}
+
+.lobby-name {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.lobby .host,
+.lobby .offline,
+.players .offline,
+.tagline .offline {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.players .room-code {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.players .room-code strong {
+  color: var(--ink);
+  letter-spacing: 0.1em;
+}
+
+.players li.away {
+  opacity: 0.55;
+}
+
+.waiting-for {
+  font-weight: 700;
+  color: var(--muted);
+}

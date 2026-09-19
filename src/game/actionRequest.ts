@@ -25,7 +25,7 @@ import {
   sellBuilding,
   settlePayment,
   unmortgage,
-  useJailCard,
+  spendJailCard,
 } from "./engine/actions";
 import type { Dice } from "./engine/actions";
 
@@ -38,7 +38,7 @@ export type ActionRequest =
   | { readonly type: "choosePay" }
   | { readonly type: "chooseDraw" }
   | { readonly type: "payBail" }
-  | { readonly type: "useJailCard" }
+  | { readonly type: "spendJailCard" }
   | { readonly type: "endTurn" }
   | { readonly type: "bid"; readonly amount: number }
   | { readonly type: "passBid" }
@@ -62,7 +62,7 @@ export function allowedPlayerFor(state: GameState, request: ActionRequest): stri
   switch (request.type) {
     case "rollDice":
     case "payBail":
-    case "useJailCard":
+    case "spendJailCard":
       return phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision" ? currentPlayer(state).id : null;
     case "movePawn":
       return phase.type === "awaitingMove" ? currentPlayer(state).id : null;
@@ -113,8 +113,8 @@ export function applyActionRequest(state: GameState, request: ActionRequest, dic
       return chooseDraw(state);
     case "payBail":
       return payBail(state);
-    case "useJailCard":
-      return useJailCard(state);
+    case "spendJailCard":
+      return spendJailCard(state);
     case "endTurn":
       return endTurn(state);
     case "bid":

@@ -11,6 +11,20 @@ import { boardToWorld } from "./tileGeometry";
 export interface DiceThrow {
   readonly id: number;
   readonly values: readonly [number, number];
+  /** Seeds the tumble and landing spots so every screen sees the same throw. */
+  readonly seed: number;
+}
+
+/** Small deterministic generator (mulberry32). */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 export interface DiceProps {
@@ -48,21 +62,21 @@ interface DieState {
   landed: boolean;
 }
 
-function randomUnit(): Vector3 {
-  return new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+function randomUnit(random: () => number = Math.random): Vector3 {
+  return new Vector3(random() - 0.5, random() - 0.5, random() - 0.5).normalize();
 }
 
 /** Orientation that shows `value` on top, with a random spin about the vertical. */
-function restingQuaternion(value: number): Quaternion {
+function restingQuaternion(value: number, random: () => number = Math.random): Quaternion {
   const q = new Quaternion().setFromUnitVectors(faceNormal(value), UP);
-  const yaw = new Quaternion().setFromAxisAngle(UP, Math.random() * Math.PI * 2);
+  const yaw = new Quaternion().setFromAxisAngle(UP, random() * Math.PI * 2);
   return yaw.multiply(q);
 }
 
 /** Landing spot on the felt, in world space, with the two dice kept apart. */
-function landingSpot(index: number): Vector3 {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 2.6 + Math.random() * 2;
+function landingSpot(index: number, random: () => number = Math.random): Vector3 {
+  const angle = random() * Math.PI * 2;
+  const radius = 2.6 + random() * 2;
   const x = Math.cos(angle) * radius + (index === 0 ? -0.9 : 0.9);
   const z = Math.sin(angle) * radius;
   return new Vector3(x, 0, z);
@@ -113,6 +127,7 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
   useEffect(() => {
     if (!throwing || throwing.id === activeThrow.current) return;
     activeThrow.current = throwing.id;
+    const random = seeded(throwing.seed * 7919 + 17);
     dice.current.forEach((die, i) => {
       const mesh = meshes[i]?.current;
       const value = throwing.values[i] ?? 1;
@@ -120,11 +135,11 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
       die.t = 0;
       die.bounces = 0;
       die.start = mesh ? mesh.position.clone() : handPosition(frame, i, tableY);
-      die.end = landingSpot(i).setY(restY);
-      die.spinAxis = randomUnit();
-      die.spinSpeed = 14 + Math.random() * 8;
+      die.end = landingSpot(i, random).setY(restY);
+      die.spinAxis = randomUnit(random);
+      die.spinSpeed = 14 + random() * 8;
       die.spinQuat = mesh ? mesh.quaternion.clone() : new Quaternion();
-      die.finalQuat = restingQuaternion(value);
+      die.finalQuat = restingQuaternion(value, random);
       die.landed = false;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- meshes are stable refs
