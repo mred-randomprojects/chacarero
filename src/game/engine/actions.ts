@@ -9,7 +9,7 @@ import { JAIL_INDEX, getSquare, salidaCrossings } from "../board";
 import { BOARD_SIZE, JAIL_BAIL, MAX_CHACRAS_PER_CAMPO, MAX_JAIL_TURNS, SALIDA_BONUS, DOUBLES_TO_JAIL } from "../constants";
 import { deedName, getDeed } from "../deeds";
 import { pesos } from "../describe";
-import type { Creditor, GameState, Holding, Phase, Player } from "./state";
+import type { Creditor, GameState, Holding, MoveKind, Phase, Player } from "./state";
 import { currentPlayer, getPlayer } from "./state";
 import {
   buildingCount,
@@ -96,11 +96,17 @@ function transfer(state: GameState, fromId: string, amount: number, to: Creditor
 
 // ---------- movement ----------
 
+function setPosition(state: GameState, playerId: string, to: number, kind: MoveKind): GameState {
+  const from = getPlayer(state, playerId).position;
+  const next = updatePlayer(state, playerId, { position: to });
+  return { ...next, lastMove: { playerId, from, to, kind } };
+}
+
 function moveBy(state: GameState, steps: number): GameState {
   const player = currentPlayer(state);
   const crossings = salidaCrossings(player.position, steps);
   const position = ((player.position + steps) % BOARD_SIZE + BOARD_SIZE) % BOARD_SIZE;
-  let next = updatePlayer(state, player.id, { position });
+  let next = setPosition(state, player.id, position, steps >= 0 ? "forward" : "backward");
   if (crossings > 0) {
     next = credit(next, player.id, SALIDA_BONUS * crossings);
     next = log(next, `${player.name} pasa por la Salida y cobra ${pesos(SALIDA_BONUS * crossings)}.`);
@@ -108,16 +114,17 @@ function moveBy(state: GameState, steps: number): GameState {
   return next;
 }
 
-function moveTo(state: GameState, square: number, collectSalida: boolean): GameState {
+function moveTo(state: GameState, square: number, collectSalida: boolean, direction: MoveKind): GameState {
   const player = currentPlayer(state);
   const forward = (square - player.position + BOARD_SIZE) % BOARD_SIZE;
   if (collectSalida) return moveBy(state, forward);
-  return updatePlayer(state, player.id, { position: square });
+  return setPosition(state, player.id, square, direction);
 }
 
 function sendToJail(state: GameState, why: string): GameState {
   const player = currentPlayer(state);
-  let next = updatePlayer(state, player.id, { position: JAIL_INDEX, inJail: true, jailTurns: 0, doublesThisTurn: 0 });
+  let next = setPosition(state, player.id, JAIL_INDEX, "jump");
+  next = updatePlayer(next, player.id, { inJail: true, jailTurns: 0, doublesThisTurn: 0 });
   next = log(next, `${player.name} marcha preso (${why}).`);
   return { ...next, rollAgain: false };
 }
@@ -221,7 +228,7 @@ function applyCard(state: GameState, card: Card): GameState {
       return finishMove(next);
     }
     case "moveTo":
-      return resolveLanding(moveTo(state, effect.square, effect.collectSalida));
+      return resolveLanding(moveTo(state, effect.square, effect.collectSalida, effect.direction));
     case "moveBy":
       return resolveLanding(moveBy(state, effect.steps));
     case "goToJail":

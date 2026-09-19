@@ -157,6 +157,8 @@ export type CardEffect =
       readonly square: number;
       /** Whether passing Salida on the way pays the usual bonus. */
       readonly collectSalida: boolean;
+      /** Which way the pawn travels; only affects animation, never the bonus. */
+      readonly direction: "forward" | "backward";
     }
   | { readonly type: "moveBy"; readonly steps: number }
   | { readonly type: "goToJail" }

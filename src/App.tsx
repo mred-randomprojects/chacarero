@@ -1,42 +1,93 @@
-import { useCallback, useState } from "react";
-import { getSquare } from "./game";
-import type { PawnState } from "./scene/Board";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { GameState, NewPlayer } from "./game";
+import { createGame, getSquare } from "./game";
+import type { PawnView } from "./scene/Board";
 import { Scene } from "./scene/Scene";
-import { Hud } from "./ui/Hud";
+import type { Act } from "./ui/ActionBar";
+import { ActionBar } from "./ui/ActionBar";
+import { LogPanel } from "./ui/LogPanel";
+import { PlayersPanel } from "./ui/PlayersPanel";
+import { Setup } from "./ui/Setup";
 import { SquarePanel } from "./ui/SquarePanel";
 
-const PLAYER_PAWN: PawnState = { id: "jugador", color: "#1d4ed8", steps: 0 };
+const ERROR_MS = 3_500;
 
-function rollDie(): number {
-  return 1 + Math.floor(Math.random() * 6);
+declare global {
+  interface Window {
+    /** Dev-only hook to inspect or replace the game state from the console. */
+    __chacarero?: { getGame: () => GameState | null; setGame: (state: GameState) => void };
+  }
 }
 
 export default function App() {
+  const [game, setGame] = useState<GameState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  const [pawn, setPawn] = useState<PawnState>(PLAYER_PAWN);
-  const [dice, setDice] = useState<readonly [number, number] | null>(null);
-  const [rolling, setRolling] = useState(false);
-  const [landed, setLanded] = useState<number | null>(null);
 
-  const roll = useCallback(() => {
-    if (rolling) return;
-    const result: [number, number] = [rollDie(), rollDie()];
-    setDice(result);
-    setRolling(true);
-    setLanded(null);
-    setPawn((current) => ({ ...current, steps: current.steps + result[0] + result[1] }));
-  }, [rolling]);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    window.__chacarero = { getGame: () => game, setGame };
+    return () => {
+      delete window.__chacarero;
+    };
+  }, [game]);
 
-  const onPawnArrive = useCallback((_pawnId: string, square: number) => {
-    setRolling(false);
-    setLanded(square);
-    setSelected(square);
+  useEffect(() => {
+    if (!error) return;
+    const id = setTimeout(() => setError(null), ERROR_MS);
+    return () => clearTimeout(id);
+  }, [error]);
+
+  const start = useCallback((players: readonly NewPlayer[]) => {
+    setGame(createGame({ players }));
+    setSelected(null);
+    setBusy(false);
   }, []);
+
+  /** Applies an engine action; a thrown precondition becomes a toast instead of a crash. */
+  const act = useCallback<Act>(
+    (action) => {
+      if (!game) return;
+      try {
+        const next = action(game);
+        setGame(next);
+        const move = next.lastMove;
+        if (move && move !== game.lastMove && move.from !== move.to) {
+          setBusy(true);
+          setSelected(move.to);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [game],
+  );
+
+  const onPawnArrive = useCallback(() => setBusy(false), []);
 
   const onSelect = useCallback((index: number) => {
     setSelected((current) => (current === index ? null : index));
   }, []);
+
+  const pawns = useMemo<readonly PawnView[]>(
+    () =>
+      game
+        ? game.players.map((p) => ({
+            id: p.id,
+            color: p.color,
+            position: p.position,
+            moveKind: game.lastMove?.playerId === p.id ? game.lastMove.kind : "forward",
+            dimmed: p.bankrupt,
+          }))
+        : [],
+    [game],
+  );
+
+  const colorOf = useCallback((playerId: string) => game?.players.find((p) => p.id === playerId)?.color ?? "#000000", [game]);
+
+  if (!game) return <Setup onStart={start} />;
 
   const shown = selected ?? hovered;
 
@@ -47,11 +98,23 @@ export default function App() {
         selected={selected}
         onHover={setHovered}
         onSelect={onSelect}
-        pawns={[pawn]}
+        pawns={pawns}
+        holdings={game.holdings}
+        colorOf={colorOf}
         onPawnArrive={onPawnArrive}
       />
-      <Hud dice={dice} rolling={rolling} landed={landed === null ? null : getSquare(landed)} onRoll={roll} />
-      <SquarePanel square={shown === null ? null : getSquare(shown)} pinned={selected !== null} onClose={() => setSelected(null)} />
+      <PlayersPanel state={game} />
+      <LogPanel state={game} />
+      <SquarePanel
+        state={game}
+        square={shown === null ? null : getSquare(shown)}
+        pinned={selected !== null}
+        busy={busy}
+        act={act}
+        onClose={() => setSelected(null)}
+      />
+      <ActionBar state={game} busy={busy} act={act} onNewGame={() => setGame(null)} />
+      {error && <div className="toast">{error}</div>}
     </div>
   );
 }

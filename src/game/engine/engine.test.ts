@@ -428,3 +428,17 @@ describe("debts and bankruptcy", () => {
     expect(currentPlayer(state).id).toBe("carla");
   });
 });
+
+describe("lastMove", () => {
+  it("records forward rolls, backward cards and the jump to jail", () => {
+    let state = roll(game(), undefined, [1, 2]);
+    expect(state.lastMove).toEqual({ playerId: "ana", from: 0, to: 3, kind: "forward" });
+    state = withDecks(decline(state), ["suerte-13"], ["destino-04"]);
+    state = { ...state, phase: { type: "awaitingRoll" } };
+    state = roll(state, undefined, [3, 4]); // 10 Destino -> back to Formosa Sur
+    expect(state.lastMove).toEqual({ playerId: "ana", from: 10, to: 1, kind: "backward" });
+    state = { ...state, phase: { type: "awaitingRoll" } };
+    state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // 15 Suerte -> jail
+    expect(state.lastMove).toEqual({ playerId: "ana", from: 15, to: 14, kind: "jump" });
+  });
+});

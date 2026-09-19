@@ -14,7 +14,7 @@ export function Scene(props: BoardProps) {
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [0, 21, 25], fov: 38, near: 0.1, far: 200 }}
+      camera={{ position: [0, 24, 27], fov: 38, near: 0.1, far: 200 }}
       gl={{ antialias: true, alpha: true }}
       onPointerMissed={() => props.onHover(null)}
     >
@@ -39,7 +39,7 @@ export function Scene(props: BoardProps) {
         minDistance={12}
         maxDistance={70}
         maxPolarAngle={Math.PI * 0.42}
-        target={[0, 0, 0]}
+        target={[0, 0, 4]}
       />
     </Canvas>
   );

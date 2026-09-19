@@ -13,6 +13,7 @@ export const SUERTE_CARDS: readonly Card[] = [
     type: "moveTo",
     square: 16,
     collectSalida: true,
+    direction: "forward",
   }),
   card("suerte", 2, "Hábeas corpus concedido: con esta tarjeta sale gratis de la Comisaría. Guárdela o véndala.", {
     type: "getOutOfJail",
@@ -30,6 +31,7 @@ export const SUERTE_CARDS: readonly Card[] = [
     type: "moveTo",
     square: 13,
     collectSalida: true,
+    direction: "forward",
   }),
   card("suerte", 9, "Multa caminera. Pague $400.", { type: "pay", amount: 400 }),
   card("suerte", 10, "Gastos de colegio. Pague $3.000.", { type: "pay", amount: 3_000 }),
@@ -37,8 +39,9 @@ export const SUERTE_CARDS: readonly Card[] = [
     type: "moveTo",
     square: 26,
     collectSalida: true,
+    direction: "forward",
   }),
-  card("suerte", 12, "Siga hasta Buenos Aires, Zona Norte.", { type: "moveTo", square: 40, collectSalida: false }),
+  card("suerte", 12, "Siga hasta Buenos Aires, Zona Norte.", { type: "moveTo", square: 40, collectSalida: false, direction: "forward" }),
   card("suerte", 13, "Marche preso. Vaya directamente a la Comisaría sin pasar por la Salida.", { type: "goToJail" }),
   card("suerte", 14, "¡Sacó la grande! Cobre $10.000.", { type: "collect", amount: 10_000 }),
   card("suerte", 15, "Sus campos necesitan reparaciones: pague al Banco $500 por cada chacra y $2.500 por cada estancia.", {
@@ -46,15 +49,15 @@ export const SUERTE_CARDS: readonly Card[] = [
     perChacra: 500,
     perEstancia: 2_500,
   }),
-  card("suerte", 16, "Siga hasta la Salida y cobre $5.000.", { type: "moveTo", square: 0, collectSalida: true }),
+  card("suerte", 16, "Siga hasta la Salida y cobre $5.000.", { type: "moveTo", square: 0, collectSalida: true, direction: "forward" }),
 ];
 
 /** The 16 Destino cards. */
 export const DESTINO_CARDS: readonly Card[] = [
   card("destino", 1, "Es su cumpleaños. Cobre $200 de cada jugador.", { type: "collectFromEachPlayer", amount: 200 }),
   card("destino", 2, "Ganó un concurso agrícola. Cobre $2.000.", { type: "collect", amount: 2_000 }),
-  card("destino", 3, "Siga hasta la Salida y cobre $5.000.", { type: "moveTo", square: 0, collectSalida: true }),
-  card("destino", 4, "Vuelva atrás hasta Formosa, Zona Sur.", { type: "moveTo", square: 1, collectSalida: false }),
+  card("destino", 3, "Siga hasta la Salida y cobre $5.000.", { type: "moveTo", square: 0, collectSalida: true, direction: "forward" }),
+  card("destino", 4, "Vuelva atrás hasta Formosa, Zona Sur.", { type: "moveTo", square: 1, collectSalida: false, direction: "backward" }),
   card("destino", 5, "Recibió una herencia. Cobre $2.000.", { type: "collect", amount: 2_000 }),
   card("destino", 6, "Pague $200 o levante una tarjeta de Suerte.", { type: "payOrDraw", amount: 200, deck: "suerte" }),
   card("destino", 7, "Devolución de impuestos. Cobre $400.", { type: "collect", amount: 400 }),

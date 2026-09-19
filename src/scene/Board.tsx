@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
+import type { DeedId, Holding, MoveKind } from "../game";
 import { SQUARES, getDeed } from "../game";
+import { Buildings } from "./Buildings";
 import type { HexLayout, Vec2 } from "./hexLayout";
 import { computeHexLayout, hexagonVertices } from "./hexLayout";
 import { Pawn } from "./Pawn";
@@ -20,10 +22,12 @@ const PAWN_Y = TILE_Y;
 /** Upright mesh rotation that lays a Shape drawn in board coordinates flat on the XZ plane. */
 const FLAT: [number, number, number] = [-Math.PI / 2, 0, 0];
 
-export interface PawnState {
+export interface PawnView {
   readonly id: string;
   readonly color: string;
-  readonly steps: number;
+  readonly position: number;
+  readonly moveKind: MoveKind;
+  readonly dimmed: boolean;
 }
 
 export interface BoardProps {
@@ -31,7 +35,9 @@ export interface BoardProps {
   readonly selected: number | null;
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
-  readonly pawns: readonly PawnState[];
+  readonly pawns: readonly PawnView[];
+  readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
+  readonly colorOf: (playerId: string) => string;
   readonly onPawnArrive: (pawnId: string, square: number) => void;
 }
 
@@ -44,7 +50,7 @@ function toShape(points: readonly Vec2[]): Shape {
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
  * towards -z (world), so Salida ends up at the bottom-right from the default camera.
  */
-export function Board({ hovered, selected, onHover, onSelect, pawns, onPawnArrive }: BoardProps) {
+export function Board({ hovered, selected, onHover, onSelect, pawns, holdings, colorOf, onPawnArrive }: BoardProps) {
   const layout = BOARD_LAYOUT;
 
   const slabGeometry = useMemo(() => {
@@ -115,14 +121,18 @@ export function Board({ hovered, selected, onHover, onSelect, pawns, onPawnArriv
         );
       })}
 
+      <Buildings layout={layout} holdings={holdings} colorOf={colorOf} y={TILE_Y} />
+
       {pawns.map((pawn, slot) => (
         <Pawn
           key={pawn.id}
           layout={layout}
-          steps={pawn.steps}
+          position={pawn.position}
+          moveKind={pawn.moveKind}
           color={pawn.color}
           slot={slot}
           y={PAWN_Y}
+          dimmed={pawn.dimmed}
           onArrive={(square) => onPawnArrive(pawn.id, square)}
         />
       ))}

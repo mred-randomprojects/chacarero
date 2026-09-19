@@ -46,6 +46,16 @@ export type Phase =
   | { readonly type: "turnEnd" }
   | { readonly type: "gameOver"; readonly winnerId: string };
 
+export type MoveKind = "forward" | "backward" | "jump";
+
+/** The most recent change of position, so the scene can animate it properly. */
+export interface LastMove {
+  readonly playerId: string;
+  readonly from: number;
+  readonly to: number;
+  readonly kind: MoveKind;
+}
+
 export interface LogEntry {
   readonly turn: number;
   readonly playerId: string;
@@ -65,6 +75,7 @@ export interface GameState {
   readonly lastCard: Card | null;
   /** Set when the current roll was doubles and the player gets another go. */
   readonly rollAgain: boolean;
+  readonly lastMove: LastMove | null;
   readonly turn: number;
   readonly log: readonly LogEntry[];
 }
@@ -116,6 +127,7 @@ export function createGame({ players, startingCash = STARTING_CASH, random = Mat
     dice: null,
     lastCard: null,
     rollAgain: false,
+    lastMove: null,
     turn: 1,
     log: [],
   };
