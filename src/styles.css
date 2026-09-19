@@ -1,0 +1,231 @@
+:root {
+  --cream: #f7f2e4;
+  --ink: #1d1a17;
+  --red: #c8261f;
+  --green: #1f5e2e;
+  --panel: rgba(247, 242, 228, 0.96);
+  font-family: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+.app {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 40%, #1f5e2e 0%, #123a1c 60%, #0a2410 100%);
+}
+
+.app {
+  position: relative;
+}
+
+.app > canvas {
+  display: block;
+  touch-action: none;
+}
+
+.hud {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  max-width: 320px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+.hud h1 {
+  margin: 0;
+  font-family: "Lobster", Georgia, serif;
+  font-weight: 400;
+  font-size: 2.4rem;
+  color: var(--red);
+  line-height: 1;
+}
+
+.hud .tagline {
+  margin: 6px 0 12px;
+  font-size: 0.95rem;
+  color: #4a443c;
+}
+
+.dice-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hud button,
+.panel button.close {
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  cursor: pointer;
+}
+
+.hud button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dice {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.die {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.double {
+  font-weight: 800;
+  color: var(--red);
+}
+
+.landed {
+  margin: 10px 0 0;
+  font-size: 1rem;
+}
+
+.panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  padding: 0 18px 16px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.panel-empty {
+  padding: 14px 18px;
+  font-size: 0.95rem;
+  color: #4a443c;
+}
+
+.panel-band {
+  height: 14px;
+  margin: 0 -18px 10px;
+}
+
+.panel header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.panel .badge {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-weight: 800;
+}
+
+.panel button.close {
+  padding: 2px 10px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.4rem;
+}
+
+.panel .price {
+  margin: 8px 0 0;
+  font-size: 1.1rem;
+}
+
+.panel .description {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: #3a3631;
+}
+
+.rent {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.rent th {
+  text-align: left;
+  font-weight: 500;
+  padding: 3px 0;
+}
+
+.rent td {
+  text-align: right;
+  font-weight: 700;
+  padding: 3px 0;
+}
+
+.rent tr.sep th,
+.rent tr.sep td {
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 720px) {
+  .hud {
+    max-width: calc(100% - 32px);
+  }
+
+  .hud .tagline {
+    display: none;
+  }
+
+  .panel {
+    top: auto;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    width: auto;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+}
