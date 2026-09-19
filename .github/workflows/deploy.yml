@@ -42,6 +42,8 @@ jobs:
 
       - name: Build
         run: bun run build
+        env:
+          VITE_WS_URL: wss://pistasjug.ar/chacarero/ws
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

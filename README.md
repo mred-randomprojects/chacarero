@@ -5,11 +5,16 @@ de 42 casilleros, en una escena Three.js.
 
 **Demo:** https://mred-randomprojects.github.io/chacarero/
 
-Se juega en "modo mesa": de 2 a 6 jugadores por turnos en la misma pantalla.
-Tirás los dados, comprás campos, cobrás alquileres, levantás tarjetas de
-Suerte y Destino, construís chacras y estancias, hipotecás cuando no te
-alcanza y, si no hay más remedio, quebrás. Gana el último que queda.
-El modo multijugador online (servidor WebSocket) es el siguiente paso.
+Se juega **online** (armás una mesa, pasás el link, cada uno desde su pantalla)
+o en **modo mesa** (todos por turnos en la misma pantalla). Tirás los dados,
+comprás campos, cobrás alquileres, levantás tarjetas de Suerte y Destino,
+construís chacras y estancias, hipotecás cuando no te alcanza y, si no hay
+más remedio, quebrás. Gana el último que queda.
+
+Online, el servidor es el único que mueve la partida: tira los dados, aplica
+las jugadas, lleva el reloj de cada decisión (y decide por vos si te fuiste) y
+manda la mesa entera a todos después de cada cambio. Cada pantalla reproduce
+lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 
 ## Controles
 
@@ -47,14 +52,19 @@ El modo multijugador online (servidor WebSocket) es el siguiente paso.
 
 ```bash
 bun install
-bun run dev        # http://localhost:5173/chacarero/
-bun run test       # vitest
+bun run server:dev # servidor de mesas en ws://localhost:9902/ws
+bun run dev        # cliente en http://localhost:5173/chacarero/
+bun run test       # vitest (motor, sala, sonidos, escena)
 bun run typecheck
 bun run lint
 bun run build
 ```
 
-Cada push a `main` despliega a GitHub Pages.
+Para sentarte dos veces en la misma mesa desde un solo navegador, abrí una
+segunda pestaña con `?mesa=CODIGO&jugador=otro`.
+
+Cada push a `main` despliega el cliente a GitHub Pages; el servidor de mesas
+se despliega al droplet con `./deploy.sh` (ver `deploy/README.md`).
 
 ## Estructura
 
@@ -62,8 +72,17 @@ Cada push a `main` despliega a GitHub Pages.
   casilleros, las 29 escrituras con sus tablas de alquiler, las 32 tarjetas y
   las constantes del reglamento. Todo con tests.
 - `src/game/engine/` — el motor: `GameState` inmutable y funciones puras
-  (`roll`, `buy`, `buildChacra`, `mortgage`, `declareBankruptcy`…) que devuelven
-  el estado siguiente. Es lo que el servidor va a ejecutar; la UI solo despacha.
+  (`rollDice`, `movePawn`, `buy`, `buildChacra`, `mortgage`,
+  `declareBankruptcy`…) que devuelven el estado siguiente y registran eventos.
+  `actionRequest.ts` y `timing.ts` son lo que comparten el servidor y el modo
+  mesa: qué jugada puede mandar quién, cuánto dura cada decisión y qué pasa si
+  nadie decide.
+- `server/` — la sala (Bun + WebSocket): `room.ts` es lógica pura con tests
+  (entrar, reconectar, empezar, jugadas con número de secuencia, relojes) e
+  `index.ts` la sirve junto con el cliente compilado.
+- `src/net/` — protocolo (Zod), cliente WebSocket con reconexión, identidad
+  del navegador. `src/session/` — la sesión local y la online detrás de una
+  misma interfaz.
 - `src/scene/` — geometría del anillo hexagonal (`hexLayout.ts`), las caras de
   los casilleros dibujadas en canvas, y los componentes de react-three-fiber.
 - `src/ui/` — HUD y panel de escrituras.

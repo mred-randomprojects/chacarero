@@ -1,0 +1,18 @@
+# Runs next to Piñas Cruzadas on the droplet: same Docker network, so the
+# existing Caddy can reverse-proxy pistasjug.ar/chacarero/* to this container.
+services:
+  chacarero:
+    build: .
+    image: chacarero:latest
+    container_name: chacarero
+    restart: unless-stopped
+    expose:
+      - "9902"
+    environment:
+      - PORT=9902
+      - STATIC_DIR=/app/dist
+
+networks:
+  default:
+    name: pinas-cruzadas_default
+    external: true
