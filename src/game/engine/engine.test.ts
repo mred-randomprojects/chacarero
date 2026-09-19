@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { DeedId } from "../types";
 import { JAIL_BAIL, SALIDA_BONUS, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
 import type { GameState, Holding, Player } from "./state";
-import { createGame, currentPlayer, getPlayer } from "./state";
+import { activePlayer, createGame, currentPlayer, getPlayer } from "./state";
 import {
+  MIN_BID_INCREMENT,
+  bid,
   buildChacra,
   buildEstancia,
   buy,
@@ -13,6 +15,7 @@ import {
   decline,
   endTurn,
   mortgage,
+  passBid,
   payBail,
   roll,
   sellBuilding,
@@ -89,11 +92,12 @@ describe("rolling and buying", () => {
     expect(state.turn).toBe(2);
   });
 
-  it("declining leaves the deed with the bank", () => {
+  it("declining sends the deed to auction, starting with the next player", () => {
     let state = roll(game(), undefined, [1, 2]);
     state = decline(state);
     expect(state.holdings["formosa-norte"]).toBeUndefined();
-    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(state.phase).toMatchObject({ type: "auction", auction: { deedId: "formosa-norte", highestBid: 0, turnBidderId: "beto", bidders: ["beto", "ana"] } });
+    expect(activePlayer(state).id).toBe("beto");
   });
 
   it("refuses actions outside their phase", () => {
@@ -112,7 +116,7 @@ describe("doubles", () => {
     expect(currentPlayer(state).doublesThisTurn).toBe(1);
     state = roll(state, undefined, [1, 3]); // 8: Compañía Petrolera, free
     expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "petrolera" });
-    state = decline(state);
+    state = buy(state);
     expect(state.phase).toEqual({ type: "turnEnd" });
   });
 
@@ -123,7 +127,7 @@ describe("doubles", () => {
     expect(state.phase).toEqual({ type: "awaitingRoll" });
     state = roll(state, undefined, [2, 2]);
     expect(currentPlayer(state).position).toBe(8);
-    state = decline(state);
+    state = buy(state);
     expect(state.phase).toEqual({ type: "awaitingRoll" });
     state = roll(state, undefined, [3, 3]);
     const ana = currentPlayer(state);
@@ -181,7 +185,7 @@ describe("jail", () => {
     let state = roll(jailed(), undefined, [2, 2]);
     expect(currentPlayer(state).inJail).toBe(false);
     expect(currentPlayer(state).position).toBe(18);
-    state = decline(state);
+    state = buy(state);
     expect(state.phase).toEqual({ type: "turnEnd" });
   });
 
@@ -299,13 +303,22 @@ describe("cards", () => {
     expect(currentPlayer(state).cash).toBe(STARTING_CASH - (4 * 500 + 2_500));
   });
 
-  it("collects from every other player on birthdays", () => {
+  it("collects from every other player on birthdays, making the broke ones liquidate", () => {
     let state = withDecks(game([ANA, BETO, CARLA]), ["suerte-03"], ["destino-01"]);
     state = withPlayer(state, "carla", { cash: 50 });
+    state = withHolding(state, "salta-sur", { ownerId: "carla" });
     state = roll(withPlayer(state, "ana", { position: 7 }), undefined, [1, 2]); // -> 10 Destino
-    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH + 200 + 50);
     expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH - 200);
-    expect(getPlayer(state, "carla").cash).toBe(0);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "carla", amount: 200, to: { type: "player", playerId: "ana" } });
+    expect(activePlayer(state).id).toBe("carla");
+    expect(() => settlePayment(state)).toThrow();
+    state = mortgage(state, "salta-sur"); // Carla, the debtor, acts even though it is Ana's turn
+    expect(getPlayer(state, "carla").cash).toBe(50 + 1_170);
+    state = settlePayment(state);
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH + 400);
+    expect(getPlayer(state, "carla").cash).toBe(1_020);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(currentPlayer(state).id).toBe("ana");
   });
 
   it("offers pay-or-draw and resolves either choice", () => {
@@ -408,13 +421,19 @@ describe("debts and bankruptcy", () => {
     expect(state.phase).toEqual({ type: "gameOver", winnerId: "beto" });
   });
 
-  it("returns deeds to the bank when the creditor is the bank", () => {
+  it("returns deeds to the bank when the creditor is the bank, which auctions them", () => {
     let state = withHolding(game([ANA, BETO, CARLA]), "formosa-sur", { ownerId: "ana", mortgaged: true });
     state = withPlayer(state, "ana", { cash: 100 });
     state = roll(state, undefined, [1, 3]); // tax 5000
     expect(state.phase).toMatchObject({ type: "awaitingPayment", to: { type: "bank" } });
     state = declareBankruptcy(state);
     expect(state.holdings["formosa-sur"]).toBeUndefined();
+    expect(state.phase).toMatchObject({ type: "auction", auction: { deedId: "formosa-sur", bidders: ["beto", "carla"], turnBidderId: "beto" } });
+    state = bid(state, 300);
+    state = passBid(state);
+    expect(state.holdings["formosa-sur"]).toMatchObject({ ownerId: "beto", mortgaged: false });
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH - 300);
+    expect(state.phase).toEqual({ type: "turnEnd" });
     state = endTurn(state);
     expect(currentPlayer(state).id).toBe("beto");
     expect(state.phase).toEqual({ type: "awaitingRoll" });
@@ -491,7 +510,7 @@ describe("edge cases", () => {
     state = roll(state, undefined, [1, 2]); // Formosa Norte 1.200
     expect(() => buy(state)).toThrow();
     state = decline(state);
-    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(state.phase.type).toBe("auction");
   });
 
   it("refuses bail without the cash", () => {
@@ -622,5 +641,117 @@ describe("edge cases", () => {
     let state = withHolding(game([ANA, BETO, CARLA]), "formosa-centro", { ownerId: "beto", mortgaged: true });
     state = withPlayer(state, "beto", { bankrupt: true });
     expect(rentFor(state, "formosa-centro", "ana", 2)).toBe(0);
+  });
+});
+
+describe("auctions", () => {
+  function auctionFor(players = [ANA, BETO, CARLA]): GameState {
+    return decline(roll(game(players), undefined, [1, 2])); // Formosa Norte
+  }
+
+  it("goes around, skipping the highest bidder, until nobody else stays in", () => {
+    let state = auctionFor();
+    expect(activePlayer(state).id).toBe("beto");
+    state = bid(state, 500);
+    expect(activePlayer(state).id).toBe("carla");
+    state = bid(state, 700);
+    expect(activePlayer(state).id).toBe("ana");
+    state = passBid(state);
+    expect(activePlayer(state).id).toBe("beto");
+    state = bid(state, 900);
+    expect(activePlayer(state).id).toBe("carla");
+    state = passBid(state);
+    expect(state.holdings["formosa-norte"]).toMatchObject({ ownerId: "beto" });
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH - 900);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("leaves the deed with the bank when everyone passes", () => {
+    let state = auctionFor();
+    state = passBid(passBid(passBid(state)));
+    expect(state.holdings["formosa-norte"]).toBeUndefined();
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("enforces the minimum increment and the bidder's cash", () => {
+    let state = auctionFor();
+    expect(() => bid(state, 50)).toThrow();
+    state = bid(state, MIN_BID_INCREMENT);
+    expect(() => bid(state, MIN_BID_INCREMENT)).toThrow();
+    expect(() => bid(state, STARTING_CASH + 1)).toThrow();
+    expect(() => bid(state, 150.5)).toThrow();
+  });
+
+  it("lets the decliner win their own auction cheaply", () => {
+    let state = auctionFor([ANA, BETO]);
+    state = passBid(state); // beto
+    expect(activePlayer(state).id).toBe("ana");
+    state = bid(state, 100);
+    expect(state.holdings["formosa-norte"]).toMatchObject({ ownerId: "ana" });
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH - 100);
+  });
+
+  it("does not allow building or mortgaging during an auction", () => {
+    let state = withHolding(game(), "salta-sur", { ownerId: "ana" });
+    state = decline(roll(state, undefined, [1, 2]));
+    expect(() => mortgage(state, "salta-sur")).toThrow(/remate/);
+  });
+
+  it("keeps the doubles re-roll after an auction", () => {
+    let state = roll(game([ANA, BETO]), undefined, [1, 1]); // Formosa Centro, doubles
+    state = decline(state);
+    state = passBid(passBid(state));
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    expect(currentPlayer(state).id).toBe("ana");
+  });
+});
+
+describe("three doubles clawback", () => {
+  it("returns what the bank paid this turn when the third doubles sends you to jail", () => {
+    let state = withPlayer(game(), "ana", { position: 41 });
+    state = roll(state, undefined, [1, 1]); // passes Salida: +5000, lands on Formosa Sur
+    state = buy(state);
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH + 5_000 - 1_000);
+    state = roll(state, undefined, [3, 3]); // 7: Premio ganadero +2500
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH + 5_000 - 1_000 + 2_500);
+    state = roll(state, undefined, [2, 2]); // third doubles
+    expect(currentPlayer(state).inJail).toBe(true);
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH - 1_000);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("queues a debt when the money was already spent", () => {
+    let state = withPlayer(game(), "ana", { position: 41, cash: 100 });
+    state = roll(state, undefined, [1, 1]); // +5000
+    state = buy(state); // spends 1000 -> 4100
+    state = roll(state, undefined, [3, 3]); // +2500 -> 6600
+    state = withPlayer(state, "ana", { cash: 500 }); // pretend it was spent elsewhere
+    state = roll(state, undefined, [2, 2]);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "ana", amount: 7_500, to: { type: "bank" } });
+  });
+
+  it("does not count money received from other players", () => {
+    let state = withHolding(game(), "formosa-centro", { ownerId: "ana" });
+    state = withPlayer(state, "ana", { position: 0 });
+    state = { ...withPlayer(state, "beto", { position: 0 }), currentPlayerIndex: 1 };
+    state = roll(state, undefined, [1, 1]); // beto lands on ana's campo: 40 to ana
+    expect(getPlayer(state, "ana").bankIncomeThisTurn).toBe(0);
+  });
+
+  it("resets the tally at the start of each turn", () => {
+    let state = roll(withPlayer(game(), "ana", { position: 40 }), undefined, [1, 2]); // +5000
+    expect(currentPlayer(state).bankIncomeThisTurn).toBe(5_000);
+    state = endTurn({ ...state, phase: { type: "turnEnd" } });
+    state = endTurn({ ...state, phase: { type: "turnEnd" } });
+    expect(currentPlayer(state).id).toBe("ana");
+    expect(currentPlayer(state).bankIncomeThisTurn).toBe(0);
+  });
+});
+
+describe("visible company rent", () => {
+  it("spells out the dice and multiplier in the log", () => {
+    let state = withHolding(game(), "petrolera", { ownerId: "beto" });
+    state = roll(state, undefined, [3, 5]);
+    expect(state.log.at(-1)?.text).toContain("dados 3+5 = 8 × 100");
   });
 });

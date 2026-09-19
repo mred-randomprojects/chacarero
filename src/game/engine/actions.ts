@@ -1,7 +1,11 @@
 /**
  * Game actions. Every function takes a state and returns a new state; nothing
  * is mutated. Preconditions throw, so the UI should only offer actions the
- * current phase allows (see `availableActions` in ui.ts).
+ * current phase allows.
+ *
+ * The turn flow is driven by `continueTurn`: after anything happens, it
+ * settles pending debts first, then pending auctions, and only then hands the
+ * dice back (or ends the turn).
  */
 import type { Card, Deck, DeedId, Square } from "../types";
 import { ALL_CARDS } from "../cards";
@@ -9,8 +13,8 @@ import { JAIL_INDEX, getSquare, salidaCrossings } from "../board";
 import { BOARD_SIZE, JAIL_BAIL, MAX_CHACRAS_PER_CAMPO, MAX_JAIL_TURNS, SALIDA_BONUS, DOUBLES_TO_JAIL } from "../constants";
 import { deedName, getDeed } from "../deeds";
 import { pesos } from "../describe";
-import type { Creditor, GameState, Holding, MoveKind, Phase, Player } from "./state";
-import { currentPlayer, getPlayer } from "./state";
+import type { Auction, Creditor, Debt, GameState, Holding, MoveKind, Phase, Player } from "./state";
+import { activePlayer, currentPlayer, getPlayer } from "./state";
 import {
   buildingCount,
   canBuildChacra,
@@ -26,6 +30,9 @@ import {
 } from "./rules";
 
 export type Dice = readonly [number, number];
+
+/** Smallest amount a bid must exceed the previous one by. */
+export const MIN_BID_INCREMENT = 100;
 
 const CARDS_BY_ID: ReadonlyMap<string, Card> = new Map(ALL_CARDS.map((c) => [c.id, c]));
 
@@ -66,32 +73,61 @@ function diceTotal(state: GameState): number {
   return state.dice ? state.dice[0] + state.dice[1] : 0;
 }
 
-// ---------- money ----------
-
-/** Adds cash to a player (the bank pays). */
-function credit(state: GameState, playerId: string, amount: number): GameState {
-  const player = getPlayer(state, playerId);
-  return updatePlayer(state, playerId, { cash: player.cash + amount });
+function solventPlayers(state: GameState): readonly Player[] {
+  return state.players.filter((p) => !p.bankrupt);
 }
 
-/**
- * Makes the current player pay. If they cannot cover it, the game enters
- * `awaitingPayment` so they can sell or mortgage first (or go bankrupt).
- */
-function charge(state: GameState, amount: number, to: Creditor, reason: string): GameState {
-  const player = currentPlayer(state);
-  if (amount <= 0) return state;
-  if (player.cash < amount) {
-    const next = log(state, `${player.name} no tiene ${pesos(amount)} para ${reason}; tiene que vender o hipotecar.`);
-    return setPhase(next, { type: "awaitingPayment", amount, to, reason });
-  }
-  return transfer(state, player.id, amount, to, reason);
+// ---------- money ----------
+
+/** The bank pays a player. Tracked per turn so a third doubles can claw it back. */
+function bankPays(state: GameState, playerId: string, amount: number): GameState {
+  const player = getPlayer(state, playerId);
+  return updatePlayer(state, playerId, { cash: player.cash + amount, bankIncomeThisTurn: player.bankIncomeThisTurn + amount });
 }
 
 function transfer(state: GameState, fromId: string, amount: number, to: Creditor, reason: string): GameState {
-  let next = updatePlayer(state, fromId, { cash: getPlayer(state, fromId).cash - amount });
-  if (to.type === "player") next = credit(next, to.playerId, amount);
-  return log(next, `${getPlayer(state, fromId).name} paga ${pesos(amount)} a ${creditorName(state, to)} (${reason}).`, fromId);
+  const from = getPlayer(state, fromId);
+  let next = updatePlayer(state, fromId, { cash: from.cash - amount });
+  if (to.type === "player") {
+    const creditor = getPlayer(next, to.playerId);
+    next = updatePlayer(next, to.playerId, { cash: creditor.cash + amount });
+  }
+  return log(next, `${from.name} paga ${pesos(amount)} a ${creditorName(state, to)} (${reason}).`, fromId);
+}
+
+/**
+ * Makes a player pay. If they cannot cover it the debt is queued; the game
+ * will stop at `awaitingPayment` so they can sell or mortgage (or go bust).
+ */
+function charge(state: GameState, debtorId: string, amount: number, to: Creditor, reason: string): GameState {
+  if (amount <= 0) return state;
+  const debtor = getPlayer(state, debtorId);
+  if (debtor.cash >= amount) return transfer(state, debtorId, amount, to, reason);
+  const debt: Debt = { debtorId, amount, to, reason };
+  const next = log(state, `${debtor.name} no tiene ${pesos(amount)} para ${reason}; tiene que vender o hipotecar.`, debtorId);
+  return { ...next, pendingDebts: [...next.pendingDebts, debt] };
+}
+
+// ---------- turn flow ----------
+
+/** Decides what comes after the current move is fully resolved. */
+function finishMove(state: GameState): GameState {
+  const player = currentPlayer(state);
+  if (player.bankrupt) return setPhase(state, { type: "turnEnd" });
+  if (state.rollAgain && !player.inJail) return setPhase(state, { type: "awaitingRoll" });
+  return setPhase(state, { type: "turnEnd" });
+}
+
+/** Central scheduler: debts first, then auctions, then the move goes on. */
+function continueTurn(state: GameState): GameState {
+  const [debt] = state.pendingDebts;
+  if (debt) {
+    return setPhase(state, { type: "awaitingPayment", debtorId: debt.debtorId, amount: debt.amount, to: debt.to, reason: debt.reason });
+  }
+  if (state.phase.type === "auction") return state;
+  const [deedId, ...rest] = state.pendingAuctions;
+  if (deedId) return startAuction({ ...state, pendingAuctions: rest }, deedId);
+  return finishMove(state);
 }
 
 // ---------- movement ----------
@@ -108,7 +144,7 @@ function moveBy(state: GameState, steps: number): GameState {
   const position = ((player.position + steps) % BOARD_SIZE + BOARD_SIZE) % BOARD_SIZE;
   let next = setPosition(state, player.id, position, steps >= 0 ? "forward" : "backward");
   if (crossings > 0) {
-    next = credit(next, player.id, SALIDA_BONUS * crossings);
+    next = bankPays(next, player.id, SALIDA_BONUS * crossings);
     next = log(next, `${player.name} pasa por la Salida y cobra ${pesos(SALIDA_BONUS * crossings)}.`);
   }
   return next;
@@ -129,14 +165,6 @@ function sendToJail(state: GameState, why: string): GameState {
   return { ...next, rollAgain: false };
 }
 
-/** Decides what comes after the current move is fully resolved. */
-function finishMove(state: GameState): GameState {
-  const player = currentPlayer(state);
-  if (player.bankrupt) return setPhase(state, { type: "turnEnd" });
-  if (state.rollAgain && !player.inJail) return setPhase(state, { type: "awaitingRoll" });
-  return setPhase(state, { type: "turnEnd" });
-}
-
 // ---------- landing ----------
 
 function resolveLanding(state: GameState): GameState {
@@ -147,15 +175,15 @@ function resolveLanding(state: GameState): GameState {
     case "comisaria":
     case "descanso":
     case "libreEstacionamiento":
-      return finishMove(log(state, `${player.name} cae en ${square.name}.`));
+      return continueTurn(log(state, `${player.name} cae en ${square.name}.`));
     case "marchePreso":
-      return finishMove(sendToJail(state, "cayó en Marche preso"));
+      return continueTurn(sendToJail(state, "cayó en Marche preso"));
     case "impuesto":
-      return finishMoveAfterCharge(charge(log(state, `${player.name} cae en ${square.name}.`), -square.amount, { type: "bank" }, square.name.toLowerCase()));
+      return continueTurn(charge(log(state, `${player.name} cae en ${square.name}.`), player.id, -square.amount, { type: "bank" }, square.name.toLowerCase()));
     case "premio": {
-      let next = credit(state, player.id, square.amount);
+      let next = bankPays(state, player.id, square.amount);
       next = log(next, `${player.name} cae en ${square.name} y cobra ${pesos(square.amount)}.`);
-      return finishMove(next);
+      return continueTurn(next);
     }
     case "suerte":
     case "destino":
@@ -165,11 +193,6 @@ function resolveLanding(state: GameState): GameState {
     case "compania":
       return resolveDeedLanding(state, square.deedId);
   }
-}
-
-/** After `charge`, continue the move unless we are now waiting for the player to raise cash. */
-function finishMoveAfterCharge(state: GameState): GameState {
-  return state.phase.type === "awaitingPayment" ? state : finishMove(state);
 }
 
 function resolveDeedLanding(state: GameState, deedId: DeedId): GameState {
@@ -182,16 +205,22 @@ function resolveDeedLanding(state: GameState, deedId: DeedId): GameState {
     return setPhase(next, { type: "awaitingBuyDecision", deedId });
   }
   if (holding.ownerId === player.id) {
-    return finishMove(log(state, `${player.name} cae en ${name}, que es suyo.`));
+    return continueTurn(log(state, `${player.name} cae en ${name}, que es suyo.`));
   }
   const owner = getPlayer(state, holding.ownerId);
   const rent = rentFor(state, deedId, player.id, diceTotal(state));
   if (rent === 0) {
     const why = holding.mortgaged ? "está hipotecada" : owner.inJail ? `${owner.name} está preso y no cobra` : "no corresponde alquiler";
-    return finishMove(log(state, `${player.name} cae en ${name} de ${owner.name}: ${why}.`));
+    return continueTurn(log(state, `${player.name} cae en ${name} de ${owner.name}: ${why}.`));
   }
-  const next = log(state, `${player.name} cae en ${name} de ${owner.name}.`);
-  return finishMoveAfterCharge(charge(next, rent, { type: "player", playerId: owner.id }, `alquiler de ${name}`));
+  let next = log(state, `${player.name} cae en ${name} de ${owner.name}.`);
+  let reason = `alquiler de ${name}`;
+  if (deed.kind === "compania" && state.dice) {
+    // Company rent depends on the dice that brought the visitor here, so spell it out.
+    reason = `alquiler de ${name}: dados ${state.dice[0]}+${state.dice[1]} = ${diceTotal(state)} × ${rent / diceTotal(state)}`;
+  }
+  next = charge(next, player.id, rent, { type: "player", playerId: owner.id }, reason);
+  return continueTurn(next);
 }
 
 // ---------- cards ----------
@@ -215,33 +244,32 @@ function applyCard(state: GameState, card: Card): GameState {
   const effect = card.effect;
   switch (effect.type) {
     case "collect":
-      return finishMove(credit(state, player.id, effect.amount));
+      return continueTurn(bankPays(state, player.id, effect.amount));
     case "pay":
-      return finishMoveAfterCharge(charge(state, effect.amount, { type: "bank" }, "la tarjeta"));
+      return continueTurn(charge(state, player.id, effect.amount, { type: "bank" }, "la tarjeta"));
     case "collectFromEachPlayer": {
       let next = state;
       for (const other of state.players) {
         if (other.id === player.id || other.bankrupt) continue;
-        const paid = Math.min(other.cash, effect.amount);
-        next = transfer(next, other.id, paid, { type: "player", playerId: player.id }, "regalo de cumpleaños");
+        next = charge(next, other.id, effect.amount, { type: "player", playerId: player.id }, `el cumpleaños de ${player.name}`);
       }
-      return finishMove(next);
+      return continueTurn(next);
     }
     case "moveTo":
       return resolveLanding(moveTo(state, effect.square, effect.collectSalida, effect.direction));
     case "moveBy":
       return resolveLanding(moveBy(state, effect.steps));
     case "goToJail":
-      return finishMove(sendToJail(state, "por la tarjeta"));
+      return continueTurn(sendToJail(state, "por la tarjeta"));
     case "getOutOfJail": {
       const next = updatePlayer(state, player.id, { getOutOfJailCards: player.getOutOfJailCards + 1 });
-      return finishMove(log(next, `${player.name} se guarda la tarjeta para salir de la Comisaría.`));
+      return continueTurn(log(next, `${player.name} se guarda la tarjeta para salir de la Comisaría.`));
     }
     case "payPerBuilding": {
       const { chacras, estancias } = buildingCount(state, player.id);
       const amount = chacras * effect.perChacra + estancias * effect.perEstancia;
-      if (amount === 0) return finishMove(log(state, `${player.name} no tiene construcciones; no paga nada.`));
-      return finishMoveAfterCharge(charge(state, amount, { type: "bank" }, `${chacras} chacras y ${estancias} estancias`));
+      if (amount === 0) return continueTurn(log(state, `${player.name} no tiene construcciones; no paga nada.`));
+      return continueTurn(charge(state, player.id, amount, { type: "bank" }, `${chacras} chacras y ${estancias} estancias`));
     }
     case "payOrDraw":
       return setPhase(state, { type: "awaitingPayOrDraw", amount: effect.amount, deck: effect.deck });
@@ -279,7 +307,14 @@ export function roll(state: GameState, random: () => number = Math.random, force
     const doublesThisTurn = player.doublesThisTurn + 1;
     next = updatePlayer(next, player.id, { doublesThisTurn });
     if (doublesThisTurn >= DOUBLES_TO_JAIL) {
-      return setPhase(sendToJail(next, "tres dobles seguidos"), { type: "turnEnd" });
+      next = sendToJail(next, "tres dobles seguidos");
+      // Rulebook: everything collected from the bank this turn goes back.
+      const owed = getPlayer(next, player.id).bankIncomeThisTurn;
+      if (owed > 0) {
+        next = log(next, `${player.name} tiene que devolver los ${pesos(owed)} que cobró del Banco en este turno.`);
+        next = charge(next, player.id, owed, { type: "bank" }, "devolución por tres dobles seguidos");
+      }
+      return continueTurn(next);
     }
     next = { ...next, rollAgain: true };
   }
@@ -295,19 +330,20 @@ export function buy(state: GameState): GameState {
   let next = updatePlayer(state, player.id, { cash: player.cash - deed.price });
   next = setHolding(next, deedId, { ownerId: player.id, chacras: 0, estancia: false, mortgaged: false });
   next = log(next, `${player.name} compra ${deedName(deed)} por ${pesos(deed.price)}.`);
-  return finishMove(next);
+  return continueTurn(next);
 }
 
-/** Leaves the deed with the bank. */
+/** Declines to buy: the bank auctions the deed to everyone, decliner included. */
 export function decline(state: GameState): GameState {
   const { deedId } = expectPhase(state, "awaitingBuyDecision");
-  return finishMove(log(state, `${currentPlayer(state).name} no compra ${deedName(getDeed(deedId))}.`));
+  const next = log(state, `${currentPlayer(state).name} no compra ${deedName(getDeed(deedId))}; sale a remate.`);
+  return startAuction(next, deedId);
 }
 
 /** For "Pague $200 o levante una tarjeta de Suerte": pay. */
 export function choosePay(state: GameState): GameState {
   const { amount } = expectPhase(state, "awaitingPayOrDraw");
-  return finishMoveAfterCharge(charge(state, amount, { type: "bank" }, "la tarjeta"));
+  return continueTurn(charge(state, currentPlayer(state).id, amount, { type: "bank" }, "la tarjeta"));
 }
 
 /** For "Pague $200 o levante una tarjeta de Suerte": draw instead. */
@@ -341,7 +377,7 @@ export function useJailCard(state: GameState): GameState {
 /** Ends the turn and hands the dice to the next solvent player. */
 export function endTurn(state: GameState): GameState {
   expectPhase(state, "turnEnd");
-  const solvent = state.players.filter((p) => !p.bankrupt);
+  const solvent = solventPlayers(state);
   const winner = solvent.length === 1 ? solvent[0] : undefined;
   if (winner) {
     return setPhase(log(state, `¡${winner.name} se queda con todo el campo!`), { type: "gameOver", winnerId: winner.id });
@@ -352,21 +388,102 @@ export function endTurn(state: GameState): GameState {
     if (!state.players[index]?.bankrupt) break;
   }
   const current = currentPlayer(state);
-  let next = updatePlayer(state, current.id, { doublesThisTurn: 0 });
+  let next = updatePlayer(state, current.id, { doublesThisTurn: 0, bankIncomeThisTurn: 0 });
   next = { ...next, currentPlayerIndex: index, turn: state.turn + 1, lastCard: null, rollAgain: false };
-  const nextPlayer = currentPlayer(next);
-  return setPhase(next, nextPlayer.inJail ? { type: "awaitingJailDecision" } : { type: "awaitingRoll" });
+  const nextPlayer = updatePlayer(next, currentPlayer(next).id, { bankIncomeThisTurn: 0 });
+  return setPhase(nextPlayer, currentPlayer(nextPlayer).inJail ? { type: "awaitingJailDecision" } : { type: "awaitingRoll" });
 }
 
-// ---------- building & mortgages (allowed in the player's own turn, any phase but gameOver) ----------
+// ---------- auctions ----------
 
-function expectOwnTurnFreePhase(state: GameState): Player {
+function startAuction(state: GameState, deedId: DeedId): GameState {
+  const current = currentPlayer(state);
+  const solvent = solventPlayers(state);
+  const startIndex = solvent.findIndex((p) => p.id === current.id);
+  // Bidding starts with the player after the one on turn and goes around.
+  const order = solvent.map((_, i) => solvent[(startIndex + 1 + i) % solvent.length]).filter((p): p is Player => p !== undefined);
+  const first = order[0];
+  if (!first) throw new Error("No hay nadie para rematar");
+  const auction: Auction = { deedId, highestBid: 0, highestBidderId: null, bidders: order.map((p) => p.id), turnBidderId: first.id };
+  const next = log(state, `Remate de ${deedName(getDeed(deedId))}. Empieza ${first.name}.`);
+  return setPhase(next, { type: "auction", auction });
+}
+
+/** Next bidder after `afterId` who is not already the highest bidder, or null if nobody is left to outbid. */
+function nextBidder(auction: Auction, afterId: string): string | null {
+  const { bidders, highestBidderId } = auction;
+  const start = bidders.indexOf(afterId);
+  for (let i = 1; i <= bidders.length; i++) {
+    const candidate = bidders[(start + i) % bidders.length];
+    if (candidate !== undefined && candidate !== highestBidderId) return candidate;
+  }
+  return null;
+}
+
+function finishAuction(state: GameState, auction: Auction): GameState {
+  const deed = getDeed(auction.deedId);
+  let next: GameState = setPhase(state, { type: "turnEnd" });
+  if (auction.highestBidderId === null) {
+    next = log(next, `Nadie ofertó por ${deedName(deed)}; queda en el Banco.`);
+    return continueTurn(next);
+  }
+  const winner = getPlayer(next, auction.highestBidderId);
+  next = updatePlayer(next, winner.id, { cash: winner.cash - auction.highestBid });
+  next = setHolding(next, auction.deedId, { ownerId: winner.id, chacras: 0, estancia: false, mortgaged: false });
+  next = log(next, `${winner.name} se lleva ${deedName(deed)} en el remate por ${pesos(auction.highestBid)}.`, winner.id);
+  return continueTurn(next);
+}
+
+function advanceAuction(state: GameState, auction: Auction, afterId: string): GameState {
+  const next = nextBidder(auction, afterId);
+  if (next === null) return finishAuction(state, auction);
+  return setPhase(state, { type: "auction", auction: { ...auction, turnBidderId: next } });
+}
+
+/** The bidder on turn raises the price to `amount`. */
+export function bid(state: GameState, amount: number): GameState {
+  const { auction } = expectPhase(state, "auction");
+  const bidder = getPlayer(state, auction.turnBidderId);
+  if (!Number.isInteger(amount)) throw new Error("La oferta tiene que ser un número entero");
+  if (amount < auction.highestBid + MIN_BID_INCREMENT) throw new Error(`La oferta mínima es ${pesos(auction.highestBid + MIN_BID_INCREMENT)}`);
+  if (amount > bidder.cash) throw new Error("No te alcanza la plata para esa oferta");
+  const next = log(state, `${bidder.name} ofrece ${pesos(amount)} por ${deedName(getDeed(auction.deedId))}.`, bidder.id);
+  return advanceAuction(next, { ...auction, highestBid: amount, highestBidderId: bidder.id }, bidder.id);
+}
+
+/** The bidder on turn drops out of the auction. */
+export function passBid(state: GameState): GameState {
+  const { auction } = expectPhase(state, "auction");
+  const bidder = getPlayer(state, auction.turnBidderId);
+  const remaining = auction.bidders.filter((id) => id !== bidder.id);
+  const next = log(state, `${bidder.name} pasa.`, bidder.id);
+  const updated: Auction = { ...auction, bidders: remaining };
+  if (remaining.length === 0) return finishAuction(next, updated);
+  // Keep `afterId` as the leaver so the rotation continues from their old slot.
+  const nextId = nextBidderAfterLeaving(updated, auction.bidders, bidder.id);
+  if (nextId === null) return finishAuction(next, updated);
+  return setPhase(next, { type: "auction", auction: { ...updated, turnBidderId: nextId } });
+}
+
+function nextBidderAfterLeaving(auction: Auction, previousOrder: readonly string[], leaverId: string): string | null {
+  const start = previousOrder.indexOf(leaverId);
+  for (let i = 1; i <= previousOrder.length; i++) {
+    const candidate = previousOrder[(start + i) % previousOrder.length];
+    if (candidate !== undefined && candidate !== leaverId && auction.bidders.includes(candidate) && candidate !== auction.highestBidderId) return candidate;
+  }
+  return null;
+}
+
+// ---------- building & mortgages (own turn, or while settling a debt) ----------
+
+function actor(state: GameState): Player {
   if (state.phase.type === "gameOver") throw new Error("La partida terminó");
-  return currentPlayer(state);
+  if (state.phase.type === "auction") throw new Error("No durante el remate");
+  return activePlayer(state);
 }
 
 export function buildChacra(state: GameState, deedId: DeedId): GameState {
-  const player = expectOwnTurnFreePhase(state);
+  const player = actor(state);
   const check = canBuildChacra(state, player, deedId);
   if (!check.ok) throw new Error(check.reason);
   const deed = getDeed(deedId);
@@ -375,11 +492,11 @@ export function buildChacra(state: GameState, deedId: DeedId): GameState {
   let next = updatePlayer(state, player.id, { cash: player.cash - deed.chacraCost });
   next = setHolding(next, deedId, { ...holding, chacras: holding.chacras + 1 });
   next = { ...next, bank: { ...next.bank, chacras: next.bank.chacras - 1 } };
-  return log(next, `${player.name} construye una chacra en ${deedName(deed)} (${pesos(deed.chacraCost)}).`);
+  return log(next, `${player.name} construye una chacra en ${deedName(deed)} (${pesos(deed.chacraCost)}).`, player.id);
 }
 
 export function buildEstancia(state: GameState, deedId: DeedId): GameState {
-  const player = expectOwnTurnFreePhase(state);
+  const player = actor(state);
   const check = canBuildEstancia(state, player, deedId);
   if (!check.ok) throw new Error(check.reason);
   const deed = getDeed(deedId);
@@ -388,11 +505,11 @@ export function buildEstancia(state: GameState, deedId: DeedId): GameState {
   let next = updatePlayer(state, player.id, { cash: player.cash - deed.estanciaCost });
   next = setHolding(next, deedId, { ...holding, chacras: 0, estancia: true });
   next = { ...next, bank: { chacras: next.bank.chacras + MAX_CHACRAS_PER_CAMPO, estancias: next.bank.estancias - 1 } };
-  return log(next, `${player.name} levanta una estancia en ${deedName(deed)} (${pesos(deed.estanciaCost)}).`);
+  return log(next, `${player.name} levanta una estancia en ${deedName(deed)} (${pesos(deed.estanciaCost)}).`, player.id);
 }
 
 export function sellBuilding(state: GameState, deedId: DeedId): GameState {
-  const player = expectOwnTurnFreePhase(state);
+  const player = actor(state);
   const check = canSellBuilding(state, player, deedId);
   if (!check.ok) throw new Error(check.reason);
   const deed = getDeed(deedId);
@@ -403,15 +520,15 @@ export function sellBuilding(state: GameState, deedId: DeedId): GameState {
   if (holding.estancia) {
     next = setHolding(next, deedId, { ...holding, estancia: false, chacras: MAX_CHACRAS_PER_CAMPO });
     next = { ...next, bank: { chacras: next.bank.chacras - MAX_CHACRAS_PER_CAMPO, estancias: next.bank.estancias + 1 } };
-    return log(next, `${player.name} vende la estancia de ${deedName(deed)} al Banco por ${pesos(value)}.`);
+    return log(next, `${player.name} vende la estancia de ${deedName(deed)} al Banco por ${pesos(value)}.`, player.id);
   }
   next = setHolding(next, deedId, { ...holding, chacras: holding.chacras - 1 });
   next = { ...next, bank: { ...next.bank, chacras: next.bank.chacras + 1 } };
-  return log(next, `${player.name} vende una chacra de ${deedName(deed)} al Banco por ${pesos(value)}.`);
+  return log(next, `${player.name} vende una chacra de ${deedName(deed)} al Banco por ${pesos(value)}.`, player.id);
 }
 
 export function mortgage(state: GameState, deedId: DeedId): GameState {
-  const player = expectOwnTurnFreePhase(state);
+  const player = actor(state);
   const check = canMortgage(state, player, deedId);
   if (!check.ok) throw new Error(check.reason);
   const holding = state.holdings[deedId];
@@ -419,11 +536,11 @@ export function mortgage(state: GameState, deedId: DeedId): GameState {
   const proceeds = mortgageProceeds(deedId);
   let next = updatePlayer(state, player.id, { cash: player.cash + proceeds });
   next = setHolding(next, deedId, { ...holding, mortgaged: true });
-  return log(next, `${player.name} hipoteca ${deedName(getDeed(deedId))} y recibe ${pesos(proceeds)}.`);
+  return log(next, `${player.name} hipoteca ${deedName(getDeed(deedId))} y recibe ${pesos(proceeds)}.`, player.id);
 }
 
 export function unmortgage(state: GameState, deedId: DeedId): GameState {
-  const player = expectOwnTurnFreePhase(state);
+  const player = actor(state);
   const check = canUnmortgage(state, player, deedId);
   if (!check.ok) throw new Error(check.reason);
   const holding = state.holdings[deedId];
@@ -431,32 +548,36 @@ export function unmortgage(state: GameState, deedId: DeedId): GameState {
   const cost = unmortgageCost(deedId);
   let next = updatePlayer(state, player.id, { cash: player.cash - cost });
   next = setHolding(next, deedId, { ...holding, mortgaged: false });
-  return log(next, `${player.name} levanta la hipoteca de ${deedName(getDeed(deedId))} por ${pesos(cost)}.`);
+  return log(next, `${player.name} levanta la hipoteca de ${deedName(getDeed(deedId))} por ${pesos(cost)}.`, player.id);
 }
 
 // ---------- debts ----------
 
-/** Pays the pending debt once the player has raised enough cash. */
+/** Pays the pending debt once the debtor has raised enough cash. */
 export function settlePayment(state: GameState): GameState {
-  const { amount, to, reason } = expectPhase(state, "awaitingPayment");
-  const player = currentPlayer(state);
-  if (player.cash < amount) throw new Error(`Todavía te faltan ${pesos(amount - player.cash)}`);
-  return finishMove(transfer(state, player.id, amount, to, reason));
+  const { debtorId, amount, to, reason } = expectPhase(state, "awaitingPayment");
+  const debtor = getPlayer(state, debtorId);
+  if (debtor.cash < amount) throw new Error(`Todavía te faltan ${pesos(amount - debtor.cash)}`);
+  let next = transfer(state, debtorId, amount, to, reason);
+  next = { ...next, pendingDebts: next.pendingDebts.slice(1) };
+  return continueTurn(next);
 }
 
 /**
- * Gives up: everything goes to the creditor (or back to the bank). Only
- * allowed once there is nothing left to sell or mortgage.
+ * The debtor gives up: everything goes to the creditor, or back to the bank
+ * (which then auctions the deeds). Only allowed once there is nothing left
+ * to sell or mortgage.
  */
 export function declareBankruptcy(state: GameState): GameState {
-  const { to, amount } = expectPhase(state, "awaitingPayment");
-  const player = currentPlayer(state);
+  const { debtorId, to, amount } = expectPhase(state, "awaitingPayment");
+  const player = getPlayer(state, debtorId);
   if (player.cash >= amount) throw new Error("Te alcanza para pagar");
   if (canRaiseCash(state, player.id)) throw new Error("Todavía podés vender o hipotecar");
 
   let next = state;
   let cashToCreditor = player.cash;
   const holdings = { ...state.holdings };
+  const toBank: DeedId[] = [];
   let { chacras, estancias } = state.bank;
   for (const [id, holding] of Object.entries(state.holdings) as [DeedId, Holding][]) {
     if (holding.ownerId !== player.id) continue;
@@ -468,7 +589,10 @@ export function declareBankruptcy(state: GameState): GameState {
       else chacras += holding.chacras;
     }
     if (to.type === "player") holdings[id] = { ownerId: to.playerId, chacras: 0, estancia: false, mortgaged: holding.mortgaged };
-    else delete holdings[id];
+    else {
+      delete holdings[id];
+      toBank.push(id);
+    }
   }
   next = { ...next, holdings, bank: { chacras, estancias } };
   next = updatePlayer(next, player.id, { cash: 0, bankrupt: true, getOutOfJailCards: 0 });
@@ -479,6 +603,13 @@ export function declareBankruptcy(state: GameState): GameState {
       getOutOfJailCards: creditor.getOutOfJailCards + player.getOutOfJailCards,
     });
   }
-  next = log(next, `${player.name} quiebra. Sus propiedades pasan a ${creditorName(state, to)}.`);
-  return setPhase(next, { type: "turnEnd" });
+  next = log(next, `${player.name} quiebra. Sus propiedades pasan a ${creditorName(state, to)}.`, player.id);
+  // A bankrupt player's other debts die with them.
+  next = { ...next, pendingDebts: next.pendingDebts.filter((d) => d.debtorId !== player.id) };
+  if (toBank.length > 0) {
+    next = log(next, `El Banco remata ${toBank.length} propiedad${toBank.length > 1 ? "es" : ""}.`, player.id);
+    next = { ...next, pendingAuctions: [...next.pendingAuctions, ...toBank] };
+  }
+  if (solventPlayers(next).length <= 1) return setPhase(next, { type: "turnEnd" });
+  return continueTurn(next);
 }

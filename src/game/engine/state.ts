@@ -15,6 +15,8 @@ export interface Player {
   readonly getOutOfJailCards: number;
   /** Consecutive doubles rolled this turn. */
   readonly doublesThisTurn: number;
+  /** Cash received from the bank this turn; returned if the turn ends with a third doubles. */
+  readonly bankIncomeThisTurn: number;
   readonly bankrupt: boolean;
 }
 
@@ -28,6 +30,25 @@ export interface Holding {
 
 export type Creditor = { readonly type: "bank" } | { readonly type: "player"; readonly playerId: string };
 
+/** Money someone owes and could not pay on the spot. */
+export interface Debt {
+  readonly debtorId: string;
+  readonly amount: number;
+  readonly to: Creditor;
+  readonly reason: string;
+}
+
+/** A deed being auctioned by the bank. Bidders take turns; the highest bid wins when nobody else stays in. */
+export interface Auction {
+  readonly deedId: DeedId;
+  readonly highestBid: number;
+  readonly highestBidderId: string | null;
+  /** Players still in the auction, in bidding order. */
+  readonly bidders: readonly string[];
+  /** Whose turn it is to bid or pass. */
+  readonly turnBidderId: string;
+}
+
 /**
  * What the game is waiting for. Every phase names the player who must act via
  * `currentPlayerIndex`; there is never more than one pending decision.
@@ -39,10 +60,13 @@ export type Phase =
   | { readonly type: "awaitingPayOrDraw"; readonly amount: number; readonly deck: Deck }
   | {
       readonly type: "awaitingPayment";
+      /** Who must pay; not necessarily the player on turn (e.g. birthday cards). */
+      readonly debtorId: string;
       readonly amount: number;
       readonly to: Creditor;
       readonly reason: string;
     }
+  | { readonly type: "auction"; readonly auction: Auction }
   | { readonly type: "turnEnd" }
   | { readonly type: "gameOver"; readonly winnerId: string };
 
@@ -69,6 +93,10 @@ export interface GameState {
   /** Card ids, top of the deck first. Cards held by players are absent. */
   readonly decks: { readonly suerte: readonly string[]; readonly destino: readonly string[] };
   readonly bank: { readonly chacras: number; readonly estancias: number };
+  /** Debts waiting to be settled, oldest first; the head is what `awaitingPayment` shows. */
+  readonly pendingDebts: readonly Debt[];
+  /** Deeds the bank still has to auction this turn (after a bankruptcy to the bank). */
+  readonly pendingAuctions: readonly DeedId[];
   readonly phase: Phase;
   readonly dice: readonly [number, number] | null;
   /** Card drawn on the current move, so the UI can show it. */
@@ -114,10 +142,13 @@ export function createGame({ players, startingCash = STARTING_CASH, random = Mat
       jailTurns: 0,
       getOutOfJailCards: 0,
       doublesThisTurn: 0,
+      bankIncomeThisTurn: 0,
       bankrupt: false,
     })),
     currentPlayerIndex: 0,
     holdings: {},
+    pendingDebts: [],
+    pendingAuctions: [],
     decks: {
       suerte: shuffledDeck("suerte", random).map((c) => c.id),
       destino: shuffledDeck("destino", random).map((c) => c.id),
@@ -144,4 +175,19 @@ export function getPlayer(state: GameState, id: string): Player {
   const player = state.players.find((p) => p.id === id);
   if (!player) throw new Error(`Unknown player ${id}`);
   return player;
+}
+
+/**
+ * The player who has to act right now: the debtor while a debt is being
+ * settled, the bidder on turn during an auction, otherwise the player on turn.
+ */
+export function activePlayer(state: GameState): Player {
+  switch (state.phase.type) {
+    case "awaitingPayment":
+      return getPlayer(state, state.phase.debtorId);
+    case "auction":
+      return getPlayer(state, state.phase.auction.turnBidderId);
+    default:
+      return currentPlayer(state);
+  }
 }
