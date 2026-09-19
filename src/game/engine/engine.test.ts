@@ -5,6 +5,7 @@ import type { GameState, Holding, Player } from "./state";
 import { activePlayer, createGame, currentPlayer, getPlayer } from "./state";
 import {
   MIN_BID_INCREMENT,
+  acknowledgeCard,
   bid,
   buildChacra,
   buildEstancia,
@@ -15,9 +16,11 @@ import {
   decline,
   endTurn,
   mortgage,
+  movePawn,
   passBid,
   payBail,
   roll,
+  rollDice,
   sellBuilding,
   settlePayment,
   unmortgage,
@@ -328,7 +331,9 @@ describe("cards", () => {
     const paid = choosePay(state);
     expect(currentPlayer(paid).cash).toBe(STARTING_CASH - 200);
     expect(paid.phase).toEqual({ type: "turnEnd" });
-    const drew = chooseDraw(state);
+    let drew = chooseDraw(state);
+    expect(drew.phase).toMatchObject({ type: "awaitingCardAck", card: { id: "suerte-14" } });
+    drew = acknowledgeCard(drew);
     expect(currentPlayer(drew).cash).toBe(STARTING_CASH + 10_000);
   });
 });
@@ -757,14 +762,33 @@ describe("visible company rent", () => {
 });
 
 describe("moves per action", () => {
-  it("records both legs when a card moves you again", () => {
+  it("splits a turn into roll, move and card steps, each with its own moves and events", () => {
     let state = withDecks(game(), ["suerte-04"], ["destino-01"]);
-    state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // 15 Suerte -> back 3 = 12
-    expect(state.moves).toEqual([
-      { playerId: "ana", from: 12, to: 15, kind: "forward" },
-      { playerId: "ana", from: 15, to: 12, kind: "backward" },
-    ]);
+    state = rollDice(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]);
+    expect(state.phase).toEqual({ type: "awaitingMove" });
+    expect(state.moves).toEqual([]);
+    expect(state.events.map((e) => e.type)).toEqual(["log"]);
+    state = movePawn(state); // 15 Suerte
+    expect(state.moves).toEqual([{ playerId: "ana", from: 12, to: 15, kind: "forward" }]);
+    expect(state.phase).toMatchObject({ type: "awaitingCardAck", card: { id: "suerte-04" } });
+    expect(state.events.map((e) => e.type)).toEqual(["move", "log", "card"]);
+    state = acknowledgeCard(state); // back 3 = 12, FC Belgrano free
+    expect(state.moves).toEqual([{ playerId: "ana", from: 15, to: 12, kind: "backward" }]);
     expect(currentPlayer(state).position).toBe(12);
+    expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "fc-belgrano" });
+  });
+
+  it("emits a transfer and a deed event on purchase", () => {
+    let state = roll(game(), undefined, [1, 2]);
+    state = buy(state);
+    expect(state.events.map((e) => e.type)).toEqual(["transfer", "deed"]);
+    expect(state.events[0]).toMatchObject({ type: "transfer", from: { type: "player", playerId: "ana" }, to: { type: "bank" }, amount: 1_200 });
+    expect(state.events[1]).toMatchObject({ type: "deed", deedId: "formosa-norte", to: { type: "player", playerId: "ana" } });
+  });
+
+  it("emits the Salida bonus as a transfer from the bank", () => {
+    const state = roll(withPlayer(game(), "ana", { position: 40 }), undefined, [1, 2]);
+    expect(state.events).toContainEqual(expect.objectContaining({ type: "transfer", from: { type: "bank" }, amount: 5_000 }));
   });
 
   it("clears the list on the next action", () => {

@@ -56,6 +56,10 @@ export interface Auction {
 export type Phase =
   | { readonly type: "awaitingRoll" }
   | { readonly type: "awaitingJailDecision" }
+  /** Dice are on the table; the player still has to move the pawn. */
+  | { readonly type: "awaitingMove" }
+  /** A Suerte/Destino card is face up; its effect applies once acknowledged. */
+  | { readonly type: "awaitingCardAck"; readonly card: Card }
   | { readonly type: "awaitingBuyDecision"; readonly deedId: DeedId }
   | { readonly type: "awaitingPayOrDraw"; readonly amount: number; readonly deck: Deck }
   | {
@@ -86,6 +90,25 @@ export interface LogEntry {
   readonly text: string;
 }
 
+/** Someone who can hold money: a player or the bank. */
+export type Party = { readonly type: "bank" } | { readonly type: "player"; readonly playerId: string };
+
+/**
+ * What an action did, step by step, so the UI can replay it: a banner per
+ * event plus the matching animation (bills flying, a card sliding, a chacra
+ * dropping on a tile). `text` is the same line that goes into the log.
+ */
+export type GameEvent =
+  | { readonly type: "log"; readonly playerId: string; readonly text: string }
+  | { readonly type: "move"; readonly playerId: string; readonly from: number; readonly to: number; readonly kind: MoveKind; readonly text: string }
+  | { readonly type: "transfer"; readonly from: Party; readonly to: Party; readonly amount: number; readonly text: string }
+  | { readonly type: "deed"; readonly deedId: DeedId; readonly from: Party; readonly to: Party; readonly text: string }
+  | { readonly type: "building"; readonly deedId: DeedId; readonly chacras: number; readonly estancia: boolean; readonly text: string }
+  | { readonly type: "mortgage"; readonly deedId: DeedId; readonly mortgaged: boolean; readonly text: string }
+  | { readonly type: "card"; readonly playerId: string; readonly deck: Deck; readonly cardId: string; readonly text: string }
+  | { readonly type: "jail"; readonly playerId: string; readonly text: string }
+  | { readonly type: "bankrupt"; readonly playerId: string; readonly text: string };
+
 export interface GameState {
   readonly players: readonly Player[];
   readonly currentPlayerIndex: number;
@@ -106,6 +129,8 @@ export interface GameState {
   readonly lastMove: LastMove | null;
   /** Every change of position caused by the latest action, in order (a card can move you twice). */
   readonly moves: readonly LastMove[];
+  /** Everything the latest action did, in order, for the UI to replay. */
+  readonly events: readonly GameEvent[];
   readonly turn: number;
   readonly log: readonly LogEntry[];
 }
@@ -162,6 +187,7 @@ export function createGame({ players, startingCash = STARTING_CASH, random = Mat
     rollAgain: false,
     lastMove: null,
     moves: [],
+    events: [],
     turn: 1,
     log: [],
   };
