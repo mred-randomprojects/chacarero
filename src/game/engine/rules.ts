@@ -1,0 +1,177 @@
+import type { CampoDeed, Deed, DeedId, Province } from "../types";
+import { DEEDS, camposOf, getDeed } from "../deeds";
+import { MAX_CHACRAS_PER_CAMPO, MORTGAGE_INTEREST } from "../constants";
+import type { GameState, Holding, Player } from "./state";
+import { getPlayer } from "./state";
+
+export type RuleCheck = { readonly ok: true } | { readonly ok: false; readonly reason: string };
+
+const OK: RuleCheck = { ok: true };
+function fail(reason: string): { readonly ok: false; readonly reason: string } {
+  return { ok: false, reason };
+}
+
+export function holdingOf(state: GameState, deedId: DeedId): Holding | undefined {
+  return state.holdings[deedId];
+}
+
+/** All deed ids owned by a player, in board order. */
+export function deedsOwnedBy(state: GameState, playerId: string): readonly DeedId[] {
+  return DEEDS.filter((d) => state.holdings[d.id]?.ownerId === playerId).map((d) => d.id);
+}
+
+/** The player owning every zone of a province, if any. */
+export function provinceOwner(state: GameState, province: Province): string | null {
+  const campos = camposOf(province);
+  const first = campos[0];
+  const firstHolding = first ? state.holdings[first.id] : undefined;
+  if (!firstHolding) return null;
+  return campos.every((c) => state.holdings[c.id]?.ownerId === firstHolding.ownerId) ? firstHolding.ownerId : null;
+}
+
+/** Number of chacras on a holding, counting an estancia as a full set for the even-build rule. */
+function buildLevel(holding: Holding | undefined): number {
+  if (!holding) return 0;
+  return holding.estancia ? MAX_CHACRAS_PER_CAMPO + 1 : holding.chacras;
+}
+
+/**
+ * Rent owed by a visitor landing on a deed, or 0 when nobody collects
+ * (unowned, mortgaged, owner in jail, or the visitor is the owner).
+ */
+export function rentFor(state: GameState, deedId: DeedId, visitorId: string, diceTotal: number): number {
+  const holding = state.holdings[deedId];
+  if (!holding || holding.mortgaged || holding.ownerId === visitorId) return 0;
+  const owner = getPlayer(state, holding.ownerId);
+  if (owner.inJail || owner.bankrupt) return 0;
+  const deed = getDeed(deedId);
+  switch (deed.kind) {
+    case "campo": {
+      if (holding.estancia) return deed.rent.estancia;
+      if (holding.chacras > 0) return deed.rent.chacras[holding.chacras - 1] ?? deed.rent.campo;
+      return deed.rent.campo;
+    }
+    case "ferrocarril": {
+      const owned = deedsOwnedBy(state, owner.id).filter((id) => getDeed(id).kind === "ferrocarril").length;
+      return deed.rentByCount[Math.min(owned, 4) - 1] ?? 0;
+    }
+    case "compania": {
+      const owned = deedsOwnedBy(state, owner.id).filter((id) => getDeed(id).kind === "compania").length;
+      return diceTotal * (deed.diceMultiplierByCount[Math.min(owned, 3) - 1] ?? 0);
+    }
+  }
+}
+
+type OwnedCampo =
+  | { readonly ok: true; readonly deed: CampoDeed; readonly holding: Holding }
+  | { readonly ok: false; readonly reason: string };
+
+function ownedCampo(state: GameState, player: Player, deedId: DeedId): OwnedCampo {
+  const deed = getDeed(deedId);
+  if (deed.kind !== "campo") return fail("Solo se construye en campos");
+  const holding = state.holdings[deedId];
+  if (!holding || holding.ownerId !== player.id) return fail("No es tu campo");
+  return { ok: true, deed, holding };
+}
+
+/** Whether `player` may add one chacra to `deedId` right now. */
+export function canBuildChacra(state: GameState, player: Player, deedId: DeedId): RuleCheck {
+  const owned = ownedCampo(state, player, deedId);
+  if (!owned.ok) return owned;
+  const { deed, holding } = owned;
+  if (provinceOwner(state, deed.province) !== player.id) return fail("Necesitás todas las zonas de la provincia");
+  if (holding.estancia) return fail("Ya tiene una estancia");
+  if (holding.chacras >= MAX_CHACRAS_PER_CAMPO) return fail("Ya tiene 4 chacras; construí una estancia");
+  const siblings = camposOf(deed.province);
+  if (siblings.some((c) => state.holdings[c.id]?.mortgaged)) return fail("Hay una zona hipotecada en la provincia");
+  const lowest = Math.min(...siblings.map((c) => buildLevel(state.holdings[c.id])));
+  if (holding.chacras > lowest) return fail("Construí parejo: primero las otras zonas");
+  if (state.bank.chacras <= 0) return fail("El Banco no tiene más chacras");
+  if (player.cash < deed.chacraCost) return fail("No te alcanza la plata");
+  return OK;
+}
+
+/** Whether `player` may replace the 4 chacras on `deedId` with an estancia. */
+export function canBuildEstancia(state: GameState, player: Player, deedId: DeedId): RuleCheck {
+  const owned = ownedCampo(state, player, deedId);
+  if (!owned.ok) return owned;
+  const { deed, holding } = owned;
+  if (holding.estancia) return fail("Ya tiene una estancia");
+  if (holding.chacras < MAX_CHACRAS_PER_CAMPO) return fail("Necesitás 4 chacras primero");
+  const siblings = camposOf(deed.province);
+  const lowest = Math.min(...siblings.map((c) => buildLevel(state.holdings[c.id])));
+  if (lowest < MAX_CHACRAS_PER_CAMPO) return fail("Construí parejo: las otras zonas necesitan 4 chacras");
+  if (state.bank.estancias <= 0) return fail("El Banco no tiene más estancias");
+  if (player.cash < deed.estanciaCost) return fail("No te alcanza la plata");
+  return OK;
+}
+
+/** Whether `player` may sell one building (chacra, or the estancia) back to the bank. */
+export function canSellBuilding(state: GameState, player: Player, deedId: DeedId): RuleCheck {
+  const owned = ownedCampo(state, player, deedId);
+  if (!owned.ok) return owned;
+  const { deed, holding } = owned;
+  if (!holding.estancia && holding.chacras === 0) return fail("No hay nada construido");
+  if (holding.estancia && state.bank.chacras < MAX_CHACRAS_PER_CAMPO) {
+    return fail("El Banco no tiene chacras para reemplazar la estancia");
+  }
+  const siblings = camposOf(deed.province);
+  const highest = Math.max(...siblings.map((c) => buildLevel(state.holdings[c.id])));
+  if (buildLevel(holding) < highest) return fail("Vendé parejo: primero las zonas con más construido");
+  return OK;
+}
+
+/** Cash the bank pays for selling one building on `deedId` (half price). */
+export function sellValue(deed: Deed, holding: Holding): number {
+  if (deed.kind !== "campo") return 0;
+  return (holding.estancia ? deed.estanciaCost : deed.chacraCost) / 2;
+}
+
+export function canMortgage(state: GameState, player: Player, deedId: DeedId): RuleCheck {
+  const holding = state.holdings[deedId];
+  if (!holding || holding.ownerId !== player.id) return fail("No es tu propiedad");
+  if (holding.mortgaged) return fail("Ya está hipotecada");
+  if (holding.chacras > 0 || holding.estancia) return fail("Vendé las construcciones antes de hipotecar");
+  return OK;
+}
+
+export function canUnmortgage(state: GameState, player: Player, deedId: DeedId): RuleCheck {
+  const holding = state.holdings[deedId];
+  if (!holding || holding.ownerId !== player.id) return fail("No es tu propiedad");
+  if (!holding.mortgaged) return fail("No está hipotecada");
+  if (player.cash < unmortgageCost(deedId)) return fail("No te alcanza la plata");
+  return OK;
+}
+
+/** Cash received when mortgaging: the mortgage value minus the bank's 10 % up front. */
+export function mortgageProceeds(deedId: DeedId): number {
+  const { mortgage } = getDeed(deedId);
+  return Math.round(mortgage * (1 - MORTGAGE_INTEREST));
+}
+
+/** Cash paid to lift a mortgage: the mortgage value plus 10 %. */
+export function unmortgageCost(deedId: DeedId): number {
+  const { mortgage } = getDeed(deedId);
+  return Math.round(mortgage * (1 + MORTGAGE_INTEREST));
+}
+
+/** Whether the player still has something to sell or mortgage. */
+export function canRaiseCash(state: GameState, playerId: string): boolean {
+  return deedsOwnedBy(state, playerId).some((id) => {
+    const holding = state.holdings[id];
+    return holding !== undefined && (!holding.mortgaged || holding.chacras > 0 || holding.estancia);
+  });
+}
+
+/** Chacras and estancias a player has on the board. */
+export function buildingCount(state: GameState, playerId: string): { chacras: number; estancias: number } {
+  let chacras = 0;
+  let estancias = 0;
+  for (const id of deedsOwnedBy(state, playerId)) {
+    const holding = state.holdings[id];
+    if (!holding) continue;
+    if (holding.estancia) estancias += 1;
+    else chacras += holding.chacras;
+  }
+  return { chacras, estancias };
+}
