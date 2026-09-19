@@ -14,13 +14,14 @@ export interface TileProps {
   readonly selected: boolean;
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
+  readonly onFocus: (index: number) => void;
 }
 
 /**
  * One square of the ring: a flat polygon with its face drawn on a canvas.
  * Hover/selection are shown by tinting the material's emissive channel.
  */
-export function Tile({ tile, square, deed, y, hovered, selected, onHover, onSelect }: TileProps) {
+export function Tile({ tile, square, deed, y, hovered, selected, onHover, onSelect, onFocus }: TileProps) {
   const geometry = useMemo(() => createTileGeometry(tile, y), [tile, y]);
   const texture = useMemo(() => createTileTexture(tile, square, deed), [tile, square, deed]);
 
@@ -45,6 +46,10 @@ export function Tile({ tile, square, deed, y, hovered, selected, onHover, onSele
       onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         onSelect(square.index);
+      }}
+      onDoubleClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation();
+        onFocus(square.index);
       }}
     >
       <meshStandardMaterial map={texture} emissive={emissive} emissiveIntensity={emissiveIntensity} roughness={0.85} metalness={0} />

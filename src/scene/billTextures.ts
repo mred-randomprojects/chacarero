@@ -19,7 +19,6 @@ export const BILL_COLORS: Readonly<Record<Denomination, string>> = {
 };
 
 const billCache = new Map<Denomination, CanvasTexture>();
-const chipCache = new Map<number, CanvasTexture>();
 
 function make(width: number, height: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement("canvas");
@@ -60,27 +59,5 @@ export function billTexture(value: Denomination): CanvasTexture {
   texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = 8;
   billCache.set(value, texture);
-  return texture;
-}
-
-/** Small round label with a count, placed on top of a stack of bills. */
-export function countChipTexture(count: number): CanvasTexture {
-  const cached = chipCache.get(count);
-  if (cached) return cached;
-  const size = 96;
-  const [canvas, ctx] = make(size, size);
-  ctx.clearRect(0, 0, size, size);
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
-  ctx.fillStyle = "#1d1a17";
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `800 ${count >= 10 ? 44 : 52}px ${TILE_FONT}`;
-  ctx.fillText(`×${count}`, size / 2, size / 2 + 2);
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  chipCache.set(count, texture);
   return texture;
 }

@@ -1,24 +1,27 @@
 import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import type { MoveKind } from "../game";
+import { sfx } from "../audio/sfx";
 import type { HexLayout } from "./hexLayout";
 import { pawnPosition } from "./hexLayout";
-import { pawnPath } from "./pawnPath";
+import { pawnTracker } from "./pawnTracker";
 import { boardToWorld } from "./tileGeometry";
 
 export interface PawnProps {
   readonly layout: HexLayout;
   /** Ring index the pawn should end up on. */
   readonly position: number;
-  /** How to get there when `position` changes. */
-  readonly moveKind: MoveKind;
+  /** Squares to walk through to get there (first = where it starts); a new `routeId` starts the walk. */
+  readonly route: readonly number[] | null;
+  readonly routeId: number;
+  /** True for a leap straight to the last square (jail). */
+  readonly jump: boolean;
   readonly color: string;
   /** 0-5, which of the six spots on a tile this pawn occupies. */
   readonly slot: number;
   readonly y: number;
   readonly dimmed?: boolean;
-  /** Called once the pawn finishes hopping to a new square. */
+  /** Called once the pawn finishes its route. */
   readonly onArrive?: (square: number) => void;
 }
 
@@ -28,25 +31,35 @@ const HOP_HEIGHT = 0.55;
 const JUMP_HEIGHT = 2.2;
 
 /**
- * A simple pawn (base + body + head) that hops along the ring towards
- * `position`. Movement runs in the frame loop; React only sets the target.
+ * A simple pawn (base + body + head) that hops along `route`. Movement runs
+ * in the frame loop; React only hands over the route. While walking it
+ * reports its position to the camera tracker and clicks on every square.
  */
-export function Pawn({ layout, position, moveKind, color, slot, y, dimmed = false, onArrive }: PawnProps) {
+export function Pawn({ layout, position, route, routeId, jump, color, slot, y, dimmed = false, onArrive }: PawnProps) {
   const group = useRef<Group>(null);
   const path = useRef<number[]>([position]);
-  const kind = useRef<MoveKind>("forward");
+  const isJump = useRef(false);
   const progress = useRef(0);
-  const settled = useRef(position);
+  const seenRoute = useRef(routeId);
+  const lastStep = useRef(0);
   const spacing = layout.tileWidth * 0.36;
 
   useEffect(() => {
-    if (position === settled.current) return;
-    const displayed = path.current[Math.floor(progress.current)] ?? settled.current;
-    path.current = pawnPath(displayed, position, moveKind);
-    kind.current = moveKind;
+    if (routeId === seenRoute.current) return;
+    seenRoute.current = routeId;
+    if (!route || route.length < 2) {
+      path.current = [position];
+      progress.current = 0;
+      return;
+    }
+    const displayed = path.current[Math.floor(progress.current)] ?? position;
+    // If the pawn is not where the route starts (e.g. state injected), leap there first.
+    path.current = displayed === route[0] ? [...route] : [displayed, ...route];
+    isJump.current = jump;
     progress.current = 0;
-    settled.current = position;
-  }, [position, moveKind]);
+    lastStep.current = 0;
+    pawnTracker.moving = true;
+  }, [route, routeId, jump, position]);
 
   useFrame((_, delta) => {
     const node = group.current;
@@ -62,11 +75,21 @@ export function Pawn({ layout, position, moveKind, color, slot, y, dimmed = fals
     if (!tileA || !tileB) return;
     const a = pawnPosition(tileA, slot, spacing);
     const b = pawnPosition(tileB, slot, spacing);
-    const height = kind.current === "jump" ? JUMP_HEIGHT : HOP_HEIGHT;
+    const height = isJump.current ? JUMP_HEIGHT : HOP_HEIGHT;
     const hop = frac > 0 ? Math.sin(frac * Math.PI) * height : 0;
     const [wx, wy, wz] = boardToWorld({ x: a.x + (b.x - a.x) * frac, y: a.y + (b.y - a.y) * frac }, y + hop);
     node.position.set(wx, wy, wz);
-    if (wasMoving && progress.current >= steps) onArrive?.(position);
+    if (wasMoving) {
+      pawnTracker.position.set(wx, y, wz);
+      if (from > lastStep.current || progress.current >= steps) {
+        lastStep.current = from;
+        sfx.play("hop", { volume: 0.5, rate: 0.9 + Math.random() * 0.2 });
+      }
+      if (progress.current >= steps) {
+        pawnTracker.moving = false;
+        onArrive?.(position);
+      }
+    }
   });
 
   const opacity = dimmed ? 0.35 : 1;

@@ -17,6 +17,7 @@ export interface PlayerAreaProps {
   readonly y: number;
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
+  readonly onFocus: (index: number) => void;
 }
 
 const PLATE_W = 4.4;
@@ -43,7 +44,7 @@ for (const square of SQUARES) {
  * clickable and select the matching square, so building and mortgaging can
  * be done from here.
  */
-export function PlayerArea({ playerId, frame, plate, holdings, y, onHover, onSelect }: PlayerAreaProps) {
+export function PlayerArea({ playerId, frame, plate, holdings, y, onHover, onSelect, onFocus }: PlayerAreaProps) {
   const yaw = seatYaw(frame);
   const rotation: [number, number, number] = [-Math.PI / 2, 0, yaw];
   const plateTexture = useMemo(() => namePlateTexture(plate), [plate]);
@@ -77,6 +78,7 @@ export function PlayerArea({ playerId, frame, plate, holdings, y, onHover, onSel
             onHover={() => onHover(square ?? null)}
             onLeave={() => onHover(null)}
             onSelect={() => square !== undefined && onSelect(square)}
+            onFocus={() => square !== undefined && onFocus(square)}
           />
         );
       })}
@@ -92,9 +94,10 @@ interface DeedCardProps {
   readonly onHover: () => void;
   readonly onLeave: () => void;
   readonly onSelect: () => void;
+  readonly onFocus: () => void;
 }
 
-function DeedCard({ deedId, holding, position, rotation, onHover, onLeave, onSelect }: DeedCardProps) {
+function DeedCard({ deedId, holding, position, rotation, onHover, onLeave, onSelect, onFocus }: DeedCardProps) {
   const texture = useMemo(() => deedCardTexture(getDeed(deedId), holding), [deedId, holding]);
   return (
     <mesh
@@ -111,6 +114,10 @@ function DeedCard({ deedId, holding, position, rotation, onHover, onLeave, onSel
       onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         onSelect();
+      }}
+      onDoubleClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation();
+        onFocus();
       }}
     >
       <planeGeometry args={[CARD_W, CARD_H]} />

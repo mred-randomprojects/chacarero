@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GameState, LogEntry } from "../game";
 
-const BANNER_MS = 2_800;
-const MAX_VISIBLE = 3;
+const MAX_VISIBLE = 4;
 
 interface Banner {
   readonly id: number;
@@ -13,13 +12,15 @@ export interface AnnouncerProps {
   readonly state: GameState;
   /** While true (dice flying, pawn hopping) new events are held back. */
   readonly paused: boolean;
+  /** How long each banner stays. */
+  readonly seconds: number;
 }
 
 /**
  * Big, short-lived banners for every game event, so everyone at the table
  * sees what just happened without reading the log.
  */
-export function Announcer({ state, paused }: AnnouncerProps) {
+export function Announcer({ state, paused, seconds }: AnnouncerProps) {
   const seen = useRef(state.log.length);
   const nextId = useRef(0);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -33,10 +34,10 @@ export function Announcer({ state, paused }: AnnouncerProps) {
     const added = fresh.map((entry) => ({ id: nextId.current++, entry }));
     setBanners((current) => [...current, ...added].slice(-MAX_VISIBLE));
     const timers = added.map((banner, i) =>
-      setTimeout(() => setBanners((current) => current.filter((b) => b.id !== banner.id)), BANNER_MS + i * 400),
+      setTimeout(() => setBanners((current) => current.filter((b) => b.id !== banner.id)), seconds * 1000 + i * 400),
     );
     return () => timers.forEach(clearTimeout);
-  }, [state.log, paused]);
+  }, [state.log, paused, seconds]);
 
   if (banners.length === 0) return null;
   const colorOf = (id: string) => state.players.find((p) => p.id === id)?.color ?? "#000";

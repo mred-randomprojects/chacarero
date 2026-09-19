@@ -35,7 +35,7 @@ describe("orbit / zoom / tilt", () => {
     const closer = zoomView(OVERVIEW, 0.5);
     const d = (v: typeof closer) => Math.hypot(v.position[0] - v.target[0], v.position[1] - v.target[1], v.position[2] - v.target[2]);
     expect(d(closer)).toBeCloseTo(d(OVERVIEW) * 0.5, 6);
-    expect(d(zoomView(OVERVIEW, 0.01))).toBeCloseTo(10, 6);
+    expect(d(zoomView(OVERVIEW, 0.01))).toBeCloseTo(3, 6);
     expect(d(zoomView(OVERVIEW, 100))).toBeCloseTo(70, 6);
   });
 

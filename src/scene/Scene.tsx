@@ -21,7 +21,7 @@ export interface SceneProps extends BoardProps, CameraRigProps {
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene({ goTo, diceSide, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
+export function Scene({ goTo, followPawn, diceSide, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
   return (
     <Canvas
@@ -53,7 +53,7 @@ export function Scene({ goTo, diceSide, shaking, throwing, onDiceSettled, ...boa
           <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
         </>
       )}
-      <CameraRig goTo={goTo} />
+      <CameraRig goTo={goTo} followPawn={followPawn} />
     </Canvas>
   );
 }

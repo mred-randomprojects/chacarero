@@ -755,3 +755,22 @@ describe("visible company rent", () => {
     expect(state.log.at(-1)?.text).toContain("dados 3+5 = 8 × 100");
   });
 });
+
+describe("moves per action", () => {
+  it("records both legs when a card moves you again", () => {
+    let state = withDecks(game(), ["suerte-04"], ["destino-01"]);
+    state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // 15 Suerte -> back 3 = 12
+    expect(state.moves).toEqual([
+      { playerId: "ana", from: 12, to: 15, kind: "forward" },
+      { playerId: "ana", from: 15, to: 12, kind: "backward" },
+    ]);
+    expect(currentPlayer(state).position).toBe(12);
+  });
+
+  it("clears the list on the next action", () => {
+    let state = roll(game(), undefined, [1, 2]);
+    expect(state.moves).toHaveLength(1);
+    state = buy(state);
+    expect(state.moves).toHaveLength(0);
+  });
+});

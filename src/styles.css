@@ -834,3 +834,44 @@ button.danger {
     font-size: 1rem;
   }
 }
+
+/* ---------- settings ---------- */
+
+.modal.settings {
+  width: min(460px, calc(100% - 32px));
+}
+
+.settings label {
+  display: block;
+  margin: 12px 0;
+  font-weight: 700;
+}
+
+.settings label span {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.settings label small {
+  display: block;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.settings input[type="range"] {
+  width: 100%;
+}
+
+.settings label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.settings .credits {
+  margin: 16px 0 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}

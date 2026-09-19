@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
 import { Quaternion, Vector3 } from "three";
+import { sfx } from "../audio/sfx";
 import { FACE_VALUES, diceFaceTexture, faceNormal } from "./diceFaces";
 import type { SeatFrame } from "./seats";
 import { seatPoint } from "./seats";
@@ -36,6 +37,8 @@ interface DieState {
   mode: Mode;
   /** Seconds since the throw started. */
   t: number;
+  /** Bounces already voiced during this flight. */
+  bounces: number;
   start: Vector3;
   end: Vector3;
   spinAxis: Vector3;
@@ -94,6 +97,7 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
     [0, 1].map((i) => ({
       mode: "rest",
       t: 0,
+      bounces: 0,
       start: new Vector3(),
       end: landingSpot(i).setY(tableY + HALF),
       spinAxis: randomUnit(),
@@ -114,6 +118,7 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
       const value = throwing.values[i] ?? 1;
       die.mode = "fly";
       die.t = 0;
+      die.bounces = 0;
       die.start = mesh ? mesh.position.clone() : handPosition(frame, i, tableY);
       die.end = landingSpot(i).setY(restY);
       die.spinAxis = randomUnit();
@@ -130,6 +135,11 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
       if (die.mode === "fly") continue;
       die.mode = shaking ? "shake" : "rest";
     }
+    if (!shaking) return;
+    // Rattle while the hands are moving.
+    sfx.play("diceGrab", { volume: 0.7 });
+    const id = setInterval(() => sfx.play("diceShake", { volume: 0.6, rate: 0.95 + Math.random() * 0.1 }), 320);
+    return () => clearInterval(id);
   }, [shaking]);
 
   useFrame((_, delta) => {
@@ -155,6 +165,12 @@ export function Dice({ frame, shaking, throwing, tableY, onSettled }: DiceProps)
         case "fly": {
           die.t += delta;
           const u = Math.min(1, die.t / FLIGHT_SECONDS);
+          // Knocks on the felt: the first landing, then two smaller bounces.
+          const knocks = [0.6, 0.8, 0.95];
+          while (die.bounces < knocks.length && u >= (knocks[die.bounces] ?? 2)) {
+            sfx.play("dieLand", { volume: [0.9, 0.5, 0.3][die.bounces] ?? 0.3, rate: 0.9 + Math.random() * 0.25 });
+            die.bounces += 1;
+          }
           const ground = easeOutCubic(Math.min(1, u / 0.7));
           mesh.position.x = die.start.x + (die.end.x - die.start.x) * ground;
           mesh.position.z = die.start.z + (die.end.z - die.start.z) * ground;

@@ -42,7 +42,7 @@ export function orbitView(view: CameraView, angle: number): CameraView {
 }
 
 /** Moves the camera closer to (factor < 1) or further from (factor > 1) its target. */
-export function zoomView(view: CameraView, factor: number, min = 10, max = 70): CameraView {
+export function zoomView(view: CameraView, factor: number, min = 3, max = 70): CameraView {
   const [px, py, pz] = view.position;
   const [tx, ty, tz] = view.target;
   const dx = px - tx;
@@ -69,4 +69,13 @@ export function tiltView(view: CameraView, angle: number): CameraView {
   const y = Math.cos(next) * distance;
   const scale = horizontal > 1e-6 ? h / horizontal : 0;
   return { position: [tx + dx * scale, ty + y, tz + dz * scale], target: view.target };
+}
+
+/** Close-up of one tile, from outside the board so its text reads the right way up. */
+export function squareView(layout: HexLayout, index: number): CameraView {
+  const tile = layout.tiles[index];
+  if (!tile) throw new Error(`No tile ${index}`);
+  const outward = { x: -tile.up.x, y: -tile.up.y };
+  const eye = { x: tile.center.x + outward.x * 4.5, y: tile.center.y + outward.y * 4.5 };
+  return { position: boardToWorld(eye, 5.5), target: boardToWorld(tile.center, 0) };
 }

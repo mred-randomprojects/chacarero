@@ -135,7 +135,13 @@ function continueTurn(state: GameState): GameState {
 function setPosition(state: GameState, playerId: string, to: number, kind: MoveKind): GameState {
   const from = getPlayer(state, playerId).position;
   const next = updatePlayer(state, playerId, { position: to });
-  return { ...next, lastMove: { playerId, from, to, kind } };
+  const move = { playerId, from, to, kind };
+  return { ...next, lastMove: move, moves: [...next.moves, move] };
+}
+
+/** Every public action starts here so `moves` only holds what this action did. */
+function begin(state: GameState): GameState {
+  return state.moves.length === 0 ? state : { ...state, moves: [] };
 }
 
 function moveBy(state: GameState, steps: number): GameState {
@@ -279,7 +285,8 @@ function applyCard(state: GameState, card: Card): GameState {
 // ---------- public actions ----------
 
 /** Rolls the dice (or uses the given ones) and moves the current player. */
-export function roll(state: GameState, random: () => number = Math.random, forced?: Dice): GameState {
+export function roll(input: GameState, random: () => number = Math.random, forced?: Dice): GameState {
+  const state = begin(input);
   const phase = expectPhase(state, "awaitingRoll", "awaitingJailDecision");
   const dice: Dice = forced ?? [1 + Math.floor(random() * 6), 1 + Math.floor(random() * 6)];
   const doubles = dice[0] === dice[1];
@@ -322,7 +329,8 @@ export function roll(state: GameState, random: () => number = Math.random, force
 }
 
 /** Buys the deed the current player is standing on. */
-export function buy(state: GameState): GameState {
+export function buy(input: GameState): GameState {
+  const state = begin(input);
   const { deedId } = expectPhase(state, "awaitingBuyDecision");
   const player = currentPlayer(state);
   const deed = getDeed(deedId);
@@ -334,25 +342,29 @@ export function buy(state: GameState): GameState {
 }
 
 /** Declines to buy: the bank auctions the deed to everyone, decliner included. */
-export function decline(state: GameState): GameState {
+export function decline(input: GameState): GameState {
+  const state = begin(input);
   const { deedId } = expectPhase(state, "awaitingBuyDecision");
   const next = log(state, `${currentPlayer(state).name} no compra ${deedName(getDeed(deedId))}; sale a remate.`);
   return startAuction(next, deedId);
 }
 
 /** For "Pague $200 o levante una tarjeta de Suerte": pay. */
-export function choosePay(state: GameState): GameState {
+export function choosePay(input: GameState): GameState {
+  const state = begin(input);
   const { amount } = expectPhase(state, "awaitingPayOrDraw");
   return continueTurn(charge(state, currentPlayer(state).id, amount, { type: "bank" }, "la tarjeta"));
 }
 
 /** For "Pague $200 o levante una tarjeta de Suerte": draw instead. */
-export function chooseDraw(state: GameState): GameState {
+export function chooseDraw(input: GameState): GameState {
+  const state = begin(input);
   const { deck } = expectPhase(state, "awaitingPayOrDraw");
   return drawCard(state, deck);
 }
 
-export function payBail(state: GameState): GameState {
+export function payBail(input: GameState): GameState {
+  const state = begin(input);
   expectPhase(state, "awaitingJailDecision");
   const player = currentPlayer(state);
   if (player.cash < JAIL_BAIL) throw new Error("No te alcanza para la fianza");
@@ -361,7 +373,8 @@ export function payBail(state: GameState): GameState {
   return setPhase(next, { type: "awaitingRoll" });
 }
 
-export function useJailCard(state: GameState): GameState {
+export function useJailCard(input: GameState): GameState {
+  const state = begin(input);
   expectPhase(state, "awaitingJailDecision");
   const player = currentPlayer(state);
   if (player.getOutOfJailCards <= 0) throw new Error("No tenés tarjeta");
@@ -375,7 +388,8 @@ export function useJailCard(state: GameState): GameState {
 }
 
 /** Ends the turn and hands the dice to the next solvent player. */
-export function endTurn(state: GameState): GameState {
+export function endTurn(input: GameState): GameState {
+  const state = begin(input);
   expectPhase(state, "turnEnd");
   const solvent = solventPlayers(state);
   const winner = solvent.length === 1 ? solvent[0] : undefined;
@@ -441,7 +455,8 @@ function advanceAuction(state: GameState, auction: Auction, afterId: string): Ga
 }
 
 /** The bidder on turn raises the price to `amount`. */
-export function bid(state: GameState, amount: number): GameState {
+export function bid(input: GameState, amount: number): GameState {
+  const state = begin(input);
   const { auction } = expectPhase(state, "auction");
   const bidder = getPlayer(state, auction.turnBidderId);
   if (!Number.isInteger(amount)) throw new Error("La oferta tiene que ser un número entero");
@@ -452,7 +467,8 @@ export function bid(state: GameState, amount: number): GameState {
 }
 
 /** The bidder on turn drops out of the auction. */
-export function passBid(state: GameState): GameState {
+export function passBid(input: GameState): GameState {
+  const state = begin(input);
   const { auction } = expectPhase(state, "auction");
   const bidder = getPlayer(state, auction.turnBidderId);
   const remaining = auction.bidders.filter((id) => id !== bidder.id);
@@ -554,7 +570,8 @@ export function unmortgage(state: GameState, deedId: DeedId): GameState {
 // ---------- debts ----------
 
 /** Pays the pending debt once the debtor has raised enough cash. */
-export function settlePayment(state: GameState): GameState {
+export function settlePayment(input: GameState): GameState {
+  const state = begin(input);
   const { debtorId, amount, to, reason } = expectPhase(state, "awaitingPayment");
   const debtor = getPlayer(state, debtorId);
   if (debtor.cash < amount) throw new Error(`Todavía te faltan ${pesos(amount - debtor.cash)}`);
@@ -568,7 +585,8 @@ export function settlePayment(state: GameState): GameState {
  * (which then auctions the deeds). Only allowed once there is nothing left
  * to sell or mortgage.
  */
-export function declareBankruptcy(state: GameState): GameState {
+export function declareBankruptcy(input: GameState): GameState {
+  const state = begin(input);
   const { debtorId, to, amount } = expectPhase(state, "awaitingPayment");
   const player = getPlayer(state, debtorId);
   if (player.cash >= amount) throw new Error("Te alcanza para pagar");

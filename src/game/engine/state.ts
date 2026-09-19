@@ -104,6 +104,8 @@ export interface GameState {
   /** Set when the current roll was doubles and the player gets another go. */
   readonly rollAgain: boolean;
   readonly lastMove: LastMove | null;
+  /** Every change of position caused by the latest action, in order (a card can move you twice). */
+  readonly moves: readonly LastMove[];
   readonly turn: number;
   readonly log: readonly LogEntry[];
 }
@@ -159,6 +161,7 @@ export function createGame({ players, startingCash = STARTING_CASH, random = Mat
     lastCard: null,
     rollAgain: false,
     lastMove: null,
+    moves: [],
     turn: 1,
     log: [],
   };

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
-import type { DeedId, Holding, MoveKind } from "../game";
+import type { DeedId, Holding } from "../game";
 import { SQUARES, getDeed } from "../game";
 import { Buildings } from "./Buildings";
 import type { PlateInfo } from "./cardTextures";
@@ -31,7 +31,9 @@ export interface PawnView {
   readonly id: string;
   readonly color: string;
   readonly position: number;
-  readonly moveKind: MoveKind;
+  readonly route: readonly number[] | null;
+  readonly routeId: number;
+  readonly jump: boolean;
   readonly dimmed: boolean;
 }
 
@@ -46,6 +48,8 @@ export interface BoardProps {
   readonly selected: number | null;
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
+  /** Double-click on a square or a card: fly the camera there. */
+  readonly onFocus: (index: number) => void;
   readonly pawns: readonly PawnView[];
   readonly seats: readonly SeatView[];
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
@@ -62,7 +66,7 @@ function toShape(points: readonly Vec2[]): Shape {
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
  * towards -z (world), so Salida ends up at the bottom-right from the default camera.
  */
-export function Board({ hovered, selected, onHover, onSelect, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
+export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
   const layout = BOARD_LAYOUT;
 
   const slabGeometry = useMemo(() => {
@@ -112,6 +116,7 @@ export function Board({ hovered, selected, onHover, onSelect, pawns, seats, hold
           y={TABLE_Y + 0.01}
           onHover={onHover}
           onSelect={onSelect}
+          onFocus={onFocus}
         />
       ))}
 
@@ -151,6 +156,7 @@ export function Board({ hovered, selected, onHover, onSelect, pawns, seats, hold
             selected={selected === tile.index}
             onHover={onHover}
             onSelect={onSelect}
+            onFocus={onFocus}
           />
         );
       })}
@@ -162,7 +168,9 @@ export function Board({ hovered, selected, onHover, onSelect, pawns, seats, hold
           key={pawn.id}
           layout={layout}
           position={pawn.position}
-          moveKind={pawn.moveKind}
+          route={pawn.route}
+          routeId={pawn.routeId}
+          jump={pawn.jump}
           color={pawn.color}
           slot={slot}
           y={PAWN_Y}

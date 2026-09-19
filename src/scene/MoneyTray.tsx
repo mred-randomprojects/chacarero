@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { BILL_DENOMINATIONS, billBreakdown } from "../game";
-import { billTexture, countChipTexture } from "./billTextures";
+import { billTexture } from "./billTextures";
 import type { SeatFrame } from "./seats";
 import { seatPoint, seatYaw } from "./seats";
 import { boardToWorld } from "./tileGeometry";
@@ -17,7 +17,8 @@ export interface MoneyTrayProps {
 const BILL_W = 0.68;
 const BILL_H = 0.34;
 const COLUMN = 0.76;
-const MAX_VISIBLE = 8;
+/** Beyond this the pile stops growing, so a millionaire does not get a tower. */
+const MAX_VISIBLE = 60;
 const BILL_THICKNESS = 0.012;
 
 /** Deterministic little wobble so stacks look hand-placed rather than printed. */
@@ -26,13 +27,12 @@ function wobble(i: number, j: number): number {
 }
 
 /**
- * The player's cash as stacks of bills, one column per denomination, with a
- * count on top of each stack. Cosmetic: the number on the plate is the truth.
+ * The player's cash as stacks of bills, one column per denomination, one
+ * mesh per bill. Cosmetic: the number on the plate is the truth.
  */
 export function MoneyTray({ frame, cash, startRight, up, y }: MoneyTrayProps) {
   const bills = useMemo(() => billBreakdown(cash), [cash]);
   const yaw = seatYaw(frame);
-  const rotation: [number, number, number] = [-Math.PI / 2, 0, yaw];
   return (
     <group>
       {BILL_DENOMINATIONS.map((value, column) => {
@@ -57,15 +57,7 @@ export function MoneyTray({ frame, cash, startRight, up, y }: MoneyTrayProps) {
             </mesh>,
           );
         }
-        return (
-          <group key={value}>
-            {stack}
-            <mesh rotation={rotation} position={boardToWorld(seatPoint(frame, right + BILL_W * 0.32, up - BILL_H * 0.28), y + BILL_THICKNESS * (visible + 1) + 0.002)}>
-              <planeGeometry args={[0.2, 0.2]} />
-              <meshStandardMaterial map={countChipTexture(count)} transparent roughness={1} />
-            </mesh>
-          </group>
-        );
+        return <group key={value}>{stack}</group>;
       })}
     </group>
   );

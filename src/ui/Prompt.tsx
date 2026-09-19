@@ -25,6 +25,8 @@ export interface PromptProps {
   readonly busy: boolean;
   /** Countdowns pause while the player is inspecting a property or the list. */
   readonly inspecting: boolean;
+  /** Multiplier on every countdown; 0 disables them. */
+  readonly countdownScale: number;
   readonly act: Act;
   readonly onNewGame: () => void;
 }
@@ -49,21 +51,23 @@ function Countdown({ remaining, total }: { readonly remaining: number | null; re
  * pay-or-draw, debts, auctions and ending the turn. Decisions with a sensible
  * default run on a countdown so nobody waits on an absent player.
  */
-export function Prompt({ state, busy, inspecting, act, onNewGame }: PromptProps) {
+export function Prompt({ state, busy, inspecting, countdownScale, act, onNewGame }: PromptProps) {
   const { phase } = state;
   const player = currentPlayer(state);
   // A new key restarts the countdown; the log length changes with every action.
   const stamp = `${phase.type}:${state.turn}:${state.log.length}`;
   const visible = !busy;
+  const timed = countdownScale > 0;
+  const scale = timed ? countdownScale : 1;
 
-  const buyKey = visible && phase.type === "awaitingBuyDecision" ? stamp : null;
-  const buyLeft = useCountdown(buyKey, BUY_SECONDS, inspecting, () => act(decline));
-  const podKey = visible && phase.type === "awaitingPayOrDraw" ? stamp : null;
-  const podLeft = useCountdown(podKey, PAY_OR_DRAW_SECONDS, inspecting, () => act(choosePay));
-  const auctionKey = visible && phase.type === "auction" ? stamp : null;
-  const auctionLeft = useCountdown(auctionKey, AUCTION_SECONDS, inspecting, () => act(passBid));
-  const endKey = visible && phase.type === "turnEnd" ? stamp : null;
-  const endLeft = useCountdown(endKey, TURN_END_SECONDS, inspecting, () => act(endTurn));
+  const buyKey = visible && timed && phase.type === "awaitingBuyDecision" ? stamp : null;
+  const buyLeft = useCountdown(buyKey, BUY_SECONDS * scale, inspecting, () => act(decline));
+  const podKey = visible && timed && phase.type === "awaitingPayOrDraw" ? stamp : null;
+  const podLeft = useCountdown(podKey, PAY_OR_DRAW_SECONDS * scale, inspecting, () => act(choosePay));
+  const auctionKey = visible && timed && phase.type === "auction" ? stamp : null;
+  const auctionLeft = useCountdown(auctionKey, AUCTION_SECONDS * scale, inspecting, () => act(passBid));
+  const endKey = visible && timed && phase.type === "turnEnd" ? stamp : null;
+  const endLeft = useCountdown(endKey, TURN_END_SECONDS * scale, inspecting, () => act(endTurn));
 
   if (!visible) return null;
 
@@ -84,7 +88,7 @@ export function Prompt({ state, busy, inspecting, act, onNewGame }: PromptProps)
               No comprar
             </button>
           </div>
-          <Countdown remaining={buyLeft} total={BUY_SECONDS} />
+          <Countdown remaining={buyLeft} total={BUY_SECONDS * scale} />
         </div>
       );
     }
@@ -102,7 +106,7 @@ export function Prompt({ state, busy, inspecting, act, onNewGame }: PromptProps)
               Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"}
             </button>
           </div>
-          <Countdown remaining={podLeft} total={PAY_OR_DRAW_SECONDS} />
+          <Countdown remaining={podLeft} total={PAY_OR_DRAW_SECONDS * scale} />
         </div>
       );
     case "awaitingPayment": {
@@ -162,7 +166,7 @@ export function Prompt({ state, busy, inspecting, act, onNewGame }: PromptProps)
               Pasar
             </button>
           </div>
-          <Countdown remaining={auctionLeft} total={AUCTION_SECONDS} />
+          <Countdown remaining={auctionLeft} total={AUCTION_SECONDS * scale} />
         </div>
       );
     }
@@ -178,7 +182,7 @@ export function Prompt({ state, busy, inspecting, act, onNewGame }: PromptProps)
               Terminar turno
             </button>
           </div>
-          <Countdown remaining={endLeft} total={TURN_END_SECONDS} />
+          <Countdown remaining={endLeft} total={TURN_END_SECONDS * scale} />
         </div>
       );
     case "gameOver":

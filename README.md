@@ -16,12 +16,19 @@ El modo multijugador online (servidor WebSocket) es el siguiente paso.
 - **Dados**: mantené apretado el botón (o la barra espaciadora) para mezclar,
   soltá para tirar. Los dados vuelan al centro del tablero y quedan mostrando
   el resultado.
-- **Cámara**: arrastrá para girar, rueda para acercar, `⌥ Option/Alt + clic`
-  centra la vista en ese punto de la mesa, botón derecho (o `⇧`/`⌘` + arrastrar)
-  desplaza. Teclado: `← → ↑ ↓` giran e inclinan, `+ −` acercan, `1`–`6` te
-  sientan en el lugar de cada jugador, `M` en el del jugador de turno, `0` vista
-  general, `T` desde arriba. Con "Sigue el turno" activo la cámara se sienta
-  sola donde le toca jugar.
+- **Cámara**: arrastrá para girar, rueda para acercar (hasta pegar la nariz a
+  los billetes). `⌥ Option/Alt + arrastrar` agarra la mesa y la desliza;
+  `⌥ + clic` centra la vista en ese punto; doble clic en un casillero o en una
+  escritura acerca la cámara ahí. Teclado: `← → ↑ ↓` giran e inclinan, `+ −`
+  acercan, `1`–`6` te sientan en el lugar de cada jugador, `M` en el del
+  jugador de turno, `0` vista general, `T` desde arriba. La cámara sigue al
+  peón mientras camina y se sienta con el jugador de turno (ambas cosas se
+  apagan en Ajustes).
+- **Ajustes** (`,` o el engranaje): duración de los avisos, tiempo para
+  decidir (o sin límite), volumen, y qué hace la cámara sola.
+- **Sonido**: dados que se mezclan y rebotan, pasos del peón, cartas, plata,
+  martillo del remate, la puerta de la Comisaría y una fanfarria al ganar.
+  Muestras CC0 de [Kenney](https://kenney.nl).
 - **Decisiones**: comprar o no, pagar o levantar tarjeta, rematar y terminar el
   turno tienen una cuenta regresiva con una acción por defecto (no comprar →
   remate, pagar, pasar, terminar), así nadie espera a un jugador distraído.
