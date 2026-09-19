@@ -201,7 +201,7 @@ const server = Bun.serve<SocketData>({
       const upgraded = srv.upgrade(request, { data: { playerId: null, code: null } });
       return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
     }
-    if (url.pathname === "/health") return Response.json({ ok: true, rooms: rooms.size });
+    if (url.pathname === "/health" || url.pathname === `${BASE_PATH}/health`) return Response.json({ ok: true, rooms: rooms.size });
     // Static client, built into dist/ with the /chacarero/ base path.
     if (!url.pathname.startsWith(BASE_PATH)) return Response.redirect(`${BASE_PATH}/`, 302);
     const path = url.pathname.slice(BASE_PATH.length);

@@ -18,11 +18,17 @@ pistasjug.ar {
 }
 ```
 
-Then reload Caddy on the droplet:
+Then reload Caddy on the droplet. The Caddyfile is a single-file bind mount,
+so after `scp` (which replaces the inode) the container still sees the old
+file until it restarts; feed the new config through stdin instead:
 
 ```bash
-ssh pinas-cruzadas 'cd /root/pinas-cruzadas && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile'
+scp Caddyfile pinas-cruzadas:/root/pinas-cruzadas/Caddyfile
+ssh pinas-cruzadas 'cd /root/pinas-cruzadas && docker compose exec -T caddy caddy validate --config /dev/stdin --adapter caddyfile < Caddyfile && docker compose exec -T caddy caddy reload --config /dev/stdin --adapter caddyfile < Caddyfile'
 ```
+
+(Done once on 2026-09-19; `pinas-cruzadas/deploy.sh` re-uploads the same
+Caddyfile on Piñas deploys, so keep the block in that repo.)
 
 The `chacarero` container joins the `pinas-cruzadas_default` network (see
 `docker-compose.yml`), which is how Caddy resolves the `chacarero` host.
@@ -34,7 +40,11 @@ The `chacarero` container joins the `pinas-cruzadas_default` network (see
 ```
 
 Builds the image for linux/amd64 with `VITE_WS_URL=wss://pistasjug.ar/chacarero/ws`
-baked into the client, ships it over SSH and restarts the container.
+baked into the client, ships it over SSH and restarts the container. The
+droplet has ~1 GB free; the image is ~350 MB and the script prunes old ones.
+
+Health: `curl https://pistasjug.ar/chacarero/health` → `{"ok":true,"rooms":N}`.
+Logs: `ssh pinas-cruzadas 'docker logs -f chacarero'`.
 
 ## GitHub Pages
 
