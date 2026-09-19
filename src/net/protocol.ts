@@ -4,10 +4,10 @@
  * carries the engine's own types, which the server produced itself.
  */
 import { z } from "zod";
-import type { ActionRequest, GameState } from "../game";
+import type { ActionRequest, DeedId, GameState } from "../game";
 import { DEEDS } from "../game";
 
-const deedIds = DEEDS.map((d) => d.id) as [string, ...string[]];
+const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
 const DeedIdSchema = z.enum(deedIds);
 
 export const ActionRequestSchema = z.discriminatedUnion("type", [
