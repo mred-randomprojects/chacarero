@@ -442,3 +442,185 @@ describe("lastMove", () => {
     expect(state.lastMove).toEqual({ playerId: "ana", from: 15, to: 14, kind: "jump" });
   });
 });
+
+describe("edge cases", () => {
+  it("pays the Salida bonus exactly once when landing on it", () => {
+    let state = withPlayer(game(), "ana", { position: 38 });
+    state = roll(state, undefined, [1, 3]);
+    expect(currentPlayer(state).position).toBe(0);
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH + SALIDA_BONUS);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("does not pay the Salida bonus when moving backwards across it", () => {
+    let state = withDecks(game(), ["suerte-04"], ["destino-01"]);
+    state = withPlayer(state, "ana", { position: 33 });
+    state = roll(state, undefined, [1, 2]); // 36 Suerte -> back 3 = 33
+    expect(currentPlayer(state).position).toBe(33);
+    state = withDecks(game(), ["suerte-04"], ["destino-01"]);
+    state = withPlayer(state, "ana", { position: 12 });
+    state = roll(state, undefined, [1, 2]); // 15 -> 12 FC Belgrano
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH);
+  });
+
+  it("'Siga hasta la Salida' from the last squares pays the bonus", () => {
+    let state = withDecks(game(), ["suerte-16"], ["destino-01"]);
+    state = withPlayer(state, "ana", { position: 33 });
+    state = roll(state, undefined, [1, 2]); // 36 Suerte
+    expect(currentPlayer(state).position).toBe(0);
+    expect(currentPlayer(state).cash).toBe(STARTING_CASH + SALIDA_BONUS);
+  });
+
+  it("'Marche preso' by card cancels the extra roll for doubles", () => {
+    let state = withDecks(game(), ["suerte-13"], ["destino-01"]);
+    state = withPlayer(state, "ana", { position: 11 });
+    state = roll(state, undefined, [2, 2]); // 15 Suerte -> jail
+    expect(currentPlayer(state).inJail).toBe(true);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("landing on Marche preso with doubles does not roll again", () => {
+    let state = withPlayer(game(), "ana", { position: 31 });
+    state = roll(state, undefined, [2, 2]);
+    expect(currentPlayer(state).inJail).toBe(true);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("refuses to buy what you cannot afford", () => {
+    let state = withPlayer(game(), "ana", { cash: 1_000 });
+    state = roll(state, undefined, [1, 2]); // Formosa Norte 1.200
+    expect(() => buy(state)).toThrow();
+    state = decline(state);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("refuses bail without the cash", () => {
+    const state: GameState = { ...withPlayer(game(), "ana", { position: 14, inJail: true, cash: 500 }), phase: { type: "awaitingJailDecision" } };
+    expect(() => payBail(state)).toThrow();
+  });
+
+  it("stops building when the bank runs out of chacras", () => {
+    let state = withProvince(game(), "ana", FORMOSA);
+    state = { ...state, bank: { chacras: 0, estancias: TOTAL_ESTANCIAS } };
+    expect(canBuildChacra(state, currentPlayer(state), "formosa-sur")).toMatchObject({ ok: false });
+    expect(() => buildChacra(state, "formosa-sur")).toThrow(/Banco/);
+  });
+
+  it("cannot sell an estancia back if the bank cannot hand out four chacras", () => {
+    let state = withProvince(game(), "ana", FORMOSA);
+    state = FORMOSA.reduce((s, id) => withHolding(s, id, { ownerId: "ana", estancia: true }), state);
+    state = { ...state, bank: { chacras: 3, estancias: TOTAL_ESTANCIAS - 3 } };
+    expect(() => sellBuilding(state, "formosa-sur")).toThrow(/Banco/);
+  });
+
+  it("does not let you build while you owe money you cannot cover, but lets you sell", () => {
+    let state = withProvince(game(), "ana", FORMOSA, 1);
+    state = withHolding(state, "buenosAires-norte", { ownerId: "beto", estancia: true });
+    state = withPlayer(state, "ana", { position: 37, cash: 100 });
+    state = roll(state, undefined, [1, 2]); // 40 Bs As Norte: 36.000 rent
+    expect(state.phase.type).toBe("awaitingPayment");
+    expect(() => buildChacra(state, "formosa-sur")).toThrow(/plata/);
+    state = sellBuilding(state, "formosa-sur");
+    expect(getPlayer(state, "ana").cash).toBe(600);
+  });
+
+  it("keeps two get-out-of-jail cards and uses them one at a time", () => {
+    let state = withDecks(game(), ["suerte-02"], ["destino-13"]);
+    state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // Suerte
+    expect(currentPlayer(state).getOutOfJailCards).toBe(1);
+    state = { ...state, phase: { type: "awaitingRoll" } };
+    state = roll(withPlayer(state, "ana", { position: 7 }), undefined, [1, 2]); // 10 Destino
+    expect(currentPlayer(state).getOutOfJailCards).toBe(2);
+    expect(state.decks.suerte).toEqual([]);
+    expect(state.decks.destino).toEqual([]);
+    state = { ...withPlayer(state, "ana", { inJail: true, position: 14 }), phase: { type: "awaitingJailDecision" } };
+    state = useJailCard(state);
+    expect(currentPlayer(state).getOutOfJailCards).toBe(1);
+    expect(state.decks.suerte).toHaveLength(1);
+  });
+
+  it("company rent uses the dice that brought you there", () => {
+    let state = withHolding(game(), "petrolera", { ownerId: "beto" });
+    state = roll(state, undefined, [3, 5]);
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 800);
+  });
+
+  it("charges rent when a card moves you onto someone's property", () => {
+    let state = withDecks(game(), ["suerte-01"], ["destino-01"]);
+    state = withHolding(state, "bodega", { ownerId: "beto" });
+    state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // Suerte -> Bodega
+    expect(currentPlayer(state).position).toBe(16);
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 300);
+  });
+
+  it("the bankrupt player's creditor inherits mortgaged deeds as mortgaged", () => {
+    let state = withHolding(game(), "buenosAires-norte", { ownerId: "beto", estancia: true });
+    state = withHolding(state, "formosa-sur", { ownerId: "ana", mortgaged: true });
+    state = withHolding(state, "fc-mitre", { ownerId: "ana", mortgaged: true });
+    state = withPlayer(state, "ana", { position: 37, cash: 10 });
+    state = roll(state, undefined, [1, 2]);
+    state = declareBankruptcy(state);
+    expect(state.holdings["formosa-sur"]?.mortgaged).toBe(true);
+    expect(state.holdings["fc-mitre"]?.ownerId).toBe("beto");
+    expect(state.bank.chacras).toBe(TOTAL_CHACRAS);
+  });
+
+  it("returns buildings to the bank when a player goes bankrupt", () => {
+    let state = withProvince(game(), "ana", FORMOSA, 2);
+    state = { ...state, bank: { chacras: TOTAL_CHACRAS - 6, estancias: TOTAL_ESTANCIAS } };
+    state = withHolding(state, "buenosAires-norte", { ownerId: "beto", estancia: true });
+    state = withPlayer(state, "ana", { position: 37, cash: 10 });
+    state = roll(state, undefined, [1, 2]);
+    // Ana can still sell chacras, so she must do that before bankruptcy.
+    expect(() => declareBankruptcy(state)).toThrow();
+    for (let i = 0; i < 6; i++) {
+      const id = FORMOSA[i % 3];
+      if (id) state = sellBuilding(state, id);
+    }
+    expect(getPlayer(state, "ana").cash).toBe(10 + 6 * 500);
+    state = FORMOSA.reduce((s, id) => mortgage(s, id), state);
+    expect(() => settlePayment(state)).toThrow();
+    state = declareBankruptcy(state);
+    expect(state.bank.chacras).toBe(TOTAL_CHACRAS);
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 10 + 3_000 + 450 + 450 + 540);
+  });
+
+  it("game continues with three players after one goes bankrupt", () => {
+    let state = withHolding(game([ANA, BETO, CARLA]), "buenosAires-norte", { ownerId: "beto", estancia: true });
+    state = withPlayer(state, "ana", { position: 37, cash: 10 });
+    state = roll(state, undefined, [1, 2]);
+    state = declareBankruptcy(state);
+    state = endTurn(state);
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    expect(currentPlayer(state).id).toBe("beto");
+    state = { ...state, phase: { type: "turnEnd" } };
+    state = endTurn(state);
+    expect(currentPlayer(state).id).toBe("carla");
+    state = { ...state, phase: { type: "turnEnd" } };
+    state = endTurn(state);
+    expect(currentPlayer(state).id).toBe("beto");
+  });
+
+  it("a bankrupt player's pawn never gets a turn again even if it was mid-doubles", () => {
+    let state = withHolding(game([ANA, BETO, CARLA]), "formosa-norte", { ownerId: "beto", estancia: true });
+    state = withPlayer(state, "ana", { cash: 10, doublesThisTurn: 1 });
+    state = { ...state, rollAgain: true };
+    state = roll(state, undefined, [1, 2]); // Formosa Norte: 9.500
+    state = declareBankruptcy(state);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+  });
+
+  it("birthday money comes from everyone still playing", () => {
+    let state = withDecks(game([ANA, BETO, CARLA]), ["suerte-03"], ["destino-01"]);
+    state = withPlayer(state, "carla", { bankrupt: true, cash: 0 });
+    state = roll(withPlayer(state, "ana", { position: 7 }), undefined, [1, 2]); // Destino
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH + 200);
+    expect(getPlayer(state, "carla").cash).toBe(0);
+  });
+
+  it("rent is not charged on a bankrupt player's former deed left with the bank", () => {
+    let state = withHolding(game([ANA, BETO, CARLA]), "formosa-centro", { ownerId: "beto", mortgaged: true });
+    state = withPlayer(state, "beto", { bankrupt: true });
+    expect(rentFor(state, "formosa-centro", "ana", 2)).toBe(0);
+  });
+});

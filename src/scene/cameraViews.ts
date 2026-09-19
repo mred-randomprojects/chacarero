@@ -1,0 +1,72 @@
+import type { HexLayout } from "./hexLayout";
+import type { SeatFrame } from "./seats";
+import { seatFrame, seatPoint } from "./seats";
+import { boardToWorld } from "./tileGeometry";
+
+/** A camera pose: where it stands and what it looks at, in world space. */
+export interface CameraView {
+  readonly position: readonly [number, number, number];
+  readonly target: readonly [number, number, number];
+}
+
+const SEAT_DISTANCE = 18;
+const SEAT_HEIGHT = 21;
+const SEAT_LOOK_IN = 4.5;
+
+/** Standing behind a seat, with that player's cards in the foreground. */
+export function seatView(layout: HexLayout, slabMargin: number, side: number): CameraView {
+  const frame: SeatFrame = seatFrame(layout, slabMargin, side);
+  const eye = seatPoint(frame, 0, -SEAT_DISTANCE);
+  const look = seatPoint(frame, 0, SEAT_LOOK_IN);
+  return { position: boardToWorld(eye, SEAT_HEIGHT), target: boardToWorld(look, 0) };
+}
+
+/** High and centred, the whole table in view. */
+export const OVERVIEW: CameraView = { position: [0, 36, 24], target: [0, 0, 2] };
+
+/** Almost straight down, for reading every tile at once (a small offset keeps lookAt well-defined). */
+export const TOP_DOWN: CameraView = { position: [0, 44, 4], target: [0, 0, 0] };
+
+/**
+ * Rotates a view around its target by `angle` radians (positive = the camera
+ * moves to the viewer's left), keeping height and distance.
+ */
+export function orbitView(view: CameraView, angle: number): CameraView {
+  const [px, py, pz] = view.position;
+  const [tx, ty, tz] = view.target;
+  const dx = px - tx;
+  const dz = pz - tz;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return { position: [tx + dx * cos - dz * sin, py, tz + dx * sin + dz * cos], target: [tx, ty, tz] };
+}
+
+/** Moves the camera closer to (factor < 1) or further from (factor > 1) its target. */
+export function zoomView(view: CameraView, factor: number, min = 10, max = 70): CameraView {
+  const [px, py, pz] = view.position;
+  const [tx, ty, tz] = view.target;
+  const dx = px - tx;
+  const dy = py - ty;
+  const dz = pz - tz;
+  const distance = Math.hypot(dx, dy, dz);
+  const next = Math.min(max, Math.max(min, distance * factor));
+  const k = next / distance;
+  return { position: [tx + dx * k, ty + dy * k, tz + dz * k], target: view.target };
+}
+
+/** Tilts the camera up or down around its target, clamped so it never goes below the table. */
+export function tiltView(view: CameraView, angle: number): CameraView {
+  const [px, py, pz] = view.position;
+  const [tx, ty, tz] = view.target;
+  const dx = px - tx;
+  const dy = py - ty;
+  const dz = pz - tz;
+  const horizontal = Math.hypot(dx, dz);
+  const distance = Math.hypot(horizontal, dy);
+  const polar = Math.atan2(horizontal, dy);
+  const next = Math.min(Math.PI * 0.45, Math.max(0.15, polar + angle));
+  const h = Math.sin(next) * distance;
+  const y = Math.cos(next) * distance;
+  const scale = horizontal > 1e-6 ? h / horizontal : 0;
+  return { position: [tx + dx * scale, ty + y, tz + dz * scale], target: view.target };
+}

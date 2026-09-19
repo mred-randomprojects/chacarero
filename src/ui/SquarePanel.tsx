@@ -125,6 +125,11 @@ function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
   const sell = canSellBuilding(state, player, deed.id);
   const mort = canMortgage(state, player, deed.id);
   const unmort = canUnmortgage(state, player, deed.id);
+  const blockers = [
+    deed.kind === "campo" && !chacra.ok && !holding.estancia ? `Chacra: ${chacra.reason}` : null,
+    deed.kind === "campo" && !estancia.ok && holding.chacras === 4 ? `Estancia: ${estancia.reason}` : null,
+    !holding.mortgaged && !mort.ok ? `Hipoteca: ${mort.reason}` : null,
+  ].filter((b): b is string => b !== null);
   return (
     <div className="owner-actions">
       {deed.kind === "campo" && (
@@ -148,6 +153,13 @@ function OwnerActions({ state, deed, busy, act }: OwnerActionsProps) {
         <button type="button" disabled={busy || !mort.ok} title={mort.ok ? "" : mort.reason} onClick={() => act((s) => mortgage(s, deed.id))}>
           Hipotecar (+{pesos(mortgageProceeds(deed.id))})
         </button>
+      )}
+      {blockers.length > 0 && (
+        <ul className="blockers">
+          {blockers.map((b) => (
+            <li key={b}>{b}</li>
+          ))}
+        </ul>
       )}
     </div>
   );

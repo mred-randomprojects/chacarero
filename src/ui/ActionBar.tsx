@@ -14,18 +14,51 @@ import {
   getPlayer,
   payBail,
   pesos,
-  roll,
   settlePayment,
   useJailCard,
 } from "../game";
 
-export type Act = (action: (state: GameState) => GameState) => void;
+/** Applies an engine action and returns the new state, or null if it was refused. */
+export type Act = (action: (state: GameState) => GameState) => GameState | null;
 
 export interface ActionBarProps {
   readonly state: GameState;
   readonly busy: boolean;
+  readonly shaking: boolean;
+  readonly canRoll: boolean;
+  readonly onShakeStart: () => void;
+  readonly onShakeEnd: () => void;
   readonly act: Act;
   readonly onNewGame: () => void;
+}
+
+interface DiceButtonProps {
+  readonly label: string;
+  readonly shaking: boolean;
+  readonly disabled: boolean;
+  readonly onShakeStart: () => void;
+  readonly onShakeEnd: () => void;
+}
+
+/** Hold to shake the dice, release to throw. A quick tap throws too. */
+function DiceButton({ label, shaking, disabled, onShakeStart, onShakeEnd }: DiceButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`primary dice-button${shaking ? " shaking" : ""}`}
+      disabled={disabled}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        onShakeStart();
+      }}
+      onPointerUp={onShakeEnd}
+      onPointerCancel={onShakeEnd}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      {shaking ? "🎲 ¡Soltá para tirar!" : `🎲 ${label}`}
+    </button>
+  );
 }
 
 function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
@@ -40,25 +73,24 @@ function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
 }
 
 /** Bottom bar: whose turn it is and the buttons the current phase allows. */
-export function ActionBar({ state, busy, act, onNewGame }: ActionBarProps) {
+export function ActionBar({ state, busy, shaking, canRoll, onShakeStart, onShakeEnd, act, onNewGame }: ActionBarProps) {
   const player = currentPlayer(state);
   const { phase } = state;
 
   const buttons = (() => {
-    if (busy) return <span className="waiting">Moviendo…</span>;
+    if (busy && !shaking) return <span className="waiting">{state.phase.type === "awaitingRoll" || state.phase.type === "awaitingJailDecision" ? "Tirando…" : "Moviendo…"}</span>;
     switch (phase.type) {
       case "awaitingRoll":
         return (
-          <button type="button" className="primary" onClick={() => act((s) => roll(s))}>
-            Tirar los dados
-          </button>
+          <>
+            <DiceButton label="Tirar los dados" shaking={shaking} disabled={!canRoll && !shaking} onShakeStart={onShakeStart} onShakeEnd={onShakeEnd} />
+            <span className="hint">Mantené apretado para mezclar (o la barra espaciadora)</span>
+          </>
         );
       case "awaitingJailDecision":
         return (
           <>
-            <button type="button" className="primary" onClick={() => act((s) => roll(s))}>
-              Tirar (doble para salir)
-            </button>
+            <DiceButton label="Tirar (doble para salir)" shaking={shaking} disabled={!canRoll && !shaking} onShakeStart={onShakeStart} onShakeEnd={onShakeEnd} />
             <button type="button" disabled={player.cash < JAIL_BAIL} onClick={() => act(payBail)}>
               Pagar fianza {pesos(JAIL_BAIL)}
             </button>

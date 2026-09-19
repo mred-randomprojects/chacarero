@@ -2,7 +2,7 @@ import type { GameState } from "../game";
 import { currentPlayer, pesos } from "../game";
 
 /** Top-left list of players with cash and status; the current one is highlighted. */
-export function PlayersPanel({ state }: { readonly state: GameState }) {
+export function PlayersPanel({ state, onShowList }: { readonly state: GameState; readonly onShowList: () => void }) {
   const current = currentPlayer(state);
   return (
     <div className="players">
@@ -20,7 +20,12 @@ export function PlayersPanel({ state }: { readonly state: GameState }) {
           </li>
         ))}
       </ul>
-      <p className="turn">Turno {state.turn}</p>
+      <div className="players-footer">
+        <span className="turn">Turno {state.turn}</span>
+        <button type="button" onClick={onShowList} title="Lista de propiedades (L)">
+          Propiedades
+        </button>
+      </div>
     </div>
   );
 }

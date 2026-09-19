@@ -3,9 +3,12 @@ import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
 import type { DeedId, Holding, MoveKind } from "../game";
 import { SQUARES, getDeed } from "../game";
 import { Buildings } from "./Buildings";
+import type { PlateInfo } from "./cardTextures";
 import type { HexLayout, Vec2 } from "./hexLayout";
 import { computeHexLayout, hexagonVertices } from "./hexLayout";
 import { Pawn } from "./Pawn";
+import { PlayerArea } from "./PlayerArea";
+import { seatFrame } from "./seats";
 import { Tile } from "./Tile";
 import { createSlotTexture, createTitleTexture } from "./tileTexture";
 
@@ -13,7 +16,9 @@ export const BOARD_LAYOUT: HexLayout = computeHexLayout({ innerRadius: 10, tileD
 
 const SLAB_DEPTH = 0.5;
 const SLAB_BEVEL = 0.08;
-const SLAB_MARGIN = 0.45;
+export const SLAB_MARGIN = 0.45;
+export const TABLE_Y = -(SLAB_DEPTH + SLAB_BEVEL);
+export const TABLE_RADIUS = 23;
 const FELT_Y = 0.01;
 const TILE_Y = 0.02;
 const DECOR_Y = 0.03;
@@ -30,12 +35,19 @@ export interface PawnView {
   readonly dimmed: boolean;
 }
 
+export interface SeatView {
+  readonly playerId: string;
+  readonly side: number;
+  readonly plate: PlateInfo;
+}
+
 export interface BoardProps {
   readonly hovered: number | null;
   readonly selected: number | null;
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
   readonly pawns: readonly PawnView[];
+  readonly seats: readonly SeatView[];
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
   readonly colorOf: (playerId: string) => string;
   readonly onPawnArrive: (pawnId: string, square: number) => void;
@@ -50,7 +62,7 @@ function toShape(points: readonly Vec2[]): Shape {
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
  * towards -z (world), so Salida ends up at the bottom-right from the default camera.
  */
-export function Board({ hovered, selected, onHover, onSelect, pawns, holdings, colorOf, onPawnArrive }: BoardProps) {
+export function Board({ hovered, selected, onHover, onSelect, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
   const layout = BOARD_LAYOUT;
 
   const slabGeometry = useMemo(() => {
@@ -81,7 +93,29 @@ export function Board({ hovered, selected, onHover, onSelect, pawns, holdings, c
 
   return (
     <group>
-      <mesh geometry={slabGeometry} rotation={FLAT} position={[0, -(SLAB_DEPTH + SLAB_BEVEL), 0]} receiveShadow castShadow>
+      <mesh rotation={FLAT} position={[0, TABLE_Y - 0.01, 0]} receiveShadow>
+        <circleGeometry args={[TABLE_RADIUS, 96]} />
+        <meshStandardMaterial color="#2f6b3c" roughness={1} />
+      </mesh>
+      <mesh position={[0, TABLE_Y - 0.36, 0]} receiveShadow>
+        <cylinderGeometry args={[TABLE_RADIUS + 0.6, TABLE_RADIUS + 0.6, 0.6, 96]} />
+        <meshStandardMaterial color="#4a3320" roughness={0.75} />
+      </mesh>
+
+      {seats.map((seat) => (
+        <PlayerArea
+          key={seat.playerId}
+          playerId={seat.playerId}
+          frame={seatFrame(layout, SLAB_MARGIN, seat.side)}
+          plate={seat.plate}
+          holdings={holdings}
+          y={TABLE_Y + 0.01}
+          onHover={onHover}
+          onSelect={onSelect}
+        />
+      ))}
+
+      <mesh geometry={slabGeometry} rotation={FLAT} position={[0, TABLE_Y, 0]} receiveShadow castShadow>
         <meshStandardMaterial color="#3b2a1e" roughness={0.7} metalness={0.05} />
       </mesh>
 

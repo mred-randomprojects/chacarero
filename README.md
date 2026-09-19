@@ -11,6 +11,19 @@ Suerte y Destino, construís chacras y estancias, hipotecás cuando no te
 alcanza y, si no hay más remedio, quebrás. Gana el último que queda.
 El modo multijugador online (servidor WebSocket) es el siguiente paso.
 
+## Controles
+
+- **Dados**: mantené apretado el botón (o la barra espaciadora) para mezclar,
+  soltá para tirar. Los dados vuelan al centro del tablero y quedan mostrando
+  el resultado.
+- **Cámara**: arrastrá para girar, rueda para acercar. Teclado: `← → ↑ ↓`
+  giran e inclinan, `+ −` acercan, `1`–`6` te sientan en el lugar de cada
+  jugador, `M` en el del jugador de turno, `0` vista general, `T` desde arriba.
+  Con "Sigue el turno" activo la cámara se sienta sola donde le toca jugar.
+- **Propiedades**: cada jugador tiene su plata y sus escrituras sobre la mesa,
+  de su lado. Hacé clic en una escritura (en la mesa o en el tablero) para
+  construir, vender o hipotecar. `L` abre la lista completa de propiedades.
+
 ## Desarrollo
 
 ```bash

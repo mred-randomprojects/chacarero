@@ -1,22 +1,35 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import type { BoardProps } from "./Board";
-import { Board } from "./Board";
+import { BOARD_LAYOUT, Board, SLAB_MARGIN } from "./Board";
+import type { CameraRigProps } from "./CameraRig";
+import { CameraRig } from "./CameraRig";
+import { OVERVIEW } from "./cameraViews";
+import type { DiceThrow } from "./Dice";
+import { Dice } from "./Dice";
+import { seatFrame } from "./seats";
 import { useFontsReady } from "./useFontsReady";
+
+export interface SceneProps extends BoardProps, CameraRigProps {
+  /** Side of the player who holds the dice. */
+  readonly diceSide: number;
+  readonly shaking: boolean;
+  readonly throwing: DiceThrow | null;
+  readonly onDiceSettled: (id: number) => void;
+}
 
 /**
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene(props: BoardProps) {
+export function Scene({ goTo, diceSide, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
   return (
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [0, 24, 27], fov: 38, near: 0.1, far: 200 }}
+      camera={{ position: [...OVERVIEW.position], fov: 45, near: 0.1, far: 200 }}
       gl={{ antialias: true, alpha: true }}
-      onPointerMissed={() => props.onHover(null)}
+      onPointerMissed={() => board.onHover(null)}
     >
       <hemisphereLight args={["#fff5e0", "#3a2a1a", 0.55]} />
       <ambientLight intensity={0.35} />
@@ -25,22 +38,22 @@ export function Scene(props: BoardProps) {
         intensity={1.8}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-left={-26}
+        shadow-camera-right={26}
+        shadow-camera-top={26}
+        shadow-camera-bottom={-26}
         shadow-camera-near={1}
         shadow-camera-far={80}
-        shadow-bias={-0.0004}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.04}
       />
-      {fontsReady && <Board {...props} />}
-      <OrbitControls
-        enablePan={false}
-        minDistance={12}
-        maxDistance={70}
-        maxPolarAngle={Math.PI * 0.42}
-        target={[0, 0, 4]}
-      />
+      {fontsReady && (
+        <>
+          <Board {...board} />
+          <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
+        </>
+      )}
+      <CameraRig goTo={goTo} />
     </Canvas>
   );
 }
