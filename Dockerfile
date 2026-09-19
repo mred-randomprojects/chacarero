@@ -13,13 +13,15 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN bun run build
 
-FROM base AS runner
+# Runtime: only production dependencies (the server itself just needs zod).
+FROM oven/bun:1-slim AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=9902
 ENV STATIC_DIR=/app/dist
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 COPY --from=builder /app/dist ./dist
-COPY package.json ./
 COPY server ./server
 COPY src/game ./src/game
 COPY src/net ./src/net
