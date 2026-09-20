@@ -46,11 +46,21 @@ function Countdown({ deadline, now }: { readonly deadline: number | null; readon
  * player who must decide gets buttons; everyone else sees who is up. The
  * clock is the session's (server's online), so all screens agree.
  */
-export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onManage, onTrade, onCounter, canRestart }: PromptProps) {
-  const { phase } = state;
-  const player = currentPlayer(state);
+export function Prompt(props: PromptProps) {
+  const { busy, deadline } = props;
   const now = useNow(!busy && deadline !== null);
   if (busy) return null;
+  return (
+    // A mouse click must not leave focus on a button, or Space would press it again instead of the highlighted action.
+    <div className="prompt-slot" onClick={(event) => event.detail > 0 && event.target instanceof HTMLButtonElement && event.target.blur()}>
+      <PromptCard {...props} now={now} />
+    </div>
+  );
+}
+
+function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTrade, onCounter, canRestart, now }: PromptProps & { readonly now: number }) {
+  const { phase } = state;
+  const player = currentPlayer(state);
 
   const mine = (action: ActionRequest) => canAct(state, you, action);
   const waiting = (action: ActionRequest) => <p className="waiting-for">{waitingFor(state, action)}</p>;

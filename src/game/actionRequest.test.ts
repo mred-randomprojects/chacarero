@@ -123,3 +123,29 @@ describe("timing", () => {
     expect(bust.players[0]?.bankrupt).toBe(true);
   });
 });
+
+describe("primaryAction (Space/Enter)", () => {
+  it("names the highlighted button of each prompt, only for the screen that may press it", async () => {
+    const { primaryAction } = await import("../ui/perspective");
+    let state = createGame({ players, random: () => 0.5 });
+    expect(primaryAction(state, null)).toBeNull(); // dice: hold Space instead
+    state = applyActionRequest(state, { type: "rollDice" }, [1, 2]);
+    expect(primaryAction(state, null)).toEqual({ type: "movePawn" });
+    expect(primaryAction(state, "a")).toEqual({ type: "movePawn" });
+    expect(primaryAction(state, "b")).toBeNull();
+    state = applyActionRequest(state, { type: "movePawn" });
+    expect(primaryAction(state, "a")).toEqual({ type: "buy" });
+    // Cannot afford it: the button is disabled, so no action.
+    const broke = { ...state, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 100 } : p)) };
+    expect(primaryAction(broke, "a")).toBeNull();
+    state = applyActionRequest(state, { type: "decline" });
+    expect(primaryAction(state, "b")).toEqual({ type: "bid", amount: 100 });
+    expect(primaryAction(state, "a")).toBeNull();
+    state = applyActionRequest(applyActionRequest(applyActionRequest(state, { type: "passBid" }), { type: "passBid" }), { type: "passBid" });
+    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(primaryAction(state, "a")).toEqual({ type: "endTurn" });
+    const proposed = proposeTrade({ ...state, holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 500 });
+    expect(primaryAction(proposed, "b")).toEqual({ type: "acceptTrade" });
+    expect(primaryAction(proposed, "a")).toBeNull();
+  });
+});

@@ -26,6 +26,10 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   y se ve en la mesa: los billetes vuelan de una pila a otra, las escrituras
   van del Banco a tu lado, las chacras caen sobre el campo. `Enter` o un clic
   en el aviso apura el paso.
+- **Espacio / Enter** hacen la acción destacada del momento: mover el peón,
+  aplicar la tarjeta, comprar, pagar, ofertar el mínimo, aceptar un canje,
+  terminar el turno. (Con los dados en la mano, Espacio los mezcla; durante
+  un aviso, lo apura.)
 - **Cámara**: arrastrá para girar, rueda para acercar (hasta pegar la nariz a
   los billetes). `⌥ Option/Alt + arrastrar` agarra la mesa y la desliza;
   `⌥ + clic` centra la vista en ese punto; doble clic en un casillero o en una

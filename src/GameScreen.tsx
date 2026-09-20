@@ -17,7 +17,7 @@ import { CameraBar } from "./ui/CameraBar";
 import { LogPanel } from "./ui/LogPanel";
 import { PlayersPanel } from "./ui/PlayersPanel";
 import { Prompt } from "./ui/Prompt";
-import { tradeProposer } from "./ui/perspective";
+import { primaryAction, tradeProposer } from "./ui/perspective";
 import { PropertiesList } from "./ui/PropertiesList";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
@@ -27,6 +27,8 @@ import { TradeDialog } from "./ui/TradeDialog";
 import { usePlayback } from "./ui/usePlayback";
 
 const ERROR_MS = 3_500;
+/** Space/Enter pressed this soon after a prompt appears are taken as leftover banner-skipping, not as the decision. */
+const PROMPT_GRACE_MS = 400;
 
 export interface GameScreenProps {
   readonly session: Session;
@@ -51,7 +53,12 @@ interface OpenTrade {
 const NO_OFFER: TradeOffer = { deeds: [], cash: 0 };
 
 function isTyping(event: KeyboardEvent): boolean {
-  return event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+  return event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement;
+}
+
+/** Inside a modal, or on a focused prompt button, the browser's own Space/Enter handling is the right one. */
+function ownsSpace(event: KeyboardEvent): boolean {
+  return event.target instanceof HTMLElement && event.target.closest(".modal-backdrop, .prompt") !== null;
 }
 
 /**
@@ -171,6 +178,12 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
 
   const canRoll = !busy && (game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision") && (you === null || currentPlayerId === you);
 
+  // When the current prompt became answerable, so a key still hammering through the banners does not answer it.
+  const promptReadyAt = useRef(0);
+  useEffect(() => {
+    promptReadyAt.current = Date.now();
+  }, [busy, seq]);
+
   // Trades: whoever must act may propose one; the other party answers from the prompt. A draft never outlives the state it was written against.
   const proposer = busy ? null : tradeProposer(game, you);
   const openTrade = useCallback(
@@ -215,17 +228,25 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const onSelect = useCallback((index: number) => setSelected((current) => (current === index ? null : index)), []);
   const closePanel = useCallback(() => setSelected(null), []);
 
-  // Keyboard: space shakes/throws (or skips a replay), digits sit at a player's seat, 0/T/M views, L list, coma settings.
+  // Keyboard: space/enter skip a replay, shake the dice (hold space) or press the prompt's highlighted button;
+  // digits sit at a player's seat, 0/T/M views, L list, C trade, coma settings.
   useEffect(() => {
     const onDown = (event: KeyboardEvent) => {
-      if (isTyping(event)) return;
+      if (isTyping(event) || ownsSpace(event)) return;
       if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
         if (playback.busy) {
           skip();
           return;
         }
-        if (event.key === " " && !event.repeat) startShake();
+        if (event.repeat) return;
+        if (canRoll) {
+          if (event.key === " ") startShake();
+          return;
+        }
+        if (busy || showList || showSettings || trade !== null || Date.now() - promptReadyAt.current < PROMPT_GRACE_MS) return;
+        const action = primaryAction(game, you);
+        if (action) dispatch(action);
         return;
       }
       if (event.key === "Escape") {
@@ -258,7 +279,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, skip, proposeTrade]);
+  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>

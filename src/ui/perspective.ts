@@ -1,5 +1,5 @@
 import type { ActionRequest, GameState } from "../game";
-import { allowedPlayerFor, getPlayer } from "../game";
+import { MIN_BID_INCREMENT, allowedPlayerFor, checkTrade, currentPlayer, getDeed, getPlayer } from "../game";
 
 /**
  * Whether this screen may send `action` now. At a shared table (`you` null)
@@ -30,4 +30,51 @@ export function tradeProposer(state: GameState, you: string | null): string | nu
   const allowed = allowedPlayerFor(state, PROPOSE_PROBE);
   if (allowed === null || (you !== null && allowed !== you)) return null;
   return state.players.some((p) => p.id !== allowed && !p.bankrupt) ? allowed : null;
+}
+
+/**
+ * The highlighted button of the current prompt, as an action, when this
+ * screen may press it right now: move the pawn, apply the card, buy, pay,
+ * the minimum bid, accept the trade, end the turn. Null when there is no
+ * prompt (the dice are handled by holding Space), when it is not this
+ * screen's call, or when the button would be disabled. Mirrors the
+ * `disabled` conditions of the primary buttons in Prompt.
+ */
+export function primaryAction(state: GameState, you: string | null): ActionRequest | null {
+  const { phase } = state;
+  let action: ActionRequest | null = null;
+  switch (phase.type) {
+    case "awaitingMove":
+      action = { type: "movePawn" };
+      break;
+    case "awaitingCardAck":
+      action = { type: "acknowledgeCard" };
+      break;
+    case "awaitingBuyDecision":
+      action = currentPlayer(state).cash >= getDeed(phase.deedId).price ? { type: "buy" } : null;
+      break;
+    case "awaitingPayOrDraw":
+      action = { type: "choosePay" };
+      break;
+    case "awaitingPayment":
+      action = getPlayer(state, phase.debtorId).cash >= phase.amount ? { type: "settlePayment" } : null;
+      break;
+    case "auction": {
+      const amount = phase.auction.highestBid + MIN_BID_INCREMENT;
+      action = getPlayer(state, phase.auction.turnBidderId).cash >= amount ? { type: "bid", amount } : null;
+      break;
+    }
+    case "awaitingTradeResponse":
+      action = checkTrade(state, phase.trade).ok ? { type: "acceptTrade" } : null;
+      break;
+    case "turnEnd":
+      action = { type: "endTurn" };
+      break;
+    case "awaitingRoll":
+    case "awaitingJailDecision":
+    case "gameOver":
+      action = null;
+      break;
+  }
+  return action !== null && canAct(state, you, action) ? action : null;
 }
