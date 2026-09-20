@@ -1,10 +1,12 @@
-import type { Deed, GameState, Square } from "../game";
+import type { Deed, DeedId, GameState, Square } from "../game";
 import {
   PROVINCE_COLORS,
   canBuildChacra,
   canBuildEstancia,
+  canManageHoldings,
   canMortgage,
   canSellBuilding,
+  canTradeDeed,
   canUnmortgage,
   activePlayer,
   describeSquare,
@@ -16,6 +18,7 @@ import {
   unmortgageCost,
 } from "../game";
 import type { Dispatch } from "./ActionBar";
+import { tradeProposer } from "./perspective";
 
 export interface SquarePanelProps {
   readonly state: GameState;
@@ -24,6 +27,8 @@ export interface SquarePanelProps {
   readonly pinned: boolean;
   readonly busy: boolean;
   readonly dispatch: Dispatch;
+  /** Opens the trade dialog with this deed already on the table. */
+  readonly onTradeDeed: (deedId: DeedId) => void;
   readonly onClose: () => void;
 }
 
@@ -114,7 +119,7 @@ interface OwnerActionsProps {
 
 /** Build / sell / mortgage buttons, shown when the player who must act owns the deed (and is at this screen). */
 function OwnerActions({ state, you, deed, busy, dispatch }: OwnerActionsProps) {
-  if (state.phase.type === "gameOver" || state.phase.type === "auction") return null;
+  if (!canManageHoldings(state)) return null;
   const player = activePlayer(state);
   if (you !== null && player.id !== you) return null;
   const holding = state.holdings[deed.id];
@@ -164,8 +169,34 @@ function OwnerActions({ state, you, deed, busy, dispatch }: OwnerActionsProps) {
   );
 }
 
+interface TradeButtonProps {
+  readonly state: GameState;
+  readonly you: string | null;
+  readonly deed: Deed;
+  readonly busy: boolean;
+  readonly onTradeDeed: (deedId: DeedId) => void;
+}
+
+/** "Pedir en canje" on another player's deed, "Ofrecer en canje" on your own, when a trade can be proposed now. */
+function TradeButton({ state, you, deed, busy, onTradeDeed }: TradeButtonProps) {
+  const proposer = tradeProposer(state, you);
+  const holding = state.holdings[deed.id];
+  if (!proposer || !holding) return null;
+  const owner = getPlayer(state, holding.ownerId);
+  if (owner.bankrupt) return null;
+  const tradeable = canTradeDeed(state, deed.id);
+  const mine = owner.id === proposer;
+  return (
+    <div className="owner-actions">
+      <button type="button" disabled={busy || !tradeable.ok} title={tradeable.ok ? "" : tradeable.reason} onClick={() => onTradeDeed(deed.id)}>
+        {mine ? "Ofrecer en canje" : `Pedirle un canje a ${owner.name}`}
+      </button>
+    </div>
+  );
+}
+
 /** Side panel describing the hovered or selected square, with owner actions. */
-export function SquarePanel({ state, you, square, pinned, busy, dispatch, onClose }: SquarePanelProps) {
+export function SquarePanel({ state, you, square, pinned, busy, dispatch, onTradeDeed, onClose }: SquarePanelProps) {
   if (!square) {
     return (
       <aside className="panel panel-empty">
@@ -205,6 +236,7 @@ export function SquarePanel({ state, you, square, pinned, busy, dispatch, onClos
       )}
       <p className="description">{describeSquare(square)}</p>
       {deed && <OwnerActions state={state} you={you} deed={deed} busy={busy} dispatch={dispatch} />}
+      {deed && <TradeButton state={state} you={you} deed={deed} busy={busy} onTradeDeed={onTradeDeed} />}
       {deed && <DeedDetails deed={deed} />}
     </aside>
   );

@@ -9,6 +9,12 @@ import { DEEDS } from "../game";
 
 const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
 const DeedIdSchema = z.enum(deedIds);
+const PlayerId = z.string().min(8).max(64);
+const Name = z.string().trim().min(1).max(16);
+const Code = z.string().trim().toUpperCase().length(4);
+/** Far above any cash a game can hold; the engine checks the real balance. */
+const MAX_CASH = 100_000_000;
+const TradeOfferSchema = z.object({ deeds: z.array(DeedIdSchema).max(deedIds.length).readonly(), cash: z.number().int().nonnegative().max(MAX_CASH) });
 
 export const ActionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("rollDice") }),
@@ -30,11 +36,12 @@ export const ActionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("unmortgage"), deedId: DeedIdSchema }),
   z.object({ type: z.literal("settlePayment") }),
   z.object({ type: z.literal("declareBankruptcy") }),
+  z.object({ type: z.literal("proposeTrade"), toId: PlayerId, gives: TradeOfferSchema, receives: TradeOfferSchema }),
+  z.object({ type: z.literal("acceptTrade") }),
+  z.object({ type: z.literal("rejectTrade") }),
+  z.object({ type: z.literal("cancelTrade") }),
+  z.object({ type: z.literal("counterTrade"), gives: TradeOfferSchema, receives: TradeOfferSchema }),
 ]);
-
-const PlayerId = z.string().min(8).max(64);
-const Name = z.string().trim().min(1).max(16);
-const Code = z.string().trim().toUpperCase().length(4);
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("createRoom"), playerId: PlayerId, name: Name }),

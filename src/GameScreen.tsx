@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { soundsForTransition } from "./audio/gameSounds";
 import { sfx } from "./audio/sfx";
-import type { GameState } from "./game";
+import type { DeedId, GameState, TradeOffer } from "./game";
 import { currentPlayer, getSquare } from "./game";
 import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
@@ -17,10 +17,13 @@ import { CameraBar } from "./ui/CameraBar";
 import { LogPanel } from "./ui/LogPanel";
 import { PlayersPanel } from "./ui/PlayersPanel";
 import { Prompt } from "./ui/Prompt";
+import { tradeProposer } from "./ui/perspective";
 import { PropertiesList } from "./ui/PropertiesList";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
+import type { TradeDraft } from "./ui/TradeDialog";
+import { TradeDialog } from "./ui/TradeDialog";
 import { usePlayback } from "./ui/usePlayback";
 
 const ERROR_MS = 3_500;
@@ -38,6 +41,14 @@ interface Flight {
   readonly view: CameraView;
   readonly seconds?: number;
 }
+
+/** The trade dialog's contents; `id` remounts it so a fresh draft starts clean. */
+interface OpenTrade {
+  readonly id: number;
+  readonly draft: TradeDraft;
+}
+
+const NO_OFFER: TradeOffer = { deeds: [], cash: 0 };
 
 function isTyping(event: KeyboardEvent): boolean {
   return event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
@@ -57,6 +68,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const [throwing, setThrowing] = useState<DiceThrow | null>(null);
   const [showList, setShowList] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [trade, setTrade] = useState<OpenTrade | null>(null);
+  const tradeCounter = useRef(0);
   const [goTo, setGoTo] = useState<Flight | null>(null);
   const goToCounter = useRef(0);
   const playback = usePlayback(game, { bannerSeconds: settings.bannerSeconds });
@@ -158,6 +171,34 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
 
   const canRoll = !busy && (game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision") && (you === null || currentPlayerId === you);
 
+  // Trades: whoever must act may propose one; the other party answers from the prompt. A draft never outlives the state it was written against.
+  const proposer = busy ? null : tradeProposer(game, you);
+  const openTrade = useCallback(
+    (draft: Omit<TradeDraft, "me" | "counter">) => {
+      if (!proposer) return;
+      tradeCounter.current += 1;
+      setTrade({ id: tradeCounter.current, draft: { ...draft, me: proposer, counter: false } });
+    },
+    [proposer],
+  );
+  const proposeTrade = useCallback(() => openTrade({ partnerId: null, gives: NO_OFFER, receives: NO_OFFER }), [openTrade]);
+  const tradeDeed = useCallback(
+    (deedId: DeedId) => {
+      const owner = game.holdings[deedId]?.ownerId;
+      if (!owner || !proposer) return;
+      if (owner === proposer) openTrade({ partnerId: null, gives: { deeds: [deedId], cash: 0 }, receives: NO_OFFER });
+      else openTrade({ partnerId: owner, gives: NO_OFFER, receives: { deeds: [deedId], cash: 0 } });
+    },
+    [game.holdings, proposer, openTrade],
+  );
+  const counterTrade = useCallback(() => {
+    if (game.phase.type !== "awaitingTradeResponse") return;
+    const { trade: pending } = game.phase;
+    tradeCounter.current += 1;
+    setTrade({ id: tradeCounter.current, draft: { me: pending.toId, partnerId: pending.fromId, gives: pending.receives, receives: pending.gives, counter: true } });
+  }, [game.phase]);
+  useEffect(() => setTrade(null), [seq]);
+
   const startShake = useCallback(() => {
     if (!canRoll) return;
     setShaking(true);
@@ -190,6 +231,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       if (event.key === "Escape") {
         setShowList(false);
         setShowSettings(false);
+        setTrade(null);
         closePanel();
         return;
       }
@@ -201,6 +243,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       else if (key === "t") flyTo(TOP_DOWN);
       else if (key === "m") flyToSeat(mySide);
       else if (key === "l") setShowList((v) => !v);
+      else if (key === "c") proposeTrade();
       else if (key === ",") setShowSettings((v) => !v);
     };
     const onUp = (event: KeyboardEvent) => {
@@ -215,7 +258,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, skip]);
+  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, skip, proposeTrade]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -259,14 +302,35 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onDiceSettled={onDiceSettled}
       />
       <div className="left-column">
-        <PlayersPanel state={game} cash={view.cash} you={you} offline={session.offline} roomCode={session.roomCode} connection={session.connection} onShowList={openList} onLeave={session.leave} />
+        <PlayersPanel
+          state={game}
+          cash={view.cash}
+          you={you}
+          offline={session.offline}
+          roomCode={session.roomCode}
+          connection={session.connection}
+          onShowList={openList}
+          onTrade={proposer ? proposeTrade : null}
+          onLeave={session.leave}
+        />
         <LogPanel state={game} />
       </div>
-      <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onClose={closePanel} />
-      <ActionBar state={game} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} dispatch={dispatch} />
+      <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
+      <ActionBar state={game} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
       <div className="stage">
         <Banner state={game} event={playback.current} onSkip={skip} />
-        <Prompt state={game} you={you} busy={busy} deadline={session.deadline} dispatch={dispatch} onNewGame={session.newGame} onManage={openList} canRestart={canRestart} />
+        <Prompt
+          state={game}
+          you={you}
+          busy={busy}
+          deadline={session.deadline}
+          dispatch={dispatch}
+          onNewGame={session.newGame}
+          onManage={openList}
+          onTrade={proposeTrade}
+          onCounter={counterTrade}
+          canRestart={canRestart}
+        />
       </div>
       <CameraBar
         followTurn={settings.followTurn}
@@ -290,6 +354,16 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         />
       )}
       {showSettings && <SettingsPanel settings={settings} onChange={onSettings} onClose={() => setShowSettings(false)} />}
+      {trade && (
+        <TradeDialog
+          key={trade.id}
+          state={game}
+          draft={trade.draft}
+          busy={busy}
+          onSubmit={(toId, gives, receives) => dispatch(trade.draft.counter ? { type: "counterTrade", gives, receives } : { type: "proposeTrade", toId, gives, receives })}
+          onClose={() => setTrade(null)}
+        />
+      )}
       {error && <div className="toast">{error}</div>}
     </div>
   );

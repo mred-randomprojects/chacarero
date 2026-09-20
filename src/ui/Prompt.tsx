@@ -1,7 +1,8 @@
 import type { ActionRequest, GameState } from "../game";
-import { MIN_BID_INCREMENT, canRaiseCash, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
+import { MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
 import type { Dispatch } from "./ActionBar";
-import { canAct, waitingFor } from "./perspective";
+import { canAct, tradeProposer, waitingFor } from "./perspective";
+import { OfferItems } from "./TradeDialog";
 import { useNow } from "./useNow";
 
 export interface PromptProps {
@@ -14,6 +15,10 @@ export interface PromptProps {
   readonly onNewGame: () => void;
   /** Opens the properties list so the player can sell or mortgage before deciding. */
   readonly onManage: () => void;
+  /** Opens the trade dialog to propose a deal. */
+  readonly onTrade: () => void;
+  /** Opens the trade dialog to answer the pending proposal with a different one. */
+  readonly onCounter: () => void;
   /** Whether this screen may start a new game (host online, anyone locally). */
   readonly canRestart: boolean;
 }
@@ -34,7 +39,7 @@ function Countdown({ deadline, now }: { readonly deadline: number | null; readon
  * player who must decide gets buttons; everyone else sees who is up. The
  * clock is the session's (server's online), so all screens agree.
  */
-export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onManage, canRestart }: PromptProps) {
+export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onManage, onTrade, onCounter, canRestart }: PromptProps) {
   const { phase } = state;
   const player = currentPlayer(state);
   const now = useNow(!busy && deadline !== null);
@@ -42,6 +47,7 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
 
   const mine = (action: ActionRequest) => canAct(state, you, action);
   const waiting = (action: ActionRequest) => <p className="waiting-for">{waitingFor(state, action)}</p>;
+  const canTrade = tradeProposer(state, you) !== null;
 
   switch (phase.type) {
     case "awaitingMove": {
@@ -112,6 +118,11 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
               <button type="button" onClick={onManage}>
                 Mis propiedades
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
             </div>
           ) : (
             waiting(action)
@@ -165,6 +176,11 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
               <button type="button" onClick={onManage}>
                 Vender / hipotecar
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
               <button type="button" className="danger" disabled={!stuck || missing <= 0} onClick={() => dispatch({ type: "declareBankruptcy" })}>
                 Declarar quiebra
               </button>
@@ -215,6 +231,58 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
         </div>
       );
     }
+    case "awaitingTradeResponse": {
+      const { trade } = phase;
+      const from = getPlayer(state, trade.fromId);
+      const to = getPlayer(state, trade.toId);
+      const check = checkTrade(state, trade);
+      const accept: ActionRequest = { type: "acceptTrade" };
+      const cancel: ActionRequest = { type: "cancelTrade" };
+      return (
+        <div className="prompt trade">
+          <h3>
+            <span className="dot" style={{ background: from.color }} /> {from.name} le propone un canje a <span className="dot" style={{ background: to.color }} /> {to.name}
+          </h3>
+          <div className="trade-sides">
+            <div className="trade-side">
+              <h4>{from.name} da</h4>
+              <OfferItems state={state} offer={trade.gives} receiver={to.name} />
+            </div>
+            <div className="trade-arrow">⇄</div>
+            <div className="trade-side">
+              <h4>{to.name} da</h4>
+              <OfferItems state={state} offer={trade.receives} receiver={from.name} />
+            </div>
+          </div>
+          {!check.ok && <p className="trade-problem">{check.reason}</p>}
+          {mine(accept) ? (
+            <div className="buttons">
+              <button type="button" className="primary" disabled={!check.ok} title={check.ok ? "" : check.reason} onClick={() => dispatch(accept)}>
+                Aceptar
+              </button>
+              <button type="button" onClick={onCounter}>
+                Contraofertar
+              </button>
+              <button type="button" className="danger" onClick={() => dispatch({ type: "rejectTrade" })}>
+                Rechazar
+              </button>
+            </div>
+          ) : mine(cancel) ? (
+            <>
+              {waiting(accept)}
+              <div className="buttons">
+                <button type="button" onClick={() => dispatch(cancel)}>
+                  Retirar la propuesta
+                </button>
+              </div>
+            </>
+          ) : (
+            waiting(accept)
+          )}
+          <Countdown deadline={deadline} now={now} />
+        </div>
+      );
+    }
     case "turnEnd": {
       const action: ActionRequest = { type: "endTurn" };
       return (
@@ -224,7 +292,7 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
           </h3>
           {mine(action) ? (
             <>
-              <p>Todavía podés construir, vender o hipotecar desde tus escrituras.</p>
+              <p>Todavía podés construir, vender, hipotecar o proponer un canje.</p>
               <div className="buttons">
                 <button type="button" className="primary" onClick={() => dispatch(action)}>
                   Terminar turno
@@ -232,6 +300,11 @@ export function Prompt({ state, you, busy, deadline, dispatch, onNewGame, onMana
                 <button type="button" onClick={onManage}>
                   Mis propiedades
                 </button>
+                {canTrade && (
+                  <button type="button" onClick={onTrade}>
+                    Canjear
+                  </button>
+                )}
               </div>
             </>
           ) : (

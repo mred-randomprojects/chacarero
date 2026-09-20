@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bid, createGame, decline, passBid, roll } from "../game";
+import type { GameState } from "../game";
+import { acceptTrade, bid, counterTrade, createGame, decline, passBid, proposeTrade, rejectTrade, roll } from "../game";
 import { soundsForTransition } from "./gameSounds";
 
 const players = [
@@ -17,6 +18,16 @@ describe("soundsForTransition", () => {
     expect(soundsForTransition(auction, raised)).toEqual(["gavelTap"]);
     const closed = passBid(raised);
     expect(soundsForTransition(raised, closed)).toEqual(["gavelBang", "auctionWon"]);
+  });
+
+  it("voices a trade being proposed, countered, accepted or turned down", () => {
+    const start: GameState = { ...createGame({ players, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const proposed = proposeTrade(start, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 1_000 });
+    expect(soundsForTransition(start, proposed)).toEqual(["open"]);
+    const countered = counterTrade(proposed, { deeds: [], cash: 500 }, { deeds: ["salta-sur"], cash: 0 });
+    expect(soundsForTransition(proposed, countered)).toEqual(["open"]);
+    expect(soundsForTransition(countered, acceptTrade(countered))).toEqual(["dealDone"]);
+    expect(soundsForTransition(countered, rejectTrade(countered))).toEqual(["close"]);
   });
 
   it("stays quiet when nobody bid and plays the fanfare on game over", () => {

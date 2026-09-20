@@ -103,12 +103,20 @@ No pasa nada. Al turno siguiente seguís normal.
 
 - Las escrituras se pueden comprar y vender entre jugadores al precio que
   acuerden. Las chacras y estancias no: solo van y vuelven del Banco.
+- En este juego eso se hace con un **canje**: el jugador de turno (o el que
+  está juntando plata para pagar una deuda) propone qué escrituras y cuánta
+  plata da cada lado; el otro acepta, rechaza o contraoferta. Tiene que haber
+  al menos una escritura en juego (plata por nada sería un préstamo, y eso
+  está prohibido). Un campo no se puede canjear mientras haya chacras o
+  estancias en cualquier zona de su provincia: primero se venden al Banco. La
+  partida espera hasta que el canje se resuelve.
 - El Banco presta el valor de hipoteca que figura al dorso de la escritura
   (la mitad del precio), cobrando **10 % de interés** por adelantado. Una
   propiedad hipotecada no cobra alquiler. Para levantarla se devuelve el
   préstamo más otro 10 %.
 - Si vendés una propiedad hipotecada, el comprador paga 10 % al Banco en el
-  momento y, si no la levanta enseguida, otro 10 % cuando lo haga.
+  momento y, si no la levanta enseguida, otro 10 % cuando lo haga. (Acá el
+  10 % se cobra al cerrar el canje y levantarla cuesta lo de siempre.)
 - Nadie puede prestarle plata a otro jugador ni hacer alianzas.
 
 ## Deudas y quiebra

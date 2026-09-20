@@ -1,7 +1,7 @@
 import type { CampoDeed, Deed, DeedId, Province } from "../types";
-import { DEEDS, camposOf, getDeed } from "../deeds";
+import { DEEDS, PROVINCE_NAMES, camposOf, deedName, getDeed } from "../deeds";
 import { MAX_CHACRAS_PER_CAMPO, MORTGAGE_INTEREST } from "../constants";
-import type { GameState, Holding, Player } from "./state";
+import type { GameState, Holding, Player, Trade, TradeOffer } from "./state";
 import { getPlayer } from "./state";
 
 export type RuleCheck = { readonly ok: true } | { readonly ok: false; readonly reason: string };
@@ -153,6 +153,105 @@ export function mortgageProceeds(deedId: DeedId): number {
 export function unmortgageCost(deedId: DeedId): number {
   const { mortgage } = getDeed(deedId);
   return Math.round(mortgage * (1 + MORTGAGE_INTEREST));
+}
+
+/**
+ * Whether players may build, mortgage or trade right now: not while a deed is
+ * being auctioned, not while a trade is on the table, not after the game.
+ */
+export function canManageHoldings(state: GameState): boolean {
+  const { type } = state.phase;
+  return type !== "auction" && type !== "awaitingTradeResponse" && type !== "gameOver";
+}
+
+// ---------- trades ----------
+
+/**
+ * Whether the player who must act may put a trade on the table: between
+ * steps only, never with the dice in the air, a card face up or an auction
+ * or another trade under way.
+ */
+export function canProposeTrade(state: GameState): boolean {
+  switch (state.phase.type) {
+    case "awaitingRoll":
+    case "awaitingJailDecision":
+    case "awaitingBuyDecision":
+    case "awaitingPayment":
+    case "turnEnd":
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Whether a deed may change hands between players. Buildings only go to and
+ * from the bank, and the even-build rule spans the province, so a campo can
+ * be traded only while its whole province is bare.
+ */
+export function canTradeDeed(state: GameState, deedId: DeedId): RuleCheck {
+  const deed = getDeed(deedId);
+  if (deed.kind !== "campo") return OK;
+  const built = camposOf(deed.province).find((c) => {
+    const holding = state.holdings[c.id];
+    return holding !== undefined && (holding.estancia || holding.chacras > 0);
+  });
+  if (!built) return OK;
+  return fail(built.id === deedId ? "Vendé las construcciones antes de canjear" : `Hay construcciones en ${PROVINCE_NAMES[deed.province]}; vendelas antes de canjear`);
+}
+
+/** Bank fee for taking over a mortgaged deed: 10 % of the mortgage value, paid on the spot. */
+export function mortgageTransferFee(deedId: DeedId): number {
+  const { mortgage } = getDeed(deedId);
+  return Math.round(mortgage * MORTGAGE_INTEREST);
+}
+
+function transferFees(state: GameState, deeds: readonly DeedId[]): number {
+  return deeds.reduce((sum, id) => sum + (state.holdings[id]?.mortgaged ? mortgageTransferFee(id) : 0), 0);
+}
+
+/** How much cash each side gains (or loses, negative) if the trade goes through, bank fees included. */
+export function tradeBalance(state: GameState, trade: Trade): { readonly from: number; readonly to: number } {
+  return {
+    from: trade.receives.cash - trade.gives.cash - transferFees(state, trade.receives.deeds),
+    to: trade.gives.cash - trade.receives.cash - transferFees(state, trade.gives.deeds),
+  };
+}
+
+function checkOffer(state: GameState, owner: Player, offer: TradeOffer): RuleCheck {
+  if (!Number.isInteger(offer.cash) || offer.cash < 0) return fail("La plata tiene que ser un número entero");
+  for (const id of offer.deeds) {
+    const holding = state.holdings[id];
+    if (!holding || holding.ownerId !== owner.id) return fail(`${deedName(getDeed(id))} no es de ${owner.name}`);
+    const tradeable = canTradeDeed(state, id);
+    if (!tradeable.ok) return fail(`${deedName(getDeed(id))}: ${tradeable.reason.charAt(0).toLowerCase()}${tradeable.reason.slice(1)}`);
+  }
+  return OK;
+}
+
+/**
+ * Whether a trade is well formed and both sides can honour it right now:
+ * two different solvent players, only their own bare deeds, at least one
+ * deed changing hands (cash for nothing would be a loan, which the rules
+ * forbid), and nobody left short of cash once fees are paid.
+ */
+export function checkTrade(state: GameState, trade: Trade): RuleCheck {
+  const from = state.players.find((p) => p.id === trade.fromId);
+  const to = state.players.find((p) => p.id === trade.toId);
+  if (!from || !to) return fail("Ese jugador no está en la mesa");
+  if (from.id === to.id) return fail("No podés canjear con vos mismo");
+  if (from.bankrupt || to.bankrupt) return fail(`${(from.bankrupt ? from : to).name} ya quebró`);
+  const all = [...trade.gives.deeds, ...trade.receives.deeds];
+  if (all.length === 0) return fail("Un canje tiene que incluir al menos una escritura");
+  if (new Set(all).size !== all.length) return fail("Hay una escritura repetida");
+  const gives = checkOffer(state, from, trade.gives);
+  if (!gives.ok) return gives;
+  const receives = checkOffer(state, to, trade.receives);
+  if (!receives.ok) return receives;
+  const balance = tradeBalance(state, trade);
+  if (from.cash + balance.from < 0) return fail(`A ${from.name} no le alcanza la plata`);
+  if (to.cash + balance.to < 0) return fail(`A ${to.name} no le alcanza la plata`);
+  return OK;
 }
 
 /** Whether the player still has something to sell or mortgage. */

@@ -9,11 +9,13 @@ export interface PlayersPanelProps {
   readonly roomCode: string | null;
   readonly connection: "local" | "connecting" | "open" | "closed";
   readonly onShowList: () => void;
+  /** Opens the trade dialog; absent when this screen may not propose right now. */
+  readonly onTrade: (() => void) | null;
   readonly onLeave: () => void;
 }
 
 /** Top-left list of players with cash and status; the current one is highlighted, you are marked. */
-export function PlayersPanel({ state, cash, you, offline, roomCode, connection, onShowList, onLeave }: PlayersPanelProps) {
+export function PlayersPanel({ state, cash, you, offline, roomCode, connection, onShowList, onTrade, onLeave }: PlayersPanelProps) {
   const current = currentPlayer(state);
   return (
     <div className="players">
@@ -45,6 +47,11 @@ export function PlayersPanel({ state, cash, you, offline, roomCode, connection, 
         <button type="button" onClick={onShowList} title="Lista de propiedades (L)">
           Propiedades
         </button>
+        {onTrade && (
+          <button type="button" onClick={onTrade} title="Proponer un canje (C)">
+            Canjear
+          </button>
+        )}
         <button type="button" onClick={onLeave} title="Dejar la mesa">
           Salir
         </button>

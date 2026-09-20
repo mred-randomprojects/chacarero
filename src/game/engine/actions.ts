@@ -17,18 +17,21 @@ import { ALL_CARDS } from "../cards";
 import { JAIL_INDEX, getSquare, salidaCrossings } from "../board";
 import { BOARD_SIZE, JAIL_BAIL, MAX_CHACRAS_PER_CAMPO, MAX_JAIL_TURNS, SALIDA_BONUS, DOUBLES_TO_JAIL } from "../constants";
 import { deedName, getDeed } from "../deeds";
-import { pesos } from "../describe";
-import type { Auction, Creditor, Debt, GameEvent, GameState, Holding, MoveKind, Party, Phase, Player } from "./state";
+import { describeOffer, pesos } from "../describe";
+import type { Auction, Creditor, Debt, GameEvent, GameState, Holding, MoveKind, Party, Phase, Player, Trade, TradeOffer } from "./state";
 import { activePlayer, currentPlayer, getPlayer } from "./state";
 import {
   buildingCount,
   canBuildChacra,
   canBuildEstancia,
   canMortgage,
+  canProposeTrade,
   canRaiseCash,
   canSellBuilding,
   canUnmortgage,
+  checkTrade,
   mortgageProceeds,
+  mortgageTransferFee,
   rentFor,
   sellValue,
   unmortgageCost,
@@ -550,6 +553,7 @@ function nextBidderAfterLeaving(auction: Auction, previousOrder: readonly string
 function actor(state: GameState): Player {
   if (state.phase.type === "gameOver") throw new Error("La partida terminó");
   if (state.phase.type === "auction") throw new Error("No durante el remate");
+  if (state.phase.type === "awaitingTradeResponse") throw new Error("Hay un canje pendiente");
   return activePlayer(state);
 }
 
@@ -627,6 +631,82 @@ export function unmortgage(input: GameState, deedId: DeedId): GameState {
   let next = transfer(state, who.id, cost, BANK, `levantar la hipoteca de ${deedName(getDeed(deedId))}`);
   next = setHolding(next, deedId, { ...holding, mortgaged: false });
   return emit(next, { type: "mortgage", deedId, mortgaged: false, text: `${deedName(getDeed(deedId))} vuelve a estar libre de hipoteca.` }, who.id);
+}
+
+// ---------- trades ----------
+
+/**
+ * Puts a trade on the table. Only the player who must act right now may
+ * propose (their own turn, or while settling a debt); the game pauses until
+ * the other player accepts, rejects or counters, then picks up where it was.
+ */
+export function proposeTrade(input: GameState, toId: string, gives: TradeOffer, receives: TradeOffer): GameState {
+  const state = begin(input);
+  const from = actor(state);
+  if (!canProposeTrade(state)) throw new Error("Terminá la jugada antes de proponer un canje");
+  const trade: Trade = { fromId: from.id, toId, gives, receives };
+  const check = checkTrade(state, trade);
+  if (!check.ok) throw new Error(check.reason);
+  const to = getPlayer(state, toId);
+  const next = log(state, `${from.name} le propone un canje a ${to.name}: da ${describeOffer(gives)} a cambio de ${describeOffer(receives)}.`, from.id);
+  return setPhase(next, { type: "awaitingTradeResponse", trade, resume: state.phase });
+}
+
+/** Moves deeds from one player to another; the receiver pays the bank's fee on mortgaged ones. */
+function handOver(state: GameState, deeds: readonly DeedId[], giver: Player, receiver: Player): GameState {
+  let next = state;
+  for (const deedId of deeds) {
+    const holding = next.holdings[deedId];
+    if (!holding) throw new Error("unreachable");
+    const name = deedName(getDeed(deedId));
+    next = setHolding(next, deedId, { ...holding, ownerId: receiver.id });
+    next = emit(next, { type: "deed", deedId, from: player(giver.id), to: player(receiver.id), text: `${name} pasa de ${giver.name} a ${receiver.name}.` }, receiver.id);
+    if (holding.mortgaged) next = transfer(next, receiver.id, mortgageTransferFee(deedId), BANK, `10 % por recibir ${name} hipotecada`);
+  }
+  return next;
+}
+
+/** The other player takes the deal: cash and deeds cross the table, then the game resumes. */
+export function acceptTrade(input: GameState): GameState {
+  const state = begin(input);
+  const { trade, resume } = expectPhase(state, "awaitingTradeResponse");
+  const check = checkTrade(state, trade);
+  if (!check.ok) throw new Error(check.reason);
+  const from = getPlayer(state, trade.fromId);
+  const to = getPlayer(state, trade.toId);
+  let next = log(state, `${to.name} acepta el canje.`, to.id);
+  if (trade.gives.cash > 0) next = transfer(next, from.id, trade.gives.cash, player(to.id), "canje");
+  if (trade.receives.cash > 0) next = transfer(next, to.id, trade.receives.cash, player(from.id), "canje");
+  next = handOver(next, trade.gives.deeds, from, to);
+  next = handOver(next, trade.receives.deeds, to, from);
+  return setPhase(next, resume);
+}
+
+export function rejectTrade(input: GameState): GameState {
+  const state = begin(input);
+  const { trade, resume } = expectPhase(state, "awaitingTradeResponse");
+  const to = getPlayer(state, trade.toId);
+  return setPhase(log(state, `${to.name} rechaza el canje.`, to.id), resume);
+}
+
+/** The proposer takes the offer back. */
+export function cancelTrade(input: GameState): GameState {
+  const state = begin(input);
+  const { trade, resume } = expectPhase(state, "awaitingTradeResponse");
+  const from = getPlayer(state, trade.fromId);
+  return setPhase(log(state, `${from.name} retira el canje.`, from.id), resume);
+}
+
+/** The other player answers with a different deal; roles swap and the proposer now has to answer. */
+export function counterTrade(input: GameState, gives: TradeOffer, receives: TradeOffer): GameState {
+  const state = begin(input);
+  const { trade, resume } = expectPhase(state, "awaitingTradeResponse");
+  const counter: Trade = { fromId: trade.toId, toId: trade.fromId, gives, receives };
+  const check = checkTrade(state, counter);
+  if (!check.ok) throw new Error(check.reason);
+  const from = getPlayer(state, counter.fromId);
+  const next = log(state, `${from.name} contraoferta: da ${describeOffer(gives)} a cambio de ${describeOffer(receives)}.`, from.id);
+  return setPhase(next, { type: "awaitingTradeResponse", trade: counter, resume });
 }
 
 // ---------- debts ----------

@@ -66,6 +66,8 @@ export function phaseSeconds(state: GameState): number | null {
       return 12;
     case "auction":
       return 15;
+    case "awaitingTradeResponse":
+      return 45;
     case "turnEnd":
       return 8;
     case "awaitingPayment":
@@ -91,6 +93,8 @@ export function defaultAction(state: GameState): ActionRequest | null {
       return { type: "choosePay" };
     case "auction":
       return { type: "passBid" };
+    case "awaitingTradeResponse":
+      return { type: "rejectTrade" };
     case "turnEnd":
       return { type: "endTurn" };
     case "awaitingPayment":

@@ -5,13 +5,16 @@ import type { GameState, Holding, Player } from "./state";
 import { activePlayer, createGame, currentPlayer, getPlayer } from "./state";
 import {
   MIN_BID_INCREMENT,
+  acceptTrade,
   acknowledgeCard,
   bid,
   buildChacra,
   buildEstancia,
   buy,
+  cancelTrade,
   chooseDraw,
   choosePay,
+  counterTrade,
   declareBankruptcy,
   decline,
   endTurn,
@@ -19,6 +22,8 @@ import {
   movePawn,
   passBid,
   payBail,
+  proposeTrade,
+  rejectTrade,
   roll,
   rollDice,
   sellBuilding,
@@ -26,7 +31,7 @@ import {
   unmortgage,
   spendJailCard,
 } from "./actions";
-import { canBuildChacra, mortgageProceeds, rentFor, unmortgageCost } from "./rules";
+import { canBuildChacra, canTradeDeed, checkTrade, mortgageProceeds, mortgageTransferFee, rentFor, tradeBalance, unmortgageCost } from "./rules";
 
 const ANA = { id: "ana", name: "Ana", color: "#f00" };
 const BETO = { id: "beto", name: "Beto", color: "#00f" };
@@ -796,5 +801,170 @@ describe("moves per action", () => {
     expect(state.moves).toHaveLength(1);
     state = buy(state);
     expect(state.moves).toHaveLength(0);
+  });
+});
+
+describe("trades", () => {
+  const NOTHING = { deeds: [], cash: 0 } as const;
+
+  /** Ana owns Formosa Sur and Salta Sur; Beto owns Formosa Norte (mortgaged) and Salta Centro. Ana is on turn. */
+  function table(): GameState {
+    let state = game([ANA, BETO, CARLA]);
+    state = withHolding(state, "formosa-sur", { ownerId: "ana" });
+    state = withHolding(state, "salta-sur", { ownerId: "ana" });
+    state = withHolding(state, "formosa-norte", { ownerId: "beto", mortgaged: true });
+    state = withHolding(state, "salta-centro", { ownerId: "beto" });
+    return { ...state, phase: { type: "turnEnd" } };
+  }
+
+  it("proposing pauses the game and remembers where to resume", () => {
+    const state = proposeTrade(table(), "beto", { deeds: ["salta-sur"], cash: 500 }, { deeds: ["salta-centro"], cash: 0 });
+    expect(state.phase).toMatchObject({
+      type: "awaitingTradeResponse",
+      trade: { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 500 }, receives: { deeds: ["salta-centro"], cash: 0 } },
+      resume: { type: "turnEnd" },
+    });
+    expect(activePlayer(state).id).toBe("beto");
+    expect(state.events).toEqual([{ type: "log", playerId: "ana", text: "Ana le propone un canje a Beto: da Salta · Zona Sur y $500 a cambio de Salta · Zona Centro." }]);
+    // Nothing else moves while the offer is on the table.
+    expect(() => endTurn(state)).toThrow();
+    expect(() => mortgage(state, "formosa-sur")).toThrow(/canje pendiente/);
+    expect(() => proposeTrade(state, "carla", { deeds: ["formosa-sur"], cash: 0 }, NOTHING)).toThrow(/canje pendiente/);
+  });
+
+  it("accepting crosses cash and deeds, charges the mortgage fee, and resumes", () => {
+    let state = proposeTrade(table(), "beto", { deeds: ["salta-sur"], cash: 500 }, { deeds: ["salta-centro", "formosa-norte"], cash: 0 });
+    state = acceptTrade(state);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(state.holdings["salta-sur"]).toMatchObject({ ownerId: "beto", mortgaged: false });
+    expect(state.holdings["salta-centro"]).toMatchObject({ ownerId: "ana" });
+    expect(state.holdings["formosa-norte"]).toMatchObject({ ownerId: "ana", mortgaged: true });
+    const fee = mortgageTransferFee("formosa-norte");
+    expect(fee).toBe(60);
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH - 500 - fee);
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 500);
+    const kinds = state.events.map((e) => e.type);
+    expect(kinds).toEqual(["log", "transfer", "deed", "deed", "deed", "transfer"]);
+    expect(state.events.map((e) => e.text)).toContain("Ana paga $60 al Banco (10 % por recibir Formosa · Zona Norte hipotecada).");
+    // The mortgage carries over: lifting it costs the usual amount.
+    expect(() => unmortgage(state, "formosa-norte")).not.toThrow();
+  });
+
+  it("rejecting and cancelling change nothing but the log", () => {
+    const proposed = proposeTrade(table(), "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: ["salta-centro"], cash: 1_000 });
+    const rejected = rejectTrade(proposed);
+    expect(rejected.phase).toEqual({ type: "turnEnd" });
+    expect(rejected.holdings).toEqual(table().holdings);
+    expect(rejected.events).toEqual([{ type: "log", playerId: "beto", text: "Beto rechaza el canje." }]);
+    const cancelled = cancelTrade(proposed);
+    expect(cancelled.phase).toEqual({ type: "turnEnd" });
+    expect(cancelled.events).toEqual([{ type: "log", playerId: "ana", text: "Ana retira el canje." }]);
+  });
+
+  it("a counter-offer swaps the roles and keeps the resume point", () => {
+    let state = proposeTrade(table(), "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: ["salta-centro"], cash: 0 });
+    state = counterTrade(state, { deeds: ["salta-centro"], cash: 0 }, { deeds: ["salta-sur"], cash: 2_000 });
+    expect(state.phase).toMatchObject({
+      type: "awaitingTradeResponse",
+      trade: { fromId: "beto", toId: "ana", gives: { deeds: ["salta-centro"], cash: 0 }, receives: { deeds: ["salta-sur"], cash: 2_000 } },
+      resume: { type: "turnEnd" },
+    });
+    expect(activePlayer(state).id).toBe("ana");
+    state = acceptTrade(state);
+    expect(state.phase).toEqual({ type: "turnEnd" });
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 2_000);
+    expect(state.holdings["salta-sur"]?.ownerId).toBe("beto");
+    expect(state.holdings["salta-centro"]?.ownerId).toBe("ana");
+  });
+
+  it("only allows well-formed trades of bare deeds between two solvent players", () => {
+    const state = table();
+    expect(checkTrade(state, { fromId: "ana", toId: "ana", gives: { deeds: ["salta-sur"], cash: 0 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /vos mismo/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: NOTHING, receives: NOTHING })).toMatchObject({ ok: false, reason: /al menos una escritura/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: [], cash: 1_000 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /al menos una escritura/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-centro"], cash: 0 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /no es de Ana/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 0 }, receives: { deeds: ["salta-sur"], cash: 0 } })).toMatchObject({ ok: false });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 1.5 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /entero/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: -100 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /entero/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "nadie", gives: { deeds: ["salta-sur"], cash: 0 }, receives: NOTHING })).toMatchObject({ ok: false });
+    expect(checkTrade(withPlayer(state, "beto", { bankrupt: true }), { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 0 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /quebró/ });
+    // A one-sided gift of a deed is fine: it is a sale at $0.
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 0 }, receives: NOTHING })).toEqual({ ok: true });
+    expect(() => proposeTrade(state, "beto", NOTHING, NOTHING)).toThrow(/al menos una escritura/);
+  });
+
+  it("refuses trades either side cannot pay for, fees included", () => {
+    const state = table();
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: STARTING_CASH + 1 }, receives: NOTHING })).toMatchObject({ ok: false, reason: /Ana no le alcanza/ });
+    expect(checkTrade(state, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 0 }, receives: { deeds: [], cash: STARTING_CASH + 1 } })).toMatchObject({ ok: false, reason: /Beto no le alcanza/ });
+    // Ana has exactly the cash she offers; the fee on the mortgaged deed she receives tips her over.
+    const broke = withPlayer(state, "ana", { cash: 1_000 });
+    const trade = { fromId: "ana", toId: "beto", gives: { deeds: [], cash: 1_000 }, receives: { deeds: ["formosa-norte"], cash: 0 } } as const;
+    expect(tradeBalance(broke, trade)).toEqual({ from: -1_060, to: 1_000 });
+    expect(checkTrade(broke, trade)).toMatchObject({ ok: false, reason: /Ana no le alcanza/ });
+    // Incoming cash counts: she can offer more than she has if she gets enough back.
+    expect(checkTrade(broke, { fromId: "ana", toId: "beto", gives: { deeds: ["salta-sur"], cash: 1_000 }, receives: { deeds: [], cash: 500 } })).toEqual({ ok: true });
+  });
+
+  it("keeps campos with buildings anywhere in their province off the table", () => {
+    let state = withProvince(table(), "ana", FORMOSA, 0);
+    state = withHolding(state, "formosa-sur", { ownerId: "ana", chacras: 1 });
+    expect(canTradeDeed(state, "formosa-sur")).toMatchObject({ ok: false, reason: /Vendé las construcciones/ });
+    expect(canTradeDeed(state, "formosa-centro")).toMatchObject({ ok: false, reason: /construcciones en Formosa/ });
+    expect(canTradeDeed(state, "salta-sur")).toEqual({ ok: true });
+    expect(canTradeDeed(state, "fc-mitre")).toEqual({ ok: true });
+    expect(() => proposeTrade(state, "beto", { deeds: ["formosa-centro"], cash: 0 }, NOTHING)).toThrow(/construcciones en Formosa/);
+    state = sellBuilding(state, "formosa-sur");
+    expect(canTradeDeed(state, "formosa-centro")).toEqual({ ok: true });
+  });
+
+  it("lets a debtor trade for cash during someone else's turn, then pay", () => {
+    // Beto owes Carla rent he cannot cover; Ana is on turn.
+    let state = game([ANA, BETO, CARLA]);
+    state = withHolding(state, "formosa-centro", { ownerId: "carla", estancia: true });
+    state = withHolding(state, "salta-sur", { ownerId: "beto" });
+    state = withPlayer(state, "beto", { cash: 100 });
+    state = { ...state, currentPlayerIndex: 1 };
+    state = roll(state, undefined, [1, 1]); // Formosa Centro, rent 4.750
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "beto" });
+    state = proposeTrade(state, "ana", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 5_000 });
+    expect(state.phase).toMatchObject({ type: "awaitingTradeResponse", trade: { fromId: "beto", toId: "ana" }, resume: { type: "awaitingPayment", debtorId: "beto" } });
+    state = acceptTrade(state);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "beto", amount: 4_750 });
+    expect(getPlayer(state, "beto").cash).toBe(5_100);
+    state = settlePayment(state);
+    expect(getPlayer(state, "carla").cash).toBe(STARTING_CASH + 4_750);
+    expect(getPlayer(state, "beto").cash).toBe(350);
+    expect(state.holdings["salta-sur"]?.ownerId).toBe("ana");
+  });
+
+  it("resumes a buy decision intact, and waits for mid-step phases to finish", () => {
+    let state = withHolding(game(), "salta-sur", { ownerId: "ana" });
+    state = rollDice(state, undefined, [1, 2]);
+    expect(state.phase).toEqual({ type: "awaitingMove" });
+    // Dice in the air: not now.
+    expect(() => proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 3_000 })).toThrow(/Terminá la jugada/);
+    state = movePawn(state);
+    expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "formosa-norte" });
+    state = proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 3_000 });
+    state = acceptTrade(state);
+    expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "formosa-norte" });
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH + 3_000);
+    state = buy(state);
+    expect(state.holdings["formosa-norte"]?.ownerId).toBe("ana");
+    // A card face up: not now either.
+    let card = withDecks(withHolding(game(), "salta-sur", { ownerId: "ana" }), ["suerte-13"], ["destino-04"]);
+    card = movePawn(rollDice(card, undefined, [4, 6])); // 10: Destino
+    expect(card.phase.type).toBe("awaitingCardAck");
+    expect(() => proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
+  });
+
+  it("is off limits during auctions and after the game", () => {
+    const auction = decline(roll(game(), undefined, [1, 2]));
+    expect(() => proposeTrade(auction, "beto", { deeds: [], cash: 0 }, NOTHING)).toThrow(/remate/);
+    const over: GameState = { ...table(), phase: { type: "gameOver", winnerId: "ana" } };
+    expect(() => proposeTrade(over, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/terminó/);
+    expect(() => acceptTrade(table())).toThrow();
+    expect(() => rejectTrade(table())).toThrow();
   });
 });

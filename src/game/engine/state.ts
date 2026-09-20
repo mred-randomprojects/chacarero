@@ -49,6 +49,20 @@ export interface Auction {
   readonly turnBidderId: string;
 }
 
+/** One side of a trade: the deeds and cash a player hands over. */
+export interface TradeOffer {
+  readonly deeds: readonly DeedId[];
+  readonly cash: number;
+}
+
+/** A proposal on the table: `fromId` hands `gives` to `toId` in exchange for `receives`. */
+export interface Trade {
+  readonly fromId: string;
+  readonly toId: string;
+  readonly gives: TradeOffer;
+  readonly receives: TradeOffer;
+}
+
 /**
  * What the game is waiting for. Every phase names the player who must act via
  * `currentPlayerIndex`; there is never more than one pending decision.
@@ -71,6 +85,8 @@ export type Phase =
       readonly reason: string;
     }
   | { readonly type: "auction"; readonly auction: Auction }
+  /** A trade is on the table; the game picks up at `resume` once it is answered. */
+  | { readonly type: "awaitingTradeResponse"; readonly trade: Trade; readonly resume: Phase }
   | { readonly type: "turnEnd" }
   | { readonly type: "gameOver"; readonly winnerId: string };
 
@@ -209,7 +225,8 @@ export function getPlayer(state: GameState, id: string): Player {
 
 /**
  * The player who has to act right now: the debtor while a debt is being
- * settled, the bidder on turn during an auction, otherwise the player on turn.
+ * settled, the bidder on turn during an auction, the player a trade was
+ * proposed to, otherwise the player on turn.
  */
 export function activePlayer(state: GameState): Player {
   switch (state.phase.type) {
@@ -217,6 +234,8 @@ export function activePlayer(state: GameState): Player {
       return getPlayer(state, state.phase.debtorId);
     case "auction":
       return getPlayer(state, state.phase.auction.turnBidderId);
+    case "awaitingTradeResponse":
+      return getPlayer(state, state.phase.trade.toId);
     default:
       return currentPlayer(state);
   }

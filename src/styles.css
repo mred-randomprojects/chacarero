@@ -1048,3 +1048,214 @@ button.link {
   font-weight: 700;
   color: var(--muted);
 }
+
+/* ---------- trades ---------- */
+
+.prompt.trade {
+  border-left-color: #2b6cb0;
+}
+
+.prompt.trade h3 .dot + .dot {
+  margin-left: 2px;
+}
+
+.trade-sides {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px 10px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+.trade-sides h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.trade-arrow {
+  align-self: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.offer-items,
+.offer-deeds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.offer-items li,
+.offer-deeds label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.offer-deeds label {
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.offer-deeds label:hover {
+  background: rgba(31, 94, 46, 0.1);
+}
+
+.offer-deeds li.blocked label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.offer-deeds input {
+  margin: 0;
+}
+
+.offer-items .swatch,
+.offer-deeds .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.offer-name {
+  font-weight: 700;
+}
+
+.offer-items .mortgaged,
+.offer-deeds .mortgaged {
+  color: var(--red);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.offer-cash {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.offer-nothing {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.trade-problem {
+  color: var(--red) !important;
+  font-weight: 700;
+}
+
+.modal.trade-dialog {
+  width: min(820px, calc(100% - 32px));
+}
+
+.partner-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+  font-weight: 700;
+}
+
+.partner-picker button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.partner-picker button.selected {
+  background: var(--green);
+  color: #fff;
+}
+
+.trade-sides.editing {
+  gap: 10px 14px;
+}
+
+.offer-editor {
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+}
+
+.offer-editor h4 {
+  margin-bottom: 8px;
+}
+
+.offer-cash-field {
+  display: block;
+  margin-top: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.offer-cash-field input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.cash-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.cash-steps button {
+  padding: 3px 8px;
+  font-size: 0.85rem;
+}
+
+.trade-balance {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.trade-dialog .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.trade-dialog .buttons button.primary {
+  font-size: 1.05rem;
+}
+
+@media (max-width: 700px) {
+  .trade-sides,
+  .trade-sides.editing {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}

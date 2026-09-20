@@ -112,6 +112,26 @@ describe("playing", () => {
     expect(room.game?.phase.type).toBe("auction");
   });
 
+  it("rejects a trade for an absent responder when its clock runs out", () => {
+    let room = playing();
+    const game = room.game;
+    if (!game) throw new Error("no game");
+    room = { ...room, game: { ...game, phase: { type: "turnEnd" }, holdings: { "salta-sur": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
+    const propose = { type: "proposeTrade", toId: beto.playerId, gives: { deeds: ["salta-sur"], cash: 0 }, receives: { deeds: [], cash: 1_000 } } as const;
+    expect(() => applyRequest(room, beto.playerId, room.seq, propose, NOW, [1, 2])).toThrow(/turno/);
+    room = applyRequest(room, ana.playerId, room.seq, propose, NOW, [1, 2]);
+    expect(room.game?.phase.type).toBe("awaitingTradeResponse");
+    // One log event to replay (2 s) plus the 45 s to answer.
+    expect(room.deadline).toBe(NOW + 47_000);
+    expect(() => applyRequest(room, ana.playerId, room.seq, { type: "acceptTrade" }, NOW, [1, 2])).toThrow(/turno/);
+    expect(() => applyRequest(room, beto.playerId, room.seq, { type: "cancelTrade" }, NOW, [1, 2])).toThrow(/turno/);
+    room = fireDeadline(room, room.deadline ?? 0, [1, 2]);
+    expect(room.lastAction).toBe("rejectTrade");
+    expect(room.lastActorId).toBe(beto.playerId);
+    expect(room.game?.phase).toEqual({ type: "turnEnd" });
+    expect(room.game?.holdings["salta-sur"]?.ownerId).toBe(ana.playerId);
+  });
+
   it("ends the game and lets the host go back to the lobby", () => {
     let room = playing();
     const game = room.game;

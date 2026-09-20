@@ -12,6 +12,8 @@ export interface ActionBarProps {
   readonly canRoll: boolean;
   readonly onShakeStart: () => void;
   readonly onShakeEnd: () => void;
+  /** Opens the trade dialog; absent when this screen may not propose right now. */
+  readonly onTrade: (() => void) | null;
   readonly dispatch: Dispatch;
 }
 
@@ -56,7 +58,7 @@ function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
 }
 
 /** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
-export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, dispatch }: ActionBarProps) {
+export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
   const player = currentPlayer(state);
   const { phase } = state;
   const rolling = phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
@@ -102,6 +104,11 @@ export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, on
                     </button>
                   )}
                 </>
+              )}
+              {onTrade && (
+                <button type="button" disabled={busy} onClick={onTrade} title="Proponer un canje (C)">
+                  ⇄ Canjear
+                </button>
               )}
               <span className="hint">Mantené apretado para mezclar (o la barra espaciadora)</span>
             </>

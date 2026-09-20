@@ -47,6 +47,13 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   de su lado (los billetes son decorativos: la cifra del cartel es la que
   vale). Hacé clic en una escritura (en la mesa o en el tablero) para
   construir, vender o hipotecar. `L` abre la lista completa de propiedades.
+- **Canjes**: en tu turno (o mientras juntás plata para una deuda) podés
+  proponerle un canje a otro jugador con `C`, el botón **Canjear** o desde
+  la escritura que querés. Elegís qué escrituras y cuánta plata da cada uno;
+  el otro ve la propuesta en su pantalla y la acepta, la rechaza o manda una
+  contraoferta. Mientras tanto la mesa espera (45 s; si nadie contesta, se
+  rechaza). Las escrituras y los billetes vuelan de un lado al otro cuando
+  se cierra el trato.
 
 ## Desarrollo
 
@@ -72,7 +79,7 @@ se despliega al droplet con `./deploy.sh` (ver `deploy/README.md`).
   casilleros, las 29 escrituras con sus tablas de alquiler, las 32 tarjetas y
   las constantes del reglamento. Todo con tests.
 - `src/game/engine/` — el motor: `GameState` inmutable y funciones puras
-  (`rollDice`, `movePawn`, `buy`, `buildChacra`, `mortgage`,
+  (`rollDice`, `movePawn`, `buy`, `buildChacra`, `mortgage`, `proposeTrade`,
   `declareBankruptcy`…) que devuelven el estado siguiente y registran eventos.
   `actionRequest.ts` y `timing.ts` son lo que comparten el servidor y el modo
   mesa: qué jugada puede mandar quién, cuánto dura cada decisión y qué pasa si

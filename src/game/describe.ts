@@ -1,4 +1,6 @@
 import { JAIL_BAIL, MAX_JAIL_TURNS, SALIDA_BONUS } from "./constants";
+import { deedName, getDeed } from "./deeds";
+import type { TradeOffer } from "./engine/state";
 import type { Square } from "./types";
 
 /** Formats an amount the way the cards do: "$5.000". */
@@ -38,4 +40,13 @@ export function describeSquare(square: Square): string {
     case "marchePreso":
       return "Vas directo a la Comisaría sin pasar por la Salida. Mientras estés preso no cobrás alquileres.";
   }
+}
+
+/** One side of a trade in words: "Formosa Sur, Salta Norte y $2.000", or "nada". */
+export function describeOffer(offer: TradeOffer): string {
+  const items = offer.deeds.map((id) => deedName(getDeed(id)));
+  if (offer.cash > 0) items.push(pesos(offer.cash));
+  if (items.length === 0) return "nada";
+  if (items.length === 1) return items[0] ?? "nada";
+  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
 }

@@ -7,6 +7,7 @@ import {
   activePlayer,
   canBuildChacra,
   canBuildEstancia,
+  canManageHoldings,
   canMortgage,
   canSellBuilding,
   canUnmortgage,
@@ -36,7 +37,7 @@ const SQUARE_INDEX = new Map(
 
 /** Modal with every deed on the board: owner, buildings, mortgage and the rent a visitor would pay now. */
 export function PropertiesList({ state, onClose, onSelect, dispatch, you = null, busy = false }: PropertiesListProps) {
-  const canManage = dispatch !== undefined && state.phase.type !== "auction" && state.phase.type !== "gameOver";
+  const canManage = dispatch !== undefined && canManageHoldings(state);
   const active = canManage ? activePlayer(state) : null;
   const me = active && (you === null || active.id === you) ? active : null;
   const groups: { readonly label: string; readonly color: string; readonly ids: readonly (typeof DEEDS)[number]["id"][] }[] = [];

@@ -4,16 +4,20 @@
  * has to know which mode it is in.
  */
 import type { DeedId } from "./types";
-import type { GameState } from "./engine/state";
+import type { GameState, TradeOffer } from "./engine/state";
 import { activePlayer, currentPlayer } from "./engine/state";
+import { canManageHoldings, canProposeTrade } from "./engine/rules";
 import {
+  acceptTrade,
   acknowledgeCard,
   bid,
   buildChacra,
   buildEstancia,
   buy,
+  cancelTrade,
   chooseDraw,
   choosePay,
+  counterTrade,
   declareBankruptcy,
   decline,
   endTurn,
@@ -21,6 +25,8 @@ import {
   movePawn,
   passBid,
   payBail,
+  proposeTrade,
+  rejectTrade,
   rollDice,
   sellBuilding,
   settlePayment,
@@ -48,13 +54,19 @@ export type ActionRequest =
   | { readonly type: "mortgage"; readonly deedId: DeedId }
   | { readonly type: "unmortgage"; readonly deedId: DeedId }
   | { readonly type: "settlePayment" }
-  | { readonly type: "declareBankruptcy" };
+  | { readonly type: "declareBankruptcy" }
+  | { readonly type: "proposeTrade"; readonly toId: string; readonly gives: TradeOffer; readonly receives: TradeOffer }
+  | { readonly type: "acceptTrade" }
+  | { readonly type: "rejectTrade" }
+  | { readonly type: "cancelTrade" }
+  | { readonly type: "counterTrade"; readonly gives: TradeOffer; readonly receives: TradeOffer };
 
 export type ActionType = ActionRequest["type"];
 
 /**
  * Who is allowed to send a request in the current phase: the player on turn
- * for turn actions, the debtor or bidder where the engine says so.
+ * for turn actions, the debtor or bidder where the engine says so, and the
+ * two parties of a trade while one is on the table.
  */
 export function allowedPlayerFor(state: GameState, request: ActionRequest): string | null {
   const { phase } = state;
@@ -87,7 +99,15 @@ export function allowedPlayerFor(state: GameState, request: ActionRequest): stri
     case "sellBuilding":
     case "mortgage":
     case "unmortgage":
-      return phase.type === "auction" ? null : activePlayer(state).id;
+      return canManageHoldings(state) ? activePlayer(state).id : null;
+    case "proposeTrade":
+      return canManageHoldings(state) && canProposeTrade(state) ? activePlayer(state).id : null;
+    case "acceptTrade":
+    case "rejectTrade":
+    case "counterTrade":
+      return phase.type === "awaitingTradeResponse" ? phase.trade.toId : null;
+    case "cancelTrade":
+      return phase.type === "awaitingTradeResponse" ? phase.trade.fromId : null;
   }
 }
 
@@ -135,5 +155,15 @@ export function applyActionRequest(state: GameState, request: ActionRequest, dic
       return settlePayment(state);
     case "declareBankruptcy":
       return declareBankruptcy(state);
+    case "proposeTrade":
+      return proposeTrade(state, request.toId, request.gives, request.receives);
+    case "acceptTrade":
+      return acceptTrade(state);
+    case "rejectTrade":
+      return rejectTrade(state);
+    case "cancelTrade":
+      return cancelTrade(state);
+    case "counterTrade":
+      return counterTrade(state, request.gives, request.receives);
   }
 }

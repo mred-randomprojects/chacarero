@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allowedPlayerFor, applyActionRequest } from "./actionRequest";
-import { createGame, decline, roll } from "./engine";
+import { createGame, decline, proposeTrade, roll } from "./engine";
+import type { GameState } from "./engine";
 import { autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
 
 const players = [
@@ -26,6 +27,46 @@ describe("allowedPlayerFor", () => {
     expect(state.phase.type).toBe("awaitingPayment");
     expect(allowedPlayerFor(state, { type: "settlePayment" })).toBe("a");
     expect(allowedPlayerFor(state, { type: "sellBuilding", deedId: "formosa-sur" })).toBe("a");
+  });
+});
+
+describe("trades", () => {
+  const offer = { deeds: ["salta-sur" as const], cash: 0 };
+  const nothing = { deeds: [], cash: 500 };
+
+  function pending(): GameState {
+    const state: GameState = { ...createGame({ players, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    return proposeTrade(state, "b", offer, nothing);
+  }
+
+  it("lets the player who must act propose, and only the two parties answer", () => {
+    const start = { ...createGame({ players, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    expect(allowedPlayerFor(start, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
+    expect(allowedPlayerFor(start, { type: "acceptTrade" })).toBeNull();
+    // Building is fine with the dice in the air; proposing a trade waits for the pawn.
+    const rolled = applyActionRequest(start, { type: "rollDice" }, [1, 2]);
+    expect(allowedPlayerFor(rolled, { type: "mortgage", deedId: "salta-sur" })).toBe("a");
+    expect(allowedPlayerFor(rolled, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBeNull();
+    const state = pending();
+    expect(allowedPlayerFor(state, { type: "acceptTrade" })).toBe("b");
+    expect(allowedPlayerFor(state, { type: "rejectTrade" })).toBe("b");
+    expect(allowedPlayerFor(state, { type: "counterTrade", gives: nothing, receives: offer })).toBe("b");
+    expect(allowedPlayerFor(state, { type: "cancelTrade" })).toBe("a");
+    // Everything else waits, including the proposer's own turn actions.
+    expect(allowedPlayerFor(state, { type: "rollDice" })).toBeNull();
+    expect(allowedPlayerFor(state, { type: "mortgage", deedId: "salta-sur" })).toBeNull();
+    expect(allowedPlayerFor(state, { type: "proposeTrade", toId: "c", gives: offer, receives: nothing })).toBeNull();
+  });
+
+  it("gets a clock and is rejected by default", () => {
+    const state = pending();
+    expect(phaseSeconds(state)).toBe(45);
+    expect(defaultAction(state)).toEqual({ type: "rejectTrade" });
+    const resumed = applyActionRequest(state, { type: "rejectTrade" });
+    expect(resumed.phase).toEqual({ type: "awaitingRoll" });
+    const accepted = applyActionRequest(state, { type: "acceptTrade" });
+    expect(accepted.holdings["salta-sur"]?.ownerId).toBe("b");
+    expect(accepted.players.find((p) => p.id === "a")?.cash).toBe(35_000 + 500);
   });
 });
 

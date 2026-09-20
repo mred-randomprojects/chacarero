@@ -23,6 +23,7 @@ export type SoundName =
   | "gavelTap"
   | "gavelBang"
   | "auctionWon"
+  | "dealDone"
   | "turn"
   | "error"
   | "open"
@@ -48,6 +49,7 @@ const LIBRARY: Readonly<Record<SoundName, readonly string[]>> = {
   gavelTap: ["impactWood_medium_000.ogg", "impactWood_medium_001.ogg"],
   gavelBang: ["impactWood_heavy_000.ogg"],
   auctionWon: ["jingles_PIZZI10.ogg"],
+  dealDone: ["confirmation_002.ogg"],
   turn: ["jingles_PIZZI08.ogg"],
   error: ["error_004.ogg"],
   open: ["open_001.ogg"],

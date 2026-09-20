@@ -17,3 +17,17 @@ export function waitingFor(state: GameState, action: ActionRequest): string {
   const allowed = allowedPlayerFor(state, action);
   return allowed ? `Esperando a ${getPlayer(state, allowed).name}…` : "";
 }
+
+/** Payload does not matter for who may propose, so one probe serves every check. */
+const PROPOSE_PROBE: ActionRequest = { type: "proposeTrade", toId: "", gives: { deeds: [], cash: 0 }, receives: { deeds: [], cash: 0 } };
+
+/**
+ * The player who may put a trade on the table from this screen right now, or
+ * null: the one who must act, provided they are at this screen and someone
+ * else is still in the game.
+ */
+export function tradeProposer(state: GameState, you: string | null): string | null {
+  const allowed = allowedPlayerFor(state, PROPOSE_PROBE);
+  if (allowed === null || (you !== null && allowed !== you)) return null;
+  return state.players.some((p) => p.id !== allowed && !p.bankrupt) ? allowed : null;
+}
