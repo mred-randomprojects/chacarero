@@ -811,6 +811,10 @@ button.danger {
   transition: width 0.1s linear;
 }
 
+.countdown.urgent .countdown-bar {
+  background: var(--red);
+}
+
 .countdown span {
   position: absolute;
   right: 0;

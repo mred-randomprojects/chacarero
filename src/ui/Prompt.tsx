@@ -1,5 +1,5 @@
 import type { ActionRequest, GameState } from "../game";
-import { MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
+import { DECISION_SECONDS, MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
 import type { Dispatch } from "./ActionBar";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./TradeDialog";
@@ -23,13 +23,20 @@ export interface PromptProps {
   readonly canRestart: boolean;
 }
 
+/** "2:59" above a minute, "45s" below. */
+function clock(seconds: number): string {
+  const whole = Math.ceil(seconds);
+  if (whole < 60) return `${whole}s`;
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
 function Countdown({ deadline, now }: { readonly deadline: number | null; readonly now: number }) {
   if (deadline === null) return null;
   const remaining = Math.max(0, (deadline - now) / 1000);
   return (
-    <div className="countdown" aria-hidden>
-      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / 20) * 100)}%` }} />
-      <span>{Math.ceil(remaining)}s</span>
+    <div className={`countdown${remaining <= 20 ? " urgent" : ""}`} aria-hidden>
+      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / DECISION_SECONDS) * 100)}%` }} />
+      <span>{clock(remaining)}</span>
     </div>
   );
 }

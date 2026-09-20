@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DECISION_SECONDS } from "../src/game";
 import {
   RoomError,
   applyRequest,
@@ -17,6 +18,7 @@ import {
 } from "./room";
 
 const NOW = 1_000_000;
+const DECISION_MS = DECISION_SECONDS * 1000;
 const ana = { playerId: "ana-0001", name: "Ana" };
 const beto = { playerId: "beto-0001", name: "Beto" };
 
@@ -71,7 +73,7 @@ describe("lobby", () => {
     expect(room.status).toBe("playing");
     expect(room.game?.players.map((p) => p.id)).toEqual([ana.playerId, beto.playerId]);
     expect(room.seq).toBe(1);
-    expect(room.deadline).toBe(NOW + 30_000);
+    expect(room.deadline).toBe(NOW + DECISION_MS);
   });
 });
 
@@ -95,8 +97,8 @@ describe("playing", () => {
     expect(room.seq).toBe(2);
     expect(room.lastAction).toBe("rollDice");
     expect(room.game?.phase).toEqual({ type: "awaitingMove" });
-    // The clock waits for the replay (one log event, 2 s) plus the 5 s move window.
-    expect(room.deadline).toBe(NOW + 7_000);
+    // The clock waits for the replay (one log event, 2 s) before the decision time starts.
+    expect(room.deadline).toBe(NOW + 2_000 + DECISION_MS);
     room = applyRequest(room, ana.playerId, 2, { type: "movePawn" }, NOW, [1, 2]);
     expect(room.game?.phase).toEqual({ type: "awaitingBuyDecision", deedId: "formosa-norte" });
   });
@@ -113,7 +115,7 @@ describe("playing", () => {
   it("fires the default when the deadline passes", () => {
     let room = playing();
     expect(fireDeadline(room, NOW + 1_000, [1, 2])).toBe(room);
-    room = fireDeadline(room, NOW + 30_000, [1, 2]);
+    room = fireDeadline(room, NOW + DECISION_MS, [1, 2]);
     expect(room.game?.dice).toEqual([1, 2]);
     expect(room.lastAction).toBe("rollDice");
     expect(room.lastActorId).toBe(ana.playerId);
@@ -132,8 +134,8 @@ describe("playing", () => {
     expect(() => applyRequest(room, beto.playerId, room.seq, propose, NOW, [1, 2])).toThrow(/turno/);
     room = applyRequest(room, ana.playerId, room.seq, propose, NOW, [1, 2]);
     expect(room.game?.phase.type).toBe("awaitingTradeResponse");
-    // One log event to replay (2 s) plus the 45 s to answer.
-    expect(room.deadline).toBe(NOW + 47_000);
+    // One log event to replay (2 s) plus the decision time to answer.
+    expect(room.deadline).toBe(NOW + 2_000 + DECISION_MS);
     expect(() => applyRequest(room, ana.playerId, room.seq, { type: "acceptTrade" }, NOW, [1, 2])).toThrow(/turno/);
     expect(() => applyRequest(room, beto.playerId, room.seq, { type: "cancelTrade" }, NOW, [1, 2])).toThrow(/turno/);
     room = fireDeadline(room, room.deadline ?? 0, [1, 2]);

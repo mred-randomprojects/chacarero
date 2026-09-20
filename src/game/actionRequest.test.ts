@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { allowedPlayerFor, applyActionRequest } from "./actionRequest";
 import { createGame, decline, proposeTrade, roll } from "./engine";
 import type { GameState } from "./engine";
-import { autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
+import { DECISION_SECONDS, autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
 
 const players = [
   { id: "a", name: "A", color: "#f00" },
@@ -60,7 +60,7 @@ describe("trades", () => {
 
   it("gets a clock and is rejected by default", () => {
     const state = pending();
-    expect(phaseSeconds(state)).toBe(45);
+    expect(phaseSeconds(state)).toBe(DECISION_SECONDS);
     expect(defaultAction(state)).toEqual({ type: "rejectTrade" });
     const resumed = applyActionRequest(state, { type: "rejectTrade" });
     expect(resumed.phase).toEqual({ type: "awaitingRoll" });
@@ -87,7 +87,7 @@ describe("applyActionRequest", () => {
 describe("timing", () => {
   it("gives every phase but game over a clock and a default", () => {
     const state = createGame({ players, random: () => 0.5 });
-    expect(phaseSeconds(state)).toBe(30);
+    expect(phaseSeconds(state)).toBe(DECISION_SECONDS);
     expect(defaultAction(state)).toEqual({ type: "rollDice" });
     const over = { ...state, phase: { type: "gameOver" as const, winnerId: "a" } };
     expect(phaseSeconds(over)).toBeNull();

@@ -13,6 +13,13 @@ import type { ActionRequest } from "./actionRequest";
 /** Seconds per pawn square, matching the scene's hop speed. */
 const SECONDS_PER_SQUARE = 1 / 6;
 
+/**
+ * Seconds a player gets for any decision before the table decides for them.
+ * Generous on purpose, like a real table: the clock is there for players who
+ * left, not to hurry the ones who stayed. Scaled by the countdown setting.
+ */
+export const DECISION_SECONDS = 180;
+
 /** Minimum seconds an event stays on screen at the default pace. */
 export function eventSeconds(event: GameEvent): number {
   switch (event.type) {
@@ -48,33 +55,11 @@ export function replaySeconds(events: readonly GameEvent[], scale = 1): number {
 }
 
 /**
- * Seconds a player gets to decide in each phase before the default kicks in.
- * Null means no clock (game over).
+ * Seconds a player gets to decide in the current phase before the default
+ * kicks in: the same for every decision. Null means no clock (game over).
  */
 export function phaseSeconds(state: GameState): number | null {
-  switch (state.phase.type) {
-    case "awaitingRoll":
-    case "awaitingJailDecision":
-      return 30;
-    case "awaitingMove":
-      return 5;
-    case "awaitingCardAck":
-      return 10;
-    case "awaitingBuyDecision":
-      return 20;
-    case "awaitingPayOrDraw":
-      return 12;
-    case "auction":
-      return 15;
-    case "awaitingTradeResponse":
-      return 45;
-    case "turnEnd":
-      return 8;
-    case "awaitingPayment":
-      return 90;
-    case "gameOver":
-      return null;
-  }
+  return state.phase.type === "gameOver" ? null : DECISION_SECONDS;
 }
 
 /** What the table does for an absent or undecided player when the clock runs out. */

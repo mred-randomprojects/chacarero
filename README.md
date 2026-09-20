@@ -39,11 +39,12 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 - **Sonido**: dados que se mezclan y rebotan, pasos del peón, cartas, plata,
   martillo del remate, la puerta de la Comisaría y una fanfarria al ganar.
   Muestras CC0 de [Kenney](https://kenney.nl).
-- **Decisiones**: comprar o no, pagar o levantar tarjeta, rematar y terminar el
-  turno tienen una cuenta regresiva con una acción por defecto (no comprar →
-  remate, pagar, pasar, terminar), así nadie espera a un jugador distraído.
-  Las deudas no tienen tiempo: el deudor vende o hipoteca hasta que paga o
-  quiebra. En modo mesa se puede jugar sin reloj (casilla al armar la partida).
+- **Decisiones**: cada decisión (tirar, mover, comprar o no, pagar o levantar
+  tarjeta, rematar, canjear, pagar una deuda, terminar el turno) tiene 3
+  minutos y una acción por defecto (no comprar → remate, pagar, pasar,
+  rechazar, terminar), así un jugador que se fue no traba la mesa. El tiempo
+  se multiplica o se apaga en Ajustes; en modo mesa también con la casilla al
+  armar la partida.
 - **Al armar la partida** (modo mesa o sala online): plata inicial y,
   opcionalmente, **escrituras repartidas** (2, 3 o 4 por jugador, gratis y al
   azar, antes de la primera tirada). Es la variante del reglamento para
@@ -57,7 +58,7 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   proponerle un canje a otro jugador con `C`, el botón **Canjear** o desde
   la escritura que querés. Elegís qué escrituras y cuánta plata da cada uno;
   el otro ve la propuesta en su pantalla y la acepta, la rechaza o manda una
-  contraoferta. Mientras tanto la mesa espera (45 s; si nadie contesta, se
+  contraoferta. Mientras tanto la mesa espera (si nadie contesta, se
   rechaza). Las escrituras y los billetes vuelan de un lado al otro cuando
   se cierra el trato.
 
