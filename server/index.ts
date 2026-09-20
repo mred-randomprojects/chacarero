@@ -153,7 +153,7 @@ function handle(ws: Socket, message: ClientMessage): void {
       if (ws.data.code) update(ws, ws.data.code, (room) => renamePlayer(room, message.playerId, message.name, now));
       return;
     case "startGame":
-      if (ws.data.code) update(ws, ws.data.code, (room) => startGame(room, message.playerId, message.startingCash, now));
+      if (ws.data.code) update(ws, ws.data.code, (room) => startGame(room, message.playerId, { startingCash: message.startingCash, dealDeeds: message.dealDeeds }, now));
       return;
     case "newGame":
       if (ws.data.code) update(ws, ws.data.code, (room) => newGame(room, message.playerId, now));

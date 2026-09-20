@@ -25,7 +25,7 @@ function lobby() {
 }
 
 function playing() {
-  return startGame(lobby(), ana.playerId, 35_000, NOW, () => 0.5);
+  return startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
 }
 
 describe("lobby", () => {
@@ -65,13 +65,24 @@ describe("lobby", () => {
   });
 
   it("only the host starts, with at least two players", () => {
-    expect(() => startGame(lobby(), beto.playerId, 35_000, NOW)).toThrow(/anfitrión/);
-    expect(() => startGame(createRoom("ABCD", ana, NOW), ana.playerId, 35_000, NOW)).toThrow(/2 jugadores/);
+    expect(() => startGame(lobby(), beto.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/anfitrión/);
+    expect(() => startGame(createRoom("ABCD", ana, NOW), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/2 jugadores/);
     const room = playing();
     expect(room.status).toBe("playing");
     expect(room.game?.players.map((p) => p.id)).toEqual([ana.playerId, beto.playerId]);
     expect(room.seq).toBe(1);
     expect(room.deadline).toBe(NOW + 30_000);
+  });
+});
+
+describe("dealt deeds", () => {
+  it("hands each player the agreed number of deeds before the first roll", () => {
+    const room = startGame(lobby(), ana.playerId, { startingCash: 50_000, dealDeeds: 3 }, NOW, () => 0.5);
+    const holdings = Object.values(room.game?.holdings ?? {});
+    expect(holdings).toHaveLength(6);
+    expect(holdings.filter((h) => h.ownerId === ana.playerId)).toHaveLength(3);
+    expect(holdings.filter((h) => h.ownerId === beto.playerId)).toHaveLength(3);
+    expect(room.game?.players.every((p) => p.cash === 50_000)).toBe(true);
   });
 });
 

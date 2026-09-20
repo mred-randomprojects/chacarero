@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import type { ActionRequest, DeedId, GameState } from "../game";
-import { DEEDS } from "../game";
+import { DEAL_DEEDS_MAX, DEEDS } from "../game";
 
 const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
 const DeedIdSchema = z.enum(deedIds);
@@ -48,7 +48,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("join"), playerId: PlayerId, name: Name, code: Code }),
   z.object({ type: z.literal("leave"), playerId: PlayerId }),
   z.object({ type: z.literal("updateName"), playerId: PlayerId, name: Name }),
-  z.object({ type: z.literal("startGame"), playerId: PlayerId, startingCash: z.number().int().min(1_000).max(1_000_000) }),
+  z.object({ type: z.literal("startGame"), playerId: PlayerId, startingCash: z.number().int().min(1_000).max(1_000_000), dealDeeds: z.number().int().min(0).max(DEAL_DEEDS_MAX).default(0) }),
   z.object({ type: z.literal("newGame"), playerId: PlayerId }),
   z.object({ type: z.literal("shake"), playerId: PlayerId, shaking: z.boolean() }),
   z.object({ type: z.literal("action"), playerId: PlayerId, seq: z.number().int().nonnegative(), action: ActionRequestSchema }),

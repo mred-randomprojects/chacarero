@@ -1,21 +1,22 @@
 import { useState } from "react";
-import type { NewPlayer } from "../game";
-import { MAX_PLAYERS, MIN_PLAYERS, STARTING_CASH, pesos } from "../game";
+import type { GameSetup, NewPlayer } from "../game";
+import { DEFAULT_SETUP, MAX_PLAYERS, MIN_PLAYERS } from "../game";
+import { GameSetupFields } from "./GameSetupFields";
 
 export const PLAYER_COLORS = ["#1d4ed8", "#dc2626", "#16a34a", "#f59e0b", "#7c3aed", "#0891b2"] as const;
 
 export interface SetupProps {
-  readonly onStart: (players: readonly NewPlayer[], startingCash: number) => void;
+  readonly onStart: (players: readonly NewPlayer[], setup: GameSetup) => void;
   readonly onBack: () => void;
+  /** Whether decisions have no clock at this table (the countdown setting at 0). */
+  readonly noClock: boolean;
+  readonly onNoClock: (noClock: boolean) => void;
 }
 
-/** The rulebook says $35.000 and "with fewer than five players it pays to hand out more". */
-const CASH_OPTIONS = [STARTING_CASH, 50_000, 70_000] as const;
-
-/** Pre-game screen: how many play and what they are called. */
-export function Setup({ onStart, onBack }: SetupProps) {
+/** Pre-game screen for the shared table: how many play, what they are called, and how the game starts. */
+export function Setup({ onStart, onBack, noClock, onNoClock }: SetupProps) {
   const [names, setNames] = useState<string[]>(["", ""]);
-  const [cash, setCash] = useState<number>(STARTING_CASH);
+  const [setup, setSetup] = useState<GameSetup>(DEFAULT_SETUP);
 
   const setCount = (count: number) => {
     setNames((current) => Array.from({ length: count }, (_, i) => current[i] ?? ""));
@@ -56,18 +57,11 @@ export function Setup({ onStart, onBack }: SetupProps) {
             </li>
           ))}
         </ol>
-        <label className="count">
-          Plata inicial
-          <div className="count-buttons">
-            {CASH_OPTIONS.map((option) => (
-              <button type="button" key={option} className={cash === option ? "active" : ""} onClick={() => setCash(option)}>
-                {pesos(option)}
-              </button>
-            ))}
-          </div>
-          <span className="hint">El reglamento reparte $35.000; con menos de cinco jugadores sugiere repartir más.</span>
+        <GameSetupFields setup={setup} onChange={setSetup} />
+        <label className="check">
+          <input type="checkbox" checked={noClock} onChange={(e) => onNoClock(e.target.checked)} /> Sin tiempo para decidir (nadie apura a nadie; ideal para probar)
         </label>
-        <button type="button" className="primary" onClick={() => onStart(players, cash)}>
+        <button type="button" className="primary" onClick={() => onStart(players, setup)}>
           Empezar
         </button>
         <p className="hint">Modo mesa: todos juegan en esta pantalla, por turnos.</p>

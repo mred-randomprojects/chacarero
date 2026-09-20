@@ -134,4 +134,5 @@ Las escrituras hipotecadas se heredan hipotecadas.
 ## Para acortar la partida
 
 Se puede repartir más plata al empezar, o repartir escrituras entre los
-jugadores antes de la primera tirada.
+jugadores antes de la primera tirada. Las dos cosas se eligen al armar la
+partida: las escrituras se reparten gratis y al azar, 2, 3 o 4 por jugador.

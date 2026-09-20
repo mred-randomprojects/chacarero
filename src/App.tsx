@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { sfx } from "./audio/sfx";
-import type { GameState, NewPlayer } from "./game";
+import type { GameSetup, GameState, NewPlayer } from "./game";
 import { GameScreen } from "./GameScreen";
 import { defaultServerUrl } from "./net/client";
 import { getLastRoom, getPlayerId, getSavedName, saveLastRoom, saveName } from "./net/identity";
@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-type Screen = { readonly type: "menu" } | { readonly type: "localSetup" } | { readonly type: "local"; readonly players: readonly NewPlayer[]; readonly startingCash: number } | { readonly type: "online" };
+type Screen = { readonly type: "menu" } | { readonly type: "localSetup" } | { readonly type: "local"; readonly players: readonly NewPlayer[]; readonly setup: GameSetup } | { readonly type: "online" };
 
 function inviteCodeFromUrl(): string | null {
   const code = new URLSearchParams(location.search).get("mesa");
@@ -119,7 +119,7 @@ export default function App() {
         room={online.room}
         you={online.you}
         connection={online.status}
-        onStart={(cash) => online.client?.startGame(cash)}
+        onStart={(setup) => online.client?.startGame(setup)}
         onRename={(name) => {
           saveName(name);
           online.client?.updateName(name);
@@ -130,11 +130,18 @@ export default function App() {
   }
 
   if (screen.type === "local") {
-    return <LocalGame players={screen.players} startingCash={screen.startingCash} settings={settings} onSettings={setSettings} onLeave={() => setScreen({ type: "menu" })} />;
+    return <LocalGame players={screen.players} setup={screen.setup} settings={settings} onSettings={setSettings} onLeave={() => setScreen({ type: "menu" })} />;
   }
 
   if (screen.type === "localSetup") {
-    return <Setup onStart={(players, startingCash) => setScreen({ type: "local", players, startingCash })} onBack={() => setScreen({ type: "menu" })} />;
+    return (
+      <Setup
+        onStart={(players, setup) => setScreen({ type: "local", players, setup })}
+        onBack={() => setScreen({ type: "menu" })}
+        noClock={settings.countdownScale === 0}
+        onNoClock={(noClock) => setSettings({ ...settings, countdownScale: noClock ? 0 : 1 })}
+      />
+    );
   }
 
   return (
@@ -153,14 +160,14 @@ export default function App() {
 
 interface LocalGameProps {
   readonly players: readonly NewPlayer[];
-  readonly startingCash: number;
+  readonly setup: GameSetup;
   readonly settings: Settings;
   readonly onSettings: (settings: Settings) => void;
   readonly onLeave: () => void;
 }
 
-function LocalGame({ players, startingCash, settings, onSettings, onLeave }: LocalGameProps) {
-  const session = useLocalSession({ players, startingCash, countdownScale: settings.countdownScale, bannerSeconds: settings.bannerSeconds, onLeave });
+function LocalGame({ players, setup, settings, onSettings, onLeave }: LocalGameProps) {
+  const session = useLocalSession({ players, setup, countdownScale: settings.countdownScale, bannerSeconds: settings.bannerSeconds, onLeave });
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     window.__chacarero = { getGame: () => session.game, setGame: session.setGame };

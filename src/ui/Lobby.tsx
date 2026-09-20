@@ -1,17 +1,23 @@
 import { useState } from "react";
+import type { GameSetup } from "../game";
+import { DEFAULT_SETUP } from "../game";
 import type { RoomView } from "../net/protocol";
 import { inviteLink } from "../net/identity";
-import { STARTING_CASH, pesos } from "../game";
-
-const CASH_OPTIONS = [STARTING_CASH, 50_000, 70_000] as const;
+import { GameSetupFields } from "./GameSetupFields";
 
 export interface LobbyProps {
   readonly room: RoomView;
   readonly you: string;
   readonly connection: "connecting" | "open" | "closed";
-  readonly onStart: (startingCash: number) => void;
+  readonly onStart: (setup: GameSetup) => void;
   readonly onRename: (name: string) => void;
   readonly onLeave: () => void;
+}
+
+/** Dev only: a second seat at this table from the same browser, in a new tab (see README). */
+function openExtraSeat(code: string): void {
+  const seat = Math.random().toString(36).slice(2, 8);
+  window.open(`${location.pathname}?mesa=${code}&jugador=${seat}`, "_blank");
 }
 
 /** Waiting room: who is here, the invite link, and the host's start button. */
@@ -19,7 +25,7 @@ export function Lobby({ room, you, connection, onStart, onRename, onLeave }: Lob
   const me = room.players.find((p) => p.playerId === you);
   const isHost = room.hostId === you;
   const [name, setName] = useState(me?.name ?? "");
-  const [cash, setCash] = useState<number>(STARTING_CASH);
+  const [setup, setSetup] = useState<GameSetup>(DEFAULT_SETUP);
   const [copied, setCopied] = useState(false);
   const link = inviteLink(room.code);
 
@@ -64,19 +70,15 @@ export function Lobby({ room, you, connection, onStart, onRename, onLeave }: Lob
             </li>
           ))}
         </ol>
+        {import.meta.env.DEV && (
+          <button type="button" className="link" onClick={() => openExtraSeat(room.code)}>
+            Abrir otra pestaña como otro jugador (dev)
+          </button>
+        )}
         {isHost ? (
           <>
-            <label className="count">
-              Plata inicial
-              <div className="count-buttons">
-                {CASH_OPTIONS.map((option) => (
-                  <button type="button" key={option} className={cash === option ? "active" : ""} onClick={() => setCash(option)}>
-                    {pesos(option)}
-                  </button>
-                ))}
-              </div>
-            </label>
-            <button type="button" className="primary" disabled={room.players.length < 2 || connection !== "open"} onClick={() => onStart(cash)}>
+            <GameSetupFields setup={setup} onChange={setSetup} />
+            <button type="button" className="primary" disabled={room.players.length < 2 || connection !== "open"} onClick={() => onStart(setup)}>
               {room.players.length < 2 ? "Esperando a alguien más…" : `Empezar con ${room.players.length} jugadores`}
             </button>
           </>

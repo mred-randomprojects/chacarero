@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ActionRequest, ActionType, GameState, NewPlayer } from "../game";
+import type { ActionRequest, ActionType, GameSetup, GameState, NewPlayer } from "../game";
 import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, phaseSeconds, replaySeconds } from "../game";
 import type { Session } from "./types";
 
 export interface LocalSessionOptions {
   readonly players: readonly NewPlayer[];
-  readonly startingCash: number;
+  readonly setup: GameSetup;
   /** Multiplier for decision clocks; 0 disables them. */
   readonly countdownScale: number;
   /** Replay pace, as banner seconds (3 = default). */
@@ -31,7 +31,7 @@ function rollDie(): number {
  * apart.
  */
 export function useLocalSession(options: LocalSessionOptions): Session & { readonly setGame: (game: GameState) => void } {
-  const { players, startingCash, countdownScale, bannerSeconds, onLeave } = options;
+  const { players, setup, countdownScale, bannerSeconds, onLeave } = options;
   const clock = useCallback(
     (game: GameState, now: number): number | null => {
       if (countdownScale <= 0) return null;
@@ -43,7 +43,7 @@ export function useLocalSession(options: LocalSessionOptions): Session & { reado
   );
 
   const [turn, setTurn] = useState<Turn>(() => {
-    const game = createGame({ players, startingCash });
+    const game = createGame({ players, ...setup });
     return { game, seq: 1, lastAction: null, lastActorId: null, deadline: clock(game, Date.now()) };
   });
   const [shakingPlayerId, setShakingPlayerId] = useState<string | null>(null);

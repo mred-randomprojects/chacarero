@@ -3,7 +3,7 @@
  * makes decisions for absent players. No sockets in here, so it is easy to
  * test; index.ts wires it to the network.
  */
-import type { ActionRequest, GameState } from "../src/game";
+import type { ActionRequest, GameSetup, GameState } from "../src/game";
 import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, phaseSeconds, replaySeconds } from "../src/game";
 import type { Dice } from "../src/game";
 import type { RoomPlayer, RoomStatus, RoomView } from "../src/net/protocol";
@@ -125,11 +125,11 @@ function withClock(room: Room, now: number): Room {
   return { ...room, deadline: now + Math.round((replaySeconds(game.events) + seconds) * 1000) };
 }
 
-export function startGame(room: Room, playerId: string, startingCash: number, now: number, random: () => number = Math.random): Room {
+export function startGame(room: Room, playerId: string, setup: GameSetup, now: number, random: () => number = Math.random): Room {
   if (room.hostId !== playerId) throw new RoomError("Solo el anfitrión puede empezar");
   if (room.status !== "lobby") throw new RoomError("La partida ya empezó");
   if (room.players.length < 2) throw new RoomError("Hacen falta al menos 2 jugadores");
-  const game = createGame({ players: room.players.map((p) => ({ id: p.playerId, name: p.name, color: p.color })), startingCash, random });
+  const game = createGame({ players: room.players.map((p) => ({ id: p.playerId, name: p.name, color: p.color })), ...setup, random });
   return touch(withClock({ ...room, status: "playing", game, seq: 1, lastAction: null, lastActorId: null, shakingPlayerId: null }, now), now);
 }
 

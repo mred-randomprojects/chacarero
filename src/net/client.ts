@@ -1,4 +1,4 @@
-import type { ActionRequest } from "../game";
+import type { ActionRequest, GameSetup } from "../game";
 import type { ClientMessage, RoomView, ServerMessage } from "./protocol";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
@@ -74,8 +74,8 @@ export class RoomClient {
     this.send({ type: "updateName", playerId: this.playerId, name });
   }
 
-  startGame(startingCash: number): void {
-    this.send({ type: "startGame", playerId: this.playerId, startingCash });
+  startGame(setup: GameSetup): void {
+    this.send({ type: "startGame", playerId: this.playerId, ...setup });
   }
 
   newGame(): void {

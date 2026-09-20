@@ -74,6 +74,27 @@ describe("createGame", () => {
     expect(state.bank).toEqual({ chacras: TOTAL_CHACRAS, estancias: TOTAL_ESTANCIAS });
   });
 
+  it("can deal a few deeds to each player before the first roll", () => {
+    const state = createGame({ players: [ANA, BETO, CARLA], dealDeeds: 3, random: () => 0.5 });
+    const holdings = Object.values(state.holdings);
+    expect(holdings).toHaveLength(9);
+    for (const p of [ANA, BETO, CARLA]) expect(holdings.filter((h) => h.ownerId === p.id)).toHaveLength(3);
+    expect(holdings.every((h) => !h.mortgaged && h.chacras === 0 && !h.estancia)).toBe(true);
+    // Dealt deeds are free.
+    expect(state.players.every((p) => p.cash === STARTING_CASH)).toBe(true);
+    expect(Object.keys(game().holdings)).toHaveLength(0);
+    expect(() => createGame({ players: [ANA, BETO], dealDeeds: 5 })).toThrow(/0 a 4/);
+    expect(() => createGame({ players: [ANA, BETO], dealDeeds: -1 })).toThrow();
+  });
+
+  it("deals different hands on different shuffles", () => {
+    let seed = 1;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const a = createGame({ players: [ANA, BETO], dealDeeds: 4, random });
+    const b = createGame({ players: [ANA, BETO], dealDeeds: 4, random });
+    expect(Object.keys(a.holdings).sort()).not.toEqual(Object.keys(b.holdings).sort());
+  });
+
   it("rejects fewer than 2 or more than 6 players", () => {
     expect(() => createGame({ players: [ANA] })).toThrow();
     expect(() => createGame({ players: Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: "x", color: "#000" })) })).toThrow();

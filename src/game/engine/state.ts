@@ -1,6 +1,7 @@
 import type { Card, Deck, DeedId } from "../types";
-import { STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
+import { DEAL_DEEDS_MAX, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
 import { shuffledDeck } from "../cards";
+import { DEEDS } from "../deeds";
 
 export interface Player {
   readonly id: string;
@@ -158,22 +159,64 @@ export interface NewPlayer {
   readonly color: string;
 }
 
+/** What the table agrees on before the first roll. */
+export interface GameSetup {
+  readonly startingCash: number;
+  /**
+   * Deeds handed out to each player, free, before the first roll. The rulebook
+   * suggests it to shorten the game; it also makes trades and building
+   * available from turn one.
+   */
+  readonly dealDeeds: number;
+}
+
+export const DEFAULT_SETUP: GameSetup = { startingCash: STARTING_CASH, dealDeeds: 0 };
+
 export interface CreateGameOptions {
   readonly players: readonly NewPlayer[];
   readonly startingCash?: number;
+  readonly dealDeeds?: number;
   readonly random?: () => number;
+}
+
+/** Deals `perPlayer` random deeds to each player, round-robin from a shuffled pile. */
+function dealHoldings(players: readonly NewPlayer[], perPlayer: number, random: () => number): GameState["holdings"] {
+  const pile = DEEDS.map((d) => d.id);
+  for (let i = pile.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const a = pile[i];
+    const b = pile[j];
+    if (a !== undefined && b !== undefined) {
+      pile[i] = b;
+      pile[j] = a;
+    }
+  }
+  const holdings: Partial<Record<DeedId, Holding>> = {};
+  const rounds = Math.min(perPlayer, Math.floor(pile.length / players.length));
+  let next = 0;
+  for (let round = 0; round < rounds; round++) {
+    for (const player of players) {
+      const id = pile[next++];
+      if (id !== undefined) holdings[id] = { ownerId: player.id, chacras: 0, estancia: false, mortgaged: false };
+    }
+  }
+  return holdings;
 }
 
 /**
  * Sets up a fresh game: every player on Salida with the starting cash, both
- * decks shuffled, and the first player in the list to roll.
+ * decks shuffled, optionally a few deeds each, and the first player in the
+ * list to roll.
  */
-export function createGame({ players, startingCash = STARTING_CASH, random = Math.random }: CreateGameOptions): GameState {
+export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, random = Math.random }: CreateGameOptions): GameState {
   if (players.length < 2 || players.length > 6) {
     throw new Error("Chacarero se juega de 2 a 6 jugadores");
   }
   if (new Set(players.map((p) => p.id)).size !== players.length) {
     throw new Error("Player ids must be unique");
+  }
+  if (!Number.isInteger(dealDeeds) || dealDeeds < 0 || dealDeeds > DEAL_DEEDS_MAX) {
+    throw new Error(`Se reparten de 0 a ${DEAL_DEEDS_MAX} escrituras por jugador`);
   }
   return {
     players: players.map((p) => ({
@@ -190,7 +233,7 @@ export function createGame({ players, startingCash = STARTING_CASH, random = Mat
       bankrupt: false,
     })),
     currentPlayerIndex: 0,
-    holdings: {},
+    holdings: dealDeeds > 0 ? dealHoldings(players, dealDeeds, random) : {},
     pendingDebts: [],
     pendingAuctions: [],
     decks: {

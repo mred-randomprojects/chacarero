@@ -25,3 +25,11 @@ describe("parseClientMessage", () => {
     expect(parseClientMessage("{not json")).toBeNull();
   });
 });
+
+describe("startGame", () => {
+  it("defaults to dealing no deeds and caps the deal", () => {
+    expect(parseClientMessage(JSON.stringify({ type: "startGame", playerId, startingCash: 35_000 }))).toMatchObject({ type: "startGame", startingCash: 35_000, dealDeeds: 0 });
+    expect(parseClientMessage(JSON.stringify({ type: "startGame", playerId, startingCash: 35_000, dealDeeds: 3 }))).toMatchObject({ dealDeeds: 3 });
+    expect(parseClientMessage(JSON.stringify({ type: "startGame", playerId, startingCash: 35_000, dealDeeds: 9 }))).toBeNull();
+  });
+});

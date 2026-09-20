@@ -6,7 +6,8 @@ de 42 casilleros, en una escena Three.js.
 **Demo:** https://mred-randomprojects.github.io/chacarero/
 
 Se juega **online** (armás una mesa, pasás el link, cada uno desde su pantalla)
-o en **modo mesa** (todos por turnos en la misma pantalla). Tirás los dados,
+o en **modo mesa** (todos por turnos en la misma pantalla, sin servidor ni
+internet). Tirás los dados,
 comprás campos, cobrás alquileres, levantás tarjetas de Suerte y Destino,
 construís chacras y estancias, hipotecás cuando no te alcanza y, si no hay
 más remedio, quebrás. Gana el último que queda.
@@ -42,7 +43,12 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   turno tienen una cuenta regresiva con una acción por defecto (no comprar →
   remate, pagar, pasar, terminar), así nadie espera a un jugador distraído.
   Las deudas no tienen tiempo: el deudor vende o hipoteca hasta que paga o
-  quiebra.
+  quiebra. En modo mesa se puede jugar sin reloj (casilla al armar la partida).
+- **Al armar la partida** (modo mesa o sala online): plata inicial y,
+  opcionalmente, **escrituras repartidas** (2, 3 o 4 por jugador, gratis y al
+  azar, antes de la primera tirada). Es la variante del reglamento para
+  acortar la partida, y hace que haya canjes y construcciones desde el primer
+  turno.
 - **Propiedades**: cada jugador tiene su plata y sus escrituras sobre la mesa,
   de su lado (los billetes son decorativos: la cifra del cartel es la que
   vale). Hacé clic en una escritura (en la mesa o en el tablero) para
@@ -67,8 +73,19 @@ bun run lint
 bun run build
 ```
 
-Para sentarte dos veces en la misma mesa desde un solo navegador, abrí una
-segunda pestaña con `?mesa=CODIGO&jugador=otro`.
+### Probar rápido
+
+- **Todo en una pantalla, sin servidor**: menú → *Jugar en esta pantalla*,
+  marcá *Sin tiempo para decidir* y repartí 3 escrituras por jugador. Con eso
+  podés probar canjes (`C`), construcciones, hipotecas y remates desde el
+  primer turno, sin apuro. En desarrollo, `window.__chacarero.getGame()` /
+  `setGame(estado)` en la consola permiten inspeccionar o reemplazar el
+  estado de la partida local.
+- **Online desde una sola PC**: levantá el servidor, armá una mesa y usá
+  *Abrir otra pestaña como otro jugador* en la sala (solo en desarrollo), o
+  abrí a mano `?mesa=CODIGO&jugador=otro`: cada pestaña con un `jugador`
+  distinto es una silla distinta. Así se ve la propuesta de canje de un lado
+  y la respuesta del otro.
 
 Cada push a `main` despliega el cliente a GitHub Pages; el servidor de mesas
 se despliega al droplet con `./deploy.sh` (ver `deploy/README.md`).

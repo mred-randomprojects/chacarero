@@ -863,11 +863,25 @@ button.danger {
   width: 100%;
 }
 
-.settings label.check {
+.settings label.check,
+.setup label.check {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
+}
+
+.setup label.check {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+}
+
+.setup .count .hint {
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .settings .credits {
