@@ -480,7 +480,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onUserControl={() => setFreeLook(true)}
         deedOnOffer={offeredDeed}
         cardOnTable={view.cardOnTable}
-        throwerId={session.shakingPlayerId ?? currentPlayerId}
+        throwerId={session.shakingPlayerId ?? shownPlayerId}
         shaking={diceShaking}
         throwing={throwing}
         onDiceLanded={onDiceLanded}
