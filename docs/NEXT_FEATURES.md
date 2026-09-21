@@ -55,11 +55,11 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 5. Shared, directed camera
 
-- [ ] 5.1 When a turn starts, a big close-up of that player's pawn on the board, with
+- [x] 5.1 When a turn starts, a big close-up of that player's pawn on the board, with
       the board still visible.
-- [ ] 5.2 By default every screen sees the same thing: the camera follows the action
+- [x] 5.2 By default every screen sees the same thing: the camera follows the action
       (turn start → pawn; throw → dice; move → pawn; landing → tile; card → card).
-- [ ] 5.3 Looking somewhere else is a deliberate act: dragging the camera or opening
+- [x] 5.3 Looking somewhere else is a deliberate act: dragging the camera or opening
       the map / properties switches that screen to free camera until the next turn
       starts (then it re-joins the director); a button/setting turns the director
       off entirely.
@@ -79,10 +79,10 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 7. Gamified camera flight between turns
 
-- [ ] 7.1 The move from one pawn to the next is continuous, never a cut: it
+- [x] 7.1 The move from one pawn to the next is continuous, never a cut: it
       accelerates out (rising away from the table), then decelerates into the next
       pawn.
-- [ ] 7.2 Fast enough not to bore, slow enough to read as a flight (~1.5 s).
+- [x] 7.2 Fast enough not to bore, slow enough to read as a flight (~1.5 s).
 
 ## 8. Suerte / Destino cards, and calmer timers
 
@@ -189,6 +189,14 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — camera director (5, 7) (`c0b7983`).** `pawnView()` in
+  `cameraViews.ts`; `CameraRig` flights take `style: "arc"` (rise + quartic ease)
+  and report user input through `onUserControl`; `GameScreen` keeps `freeLook`
+  (set by drag/wheel/camera keys/buttons, cleared by `directorCue()` at every
+  turn change); `CameraBar` is three-state (Sigue la partida / Volver a la partida
+  / Cámara libre). Modals deliberately do NOT switch to free look — closing them
+  puts you back in sync. 5.2's per-step cues were already in place (dice present
+  to the camera, pawn chase, card hovers in front of the camera).
 - **2026-09-21 — opening roll (2) (`5d7f821`).** Phase `openingRoll { contenders,
   rolls }` in `state.ts`; `openingRoll()` in `actions.ts` driven by the normal
   `rollDice` request (so the server, the clock defaults and the hold-to-shake UI
