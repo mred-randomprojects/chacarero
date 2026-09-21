@@ -151,6 +151,113 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ---
 
+# Batch 2 (2026-09-21, after playing batch 1)
+
+Maxi's review of the first batch, with screenshots. Same conventions. The
+guiding rule he added, now in `docs/GUIDELINES.md`: **the game is a play in a
+theatre — whatever happens on the table, the camera follows it, step by step**.
+Numbers updating and pop-ups saying what happened are not enough.
+
+## B1. Bigger icons at setup
+
+- [ ] B1.1 The token icons in the setup / lobby pickers are too small to tell
+      apart; make them big (with the name), pick-by-sight.
+
+## B2. No building limit
+
+- [ ] B2.1 The bank never runs out of chacras or estancias: remove the limit from
+      the engine and the "32 chacras · 12 estancias" counters from the HUD/map.
+      (Maxi: limiting buildings is not a good idea. It was in the engine before
+      batch 1; surfacing it on the Banco card was what he noticed.)
+
+## B3–B6, B14. Dice that behave
+
+- [ ] B3.1 Shaking must look like dice in a cupped hand: a rhythmic rattle in
+      front of the camera (the hands are the camera), not random jitter above
+      the seat.
+- [ ] B4.1 After the dice come to rest, wait ~1.5 s so everyone can read them on
+      the table, then do the close-up.
+- [ ] B5.1 Dice never teleport: every relocation is a visible flight (grabbing
+      them from where they lie into the hands, throwing, the close-up and back to
+      exactly where they landed).
+- [ ] B6.1 The two dice never pass through each other: separated landing spots
+      and mid-flight separation so they read as solid.
+- [ ] B14.1 Doubles: the dice glow gold for a moment and "¡DOBLES!" flashes on
+      screen.
+
+## B7, B15, B18. Step by step, and nothing gets stuck
+
+- [ ] B7.1 The deed on offer must not flash-appear, vanish and reappear: it
+      appears once, after the pawn has arrived and the landing has been
+      announced.
+- [ ] B15.1 Nothing that belongs to a later step shows up early (the card on
+      offer while the pawn is still walking, etc.): what the table shows is
+      driven by the replayed view state, not by the final game state.
+- [ ] B18.1 A lifted deed can never get stuck on screen (it did after a buy):
+      showing/hiding is derived from state, not from fire-and-forget bus
+      messages that a skip could swallow. Tests for the view-state rules.
+
+## B8. The offer's buttons belong next to the card
+
+- [ ] B8.1 The buy / auction panel sits beside the lifted deed (right of it,
+      vertically aligned), not in the top-right corner.
+
+## B9, B11, B17. The camera is the audience
+
+- [ ] B9.1 The camera follows the pawn hop by hop, close behind it, looking
+      inward across the board.
+- [ ] B11.1 Movement is slower: no rush, seeing things move is the fun. Replay
+      timings (clock allowance) stay in sync with the scene speeds.
+- [ ] B17.1 Every replayed happening gets a camera cue: money flying between
+      piles, a deed flying from the bank to a seat, a building dropping, going
+      to jail, a bankruptcy. Not just the pawn and the turn start.
+- [ ] B17.2 A landing gets a small flourish (settle on the tile; the deed lift
+      is the flourish for a free deed).
+
+## B12. Cards say what the real ones say
+
+- [ ] B12.1 Railway and company deeds carry the explanatory text of the physical
+      cards (on the table texture, the lifted card and the details panel), not
+      just the number ladder.
+
+## B13. Focus on a player
+
+- [ ] B13.1 Clicking a player's card at the bottom flies to their side of the
+      table (their deeds and money); the number keys stay as a shortcut.
+
+## B16, B20. Keys that are safe, and visible
+
+- [ ] B16.1 Space/Enter never take a decision with consequences (buy, bid,
+      accept a trade, pay-or-draw choice); they only advance the harmless steps.
+- [ ] B20.1 Every action button shows its shortcut ("Negociar [N]"), and the key
+      does what the button does. Keys must not collide with the camera keys.
+
+## B19. Real cards in the trade screen (and beyond)
+
+- [ ] B19.1 The preview in the middle is the real card (same artwork as on the
+      table), not a restyled table.
+- [ ] B19.2 What is on the table on each side is shown as a fan of real cards,
+      like a hand, not as a text list.
+- [ ] B19.3 The same real-card artwork is used wherever deeds are listed in the
+      HUD (the compact trade prompt at least).
+
+## B21. Square corners
+
+- [ ] B21.1 Card-like UI (deed slots, previews, hands, player cards) has square
+      corners like the physical cards; panels lose most of their rounding.
+
+## B22. Table layout
+
+- [ ] B22.1 A player's deed cards on the table never collide visually with their
+      bill stacks (screenshot 3).
+
+## Guidelines
+
+- [ ] G.1 `docs/GUIDELINES.md` with the project rules (one 3D scene, theatre
+      camera, step by step, no unrequested scope), linked from the README.
+
+---
+
 ## Structural analysis
 
 What the requirements touch, from the bottom of the stack up:
@@ -188,6 +295,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-21 — batch 2 captured.** 22 review points from Maxi, grouped above
+  as B1–B22 + G.1. Order of work: B2 (engine, quick) → B7/B15/B18 (view-state
+  stepping: the correctness core) → dice (B3–B6, B14) → camera theatre (B9,
+  B11, B17) → B8 → B16/B20 → B12 → B19 → B13 → B21 → B22 → B1 → G.1.
 
 - **2026-09-21 — all 17 items shipped; second look done (`830e1ac`, `aaf2b14`).**
   Verified end to end in the browser: hot-seat (opening throws → roll → move →
