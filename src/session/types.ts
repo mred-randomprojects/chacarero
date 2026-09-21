@@ -27,6 +27,8 @@ export interface Session {
   readonly error: string | null;
   readonly dispatch: (action: ActionRequest) => void;
   readonly setShaking: (shaking: boolean) => void;
+  /** This screen's player is at the trade screen; the clock should wait for them. */
+  readonly setComposing: (composing: boolean) => void;
   readonly clearError: () => void;
   /** Leaves the table (online: leaves the room). */
   readonly leave: () => void;

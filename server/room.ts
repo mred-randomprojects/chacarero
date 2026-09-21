@@ -25,6 +25,8 @@ export interface Room {
   readonly lastActorId: string | null;
   readonly deadline: number | null;
   readonly shakingPlayerId: string | null;
+  /** Player at the trade screen; the clock waits for them instead of deciding. */
+  readonly composingPlayerId: string | null;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
@@ -52,10 +54,14 @@ export function createRoom(code: string, host: { playerId: string; name: string 
     lastActorId: null,
     deadline: null,
     shakingPlayerId: null,
+    composingPlayerId: null,
     createdAt: now,
     updatedAt: now,
   };
 }
+
+/** How much longer a player composing a trade gets each time their clock would have fired. */
+export const COMPOSING_GRACE_MS = 30_000;
 
 function touch(room: Room, now: number): Room {
   return { ...room, updatedAt: now };
@@ -144,7 +150,14 @@ export function startGame(room: Room, playerId: string, setup: GameSetup, now: n
 /** Back to the lobby once a game is over (host only). */
 export function newGame(room: Room, playerId: string, now: number): Room {
   if (room.hostId !== playerId) throw new RoomError("Solo el anfitrión puede volver a la sala");
-  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null }, now);
+  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null, composingPlayerId: null }, now);
+}
+
+/** A player opened (or closed) the trade screen. Only the player the clock is waiting on matters. */
+export function setComposing(room: Room, playerId: string, composing: boolean): Room {
+  if (!room.game) return room;
+  if (composing) return { ...room, composingPlayerId: playerId };
+  return room.composingPlayerId === playerId ? { ...room, composingPlayerId: null } : room;
 }
 
 export function setShaking(room: Room, playerId: string, shaking: boolean): Room {
@@ -155,7 +168,7 @@ export function setShaking(room: Room, playerId: string, shaking: boolean): Room
 
 function afterChange(room: Room, game: GameState, action: ActionRequest["type"], actorId: string | null, now: number): Room {
   const status: RoomStatus = game.phase.type === "gameOver" ? "finished" : "playing";
-  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null }, now), now);
+  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null, composingPlayerId: null }, now), now);
 }
 
 /**
@@ -177,6 +190,8 @@ export function fireDeadline(room: Room, now: number, dice: Dice): Room {
   const action = defaultAction(room.game);
   if (!action) return { ...room, deadline: null };
   const actorId = allowedPlayerFor(room.game, action);
+  // Someone at the trade screen is not absent: give them a little longer rather than deciding for them.
+  if (actorId !== null && actorId === room.composingPlayerId) return { ...room, deadline: now + COMPOSING_GRACE_MS };
   const game = room.game.phase.type === "awaitingPayment" ? autoResolveDebt(room.game) : applyActionRequest(room.game, action, dice);
   if (game === room.game) return { ...room, deadline: now + 60_000 };
   return afterChange(room, game, action.type, actorId, now);

@@ -21,6 +21,9 @@ interface Turn {
   readonly deadline: number | null;
 }
 
+/** How much longer the trade screen buys each time the clock would have fired. */
+const COMPOSING_GRACE_MS = 30_000;
+
 function rollDie(): number {
   return 1 + Math.floor(Math.random() * 6);
 }
@@ -47,6 +50,8 @@ export function useLocalSession(options: LocalSessionOptions): Session & { reado
     return { game, seq: 1, lastAction: null, lastActorId: null, deadline: clock(game, Date.now()) };
   });
   const [shakingPlayerId, setShakingPlayerId] = useState<string | null>(null);
+  /** Whoever is at the trade screen: the clock gives them more time instead of deciding. */
+  const composing = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const turnRef = useRef(turn);
   turnRef.current = turn;
@@ -69,13 +74,20 @@ export function useLocalSession(options: LocalSessionOptions): Session & { reado
     [clock],
   );
 
-  // The table's clock: when a decision times out, the default happens by itself.
+  // The table's clock: when a decision times out, the default happens by itself
+  // (unless the trade screen is open: at a shared screen that is always the player the clock waits on).
   useEffect(() => {
     const id = setInterval(() => {
       const current = turnRef.current;
       if (current.deadline === null || Date.now() < current.deadline) return;
       const action = defaultAction(current.game);
       if (!action) return;
+      if (composing.current) {
+        const next: Turn = { ...current, deadline: Date.now() + COMPOSING_GRACE_MS };
+        turnRef.current = next;
+        setTurn(next);
+        return;
+      }
       apply(action, current.game.phase.type === "awaitingPayment");
     }, 250);
     return () => clearInterval(id);
@@ -106,6 +118,9 @@ export function useLocalSession(options: LocalSessionOptions): Session & { reado
       error,
       dispatch: (action: ActionRequest) => apply(action),
       setShaking: (shaking: boolean) => setShakingPlayerId(shaking ? allowedPlayerFor(turnRef.current.game, { type: "rollDice" }) : null),
+      setComposing: (value: boolean) => {
+        composing.current = value;
+      },
       clearError: () => setError(null),
       leave: onLeave,
       newGame: onLeave,

@@ -90,6 +90,10 @@ export class RoomClient {
     this.send({ type: "shake", playerId: this.playerId, shaking });
   }
 
+  composing(composing: boolean): void {
+    this.send({ type: "composing", playerId: this.playerId, composing });
+  }
+
   action(seq: number, action: ActionRequest): void {
     this.send({ type: "action", playerId: this.playerId, seq, action });
   }

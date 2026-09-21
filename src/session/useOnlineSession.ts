@@ -82,6 +82,7 @@ export function useOnlineSession({ client, room, you, status, clockOffset, error
       error,
       dispatch: (action: ActionRequest) => client.action(seqRef.current, action),
       setShaking: (shaking: boolean) => client.shake(shaking),
+      setComposing: (composing: boolean) => client.composing(composing),
       clearError,
       leave: () => client.leave(),
       newGame: () => client.newGame(),

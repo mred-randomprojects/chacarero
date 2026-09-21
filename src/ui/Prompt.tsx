@@ -109,6 +109,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <button type="button" className="primary" onClick={() => dispatch(action)}>
                 Mover {total} casilleros
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
             </div>
           ) : (
             waiting(action)
@@ -131,6 +136,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <button type="button" className="primary" onClick={() => dispatch(action)}>
                 Levantar la tarjeta
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
             </div>
           ) : (
             waiting(action)
@@ -153,6 +163,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <button type="button" className="primary" onClick={() => dispatch(action)}>
                 Aplicar
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
             </div>
           ) : (
             waiting(action)
@@ -226,6 +241,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <button type="button" onClick={() => dispatch({ type: "chooseDraw" })}>
                 Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"}
               </button>
+              {canTrade && (
+                <button type="button" onClick={onTrade}>
+                  Canjear
+                </button>
+              )}
             </div>
           ) : (
             waiting(action)

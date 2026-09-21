@@ -167,20 +167,21 @@ export function canManageHoldings(state: GameState): boolean {
 // ---------- trades ----------
 
 /**
- * Whether the player who must act may put a trade on the table: between
- * steps only, never with the dice in the air, a card face up or an auction
- * or another trade under way.
+ * Whether the player who must act may put a trade on the table: at any
+ * step of their own turn (even with the dice on the table or a card face
+ * up, and especially while a debt is waiting to be paid), but never before
+ * the first turn, during an auction, while another trade is pending, or
+ * after the game. The interrupted step resumes once the trade is answered.
  */
 export function canProposeTrade(state: GameState): boolean {
   switch (state.phase.type) {
-    case "awaitingRoll":
-    case "awaitingJailDecision":
-    case "awaitingBuyDecision":
-    case "awaitingPayment":
-    case "turnEnd":
-      return true;
-    default:
+    case "openingRoll":
+    case "auction":
+    case "awaitingTradeResponse":
+    case "gameOver":
       return false;
+    default:
+      return true;
   }
 }
 

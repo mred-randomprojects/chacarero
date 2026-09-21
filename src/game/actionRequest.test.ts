@@ -43,10 +43,14 @@ describe("trades", () => {
     const start = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
     expect(allowedPlayerFor(start, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
     expect(allowedPlayerFor(start, { type: "acceptTrade" })).toBeNull();
-    // Building is fine with the dice in the air; proposing a trade waits for the pawn.
+    // Building and trading are both fine with the dice on the table; the move waits for the answer.
     const rolled = applyActionRequest(start, { type: "rollDice" }, [1, 2]);
     expect(allowedPlayerFor(rolled, { type: "mortgage", deedId: "salta-sur" })).toBe("a");
-    expect(allowedPlayerFor(rolled, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBeNull();
+    expect(allowedPlayerFor(rolled, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
+    // Never before the first turn is decided.
+    const opening = createGame({ players, random: () => 0.5 });
+    expect(allowedPlayerFor(opening, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBeNull();
+    expect(allowedPlayerFor(opening, { type: "mortgage", deedId: "salta-sur" })).toBeNull();
     const state = pending();
     expect(allowedPlayerFor(state, { type: "acceptTrade" })).toBe("b");
     expect(allowedPlayerFor(state, { type: "rejectTrade" })).toBe("b");

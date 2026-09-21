@@ -54,6 +54,8 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("startGame"), playerId: PlayerId, startingCash: z.number().int().min(1_000).max(1_000_000), dealDeeds: z.number().int().min(0).max(DEAL_DEEDS_MAX).default(0) }),
   z.object({ type: z.literal("newGame"), playerId: PlayerId }),
   z.object({ type: z.literal("shake"), playerId: PlayerId, shaking: z.boolean() }),
+  /** The player is at the trade screen: the clock must not decide for them meanwhile. */
+  z.object({ type: z.literal("composing"), playerId: PlayerId, composing: z.boolean() }),
   z.object({ type: z.literal("action"), playerId: PlayerId, seq: z.number().int().nonnegative(), action: ActionRequestSchema }),
   z.object({ type: z.literal("heartbeat"), playerId: PlayerId }),
 ]);

@@ -989,12 +989,13 @@ describe("trades", () => {
     expect(state.holdings["salta-sur"]?.ownerId).toBe("ana");
   });
 
-  it("resumes a buy decision intact, and waits for mid-step phases to finish", () => {
+  it("resumes whatever step it interrupted: a buy decision, the dice on the table, a card face up", () => {
     let state = withHolding(game(), "salta-sur", { ownerId: "ana" });
     state = rollDice(state, undefined, [1, 2]);
     expect(state.phase).toEqual({ type: "awaitingMove" });
-    // Dice in the air: not now.
-    expect(() => proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 3_000 })).toThrow(/Terminá la jugada/);
+    // Dice on the table: a rejected trade hands them straight back.
+    state = rejectTrade(proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 3_000 }));
+    expect(state.phase).toEqual({ type: "awaitingMove" });
     state = movePawn(state);
     expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "formosa-norte" });
     state = proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 3_000 });
@@ -1003,17 +1004,22 @@ describe("trades", () => {
     expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH + 3_000);
     state = buy(state);
     expect(state.holdings["formosa-norte"]?.ownerId).toBe("ana");
-    // A card face up: not now either.
+    // A card face up: the trade goes through and the card is still there to apply.
     let card = withDecks(withHolding(game(), "salta-sur", { ownerId: "ana" }), ["suerte-13"], ["destino-04"]);
     card = movePawn(rollDice(card, undefined, [4, 6])); // 10: Destino
     expect(card.phase.type).toBe("awaitingDraw");
-    expect(() => proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
+    card = cancelTrade(proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING));
+    expect(card.phase.type).toBe("awaitingDraw");
     card = drawCard(card);
-    expect(card.phase.type).toBe("awaitingCardAck");
-    expect(() => proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
+    expect(card.phase).toMatchObject({ type: "awaitingCardAck", card: { id: "destino-04" } });
+    card = acceptTrade(proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING));
+    expect(card.phase).toMatchObject({ type: "awaitingCardAck", card: { id: "destino-04" } });
+    expect(card.holdings["salta-sur"]?.ownerId).toBe("beto");
   });
 
-  it("is off limits during auctions and after the game", () => {
+  it("is off limits before the first turn, during auctions and after the game", () => {
+    const opening = createGame({ players: [ANA, BETO], random: () => 0.5 });
+    expect(() => proposeTrade(opening, "beto", { deeds: [], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
     const auction = decline(roll(game(), undefined, [1, 2]));
     expect(() => proposeTrade(auction, "beto", { deeds: [], cash: 0 }, NOTHING)).toThrow(/remate/);
     const over: GameState = { ...table(), phase: { type: "gameOver", winnerId: "ana" } };

@@ -201,7 +201,8 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
 
   const enqueue = useCallback(
     (before: GameState, after: GameState) => {
-      if (before.phase.type === "awaitingCardAck") void effectsBus.request({ kind: "hideCard" });
+      // The face-up card goes back once applied; a trade proposed meanwhile leaves it on the table.
+      if (before.phase.type === "awaitingCardAck" && after.phase.type !== "awaitingTradeResponse") void effectsBus.request({ kind: "hideCard" });
       if (after.events.length === 0) {
         viewRef.current = viewOf(after);
         setView(viewRef.current);

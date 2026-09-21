@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DECISION_SECONDS } from "../src/game";
 import type { Room } from "./room";
 import {
+  COMPOSING_GRACE_MS,
   RoomError,
   applyRequest,
   chooseToken,
@@ -14,6 +15,7 @@ import {
   markDisconnected,
   newGame,
   pruneIdle,
+  setComposing,
   setShaking,
   startGame,
   toView,
@@ -164,6 +166,20 @@ describe("playing", () => {
     expect(room.game?.phase.type).toBe("awaitingBuyDecision");
     room = fireDeadline(room, room.deadline ?? 0, [1, 2]);
     expect(room.game?.phase.type).toBe("auction");
+  });
+
+  it("keeps the clock from deciding for a player who is at the trade screen", () => {
+    let room = playing();
+    room = setComposing(room, ana.playerId, true);
+    const deadline = room.deadline ?? 0;
+    room = fireDeadline(room, deadline, [1, 2]);
+    expect(room.game?.phase).toEqual({ type: "awaitingRoll" });
+    expect(room.deadline).toBe(deadline + COMPOSING_GRACE_MS);
+    // Someone else composing does not hold Ana's clock.
+    room = setComposing(setComposing(room, ana.playerId, false), beto.playerId, true);
+    room = fireDeadline(room, room.deadline ?? 0, [1, 2]);
+    expect(room.lastAction).toBe("rollDice");
+    expect(room.composingPlayerId).toBeNull();
   });
 
   it("rejects a trade for an absent responder when its clock runs out", () => {

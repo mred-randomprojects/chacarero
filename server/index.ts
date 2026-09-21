@@ -25,6 +25,7 @@ import {
   newGame,
   pruneIdle,
   renamePlayer,
+  setComposing,
   setShaking,
   startGame,
   toView,
@@ -165,6 +166,13 @@ function handle(ws: Socket, message: ClientMessage): void {
     case "shake":
       if (ws.data.code) update(ws, ws.data.code, (room) => setShaking(room, message.playerId, message.shaking));
       return;
+    case "composing": {
+      // Nothing to broadcast: the room only remembers it for the clock.
+      const code = ws.data.code;
+      const room = code ? rooms.get(code) : undefined;
+      if (room) rooms.set(room.code, setComposing(room, message.playerId, message.composing));
+      return;
+    }
     case "action":
       if (ws.data.code) update(ws, ws.data.code, (room) => applyRequest(room, message.playerId, message.seq, message.action, now, rollDice()));
       return;

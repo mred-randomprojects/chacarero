@@ -246,6 +246,14 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     tradeCounter.current += 1;
     setTrade({ id: tradeCounter.current, mode: { kind: "compose", draft: { me: pending.toId, partnerId: pending.fromId, gives: pending.receives, receives: pending.gives, counter: true } } });
   }, [game.phase]);
+  // While the trade screen is open the clock must not decide for us.
+  const composing = trade !== null;
+  useEffect(() => {
+    if (!composing) return;
+    session.setComposing(true);
+    return () => session.setComposing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session identity changes with every state; only the flag matters
+  }, [composing]);
   const reviewTrade = useCallback(() => {
     if (game.phase.type !== "awaitingTradeResponse") return;
     tradeCounter.current += 1;
