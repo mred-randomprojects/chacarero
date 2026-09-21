@@ -47,13 +47,14 @@ function DiceButton({ label, shaking, disabled, onShakeStart, onShakeEnd }: Dice
   );
 }
 
-function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
+/** The last throw; "¡Doble!" only while the extra turn it earned is still pending (never during the opening throws). */
+function Dice({ dice, rollAgain }: { readonly dice: readonly [number, number] | null; readonly rollAgain: boolean }) {
   if (!dice) return null;
   return (
     <span className="dice" aria-label={`Dados: ${dice[0]} y ${dice[1]}`}>
       <span className="die">{dice[0]}</span>
       <span className="die">{dice[1]}</span>
-      {dice[0] === dice[1] && <span className="double">¡Doble!</span>}
+      {rollAgain && <span className="double">¡Doble!</span>}
     </span>
   );
 }
@@ -71,7 +72,7 @@ export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, on
         <TokenIcon token={player.token} size={20} />
         <strong>{player.name}</strong>
         {player.inJail && <span className="status">preso</span>}
-        <Dice dice={state.dice} />
+        <Dice dice={state.dice} rollAgain={state.rollAgain} />
       </div>
       {state.lastCard && (
         <div className={`card ${state.lastCard.deck}`}>
