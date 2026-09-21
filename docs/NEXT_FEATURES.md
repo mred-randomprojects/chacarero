@@ -94,12 +94,12 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 9. 2D board map on a key press
 
-- [ ] 9.1 A key (and a button) opens a simplified 2D map of the hex ring: every square
+- [x] 9.1 A key (and a button) opens a simplified 2D map of the hex ring: every square
       with its colour band, the owner's colour, buildings and mortgage state.
-- [ ] 9.2 A pin with each player's token icon on the square they stand on.
-- [ ] 9.3 Side statistics: free properties, per-player holdings, buildings left in the
+- [x] 9.2 A pin with each player's token icon on the square they stand on.
+- [x] 9.3 Side statistics: free properties, per-player holdings, buildings left in the
       bank, etc.
-- [ ] 9.4 Clicking a square selects it (opens its panel) so building/mortgaging is one
+- [x] 9.4 Clicking a square selects it (opens its panel) so building/mortgaging is one
       click away; the old property list remains reachable from the map.
 
 ## 10. Dice thrown next to the pawn
@@ -189,6 +189,10 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — 2D map (9) (`c259b78`).** `src/ui/BoardMap.tsx`: SVG from
+  `BOARD_LAYOUT` (board y flipped), `HexMap` + `MapStats`, tabs Mapa/Lista; the
+  list body is now `PropertiesTable` in `PropertiesList.tsx` (modal wrapper gone).
+  Top bar button renamed "Mapa"; key `L` unchanged.
 - **2026-09-21 — path lights + skip (12) (`9b67c9b`).** `GameScreen` computes
   `path` (next N squares in `awaitingMove`, or the rest of the walking route) →
   `Board` → `Tile` (`pathStep`/`pathLength`); the tile material's emissive is now
