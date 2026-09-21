@@ -137,9 +137,9 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 13. Trade whenever
 
-- [ ] 13.1 A trade can be proposed at (almost) any moment of your own turn, including
+- [x] 13.1 A trade can be proposed at (almost) any moment of your own turn, including
       when you owe money and before you pay it — not only between steps.
-- [ ] 13.2 Nobody is auto-charged by the decision clock while they are in the middle of
+- [x] 13.2 Nobody is auto-charged by the decision clock while they are in the middle of
       a trade: proposing pauses the decision, and composing a trade keeps the clock
       from firing.
 
@@ -189,6 +189,14 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — trade whenever + composing (13) (`0fe4268`).** `canProposeTrade`
+  is now a deny-list (openingRoll, auction, awaitingTradeResponse, gameOver).
+  `composing` message in the protocol → `Room.composingPlayerId`; `fireDeadline`
+  pushes the deadline by `COMPOSING_GRACE_MS` (30 s) when the actor it would
+  default is composing (no cap — a table of friends; add one if it is abused).
+  Hot-seat mirrors it in `useLocalSession`. `GameScreen` sets it while the trade
+  screen (compose or review) is open. `usePlayback` keeps the face-up card on the
+  table when a trade interrupts `awaitingCardAck`.
 - **2026-09-21 — trade screen (11, 14, 15, 16) (`1b596ed`).** `src/ui/TradeScreen.tsx`
   replaces `TradeDialog.tsx` (`OfferItems` moved to `OfferItems.tsx` for the compact
   prompt). Modes: `compose` (draft) and `review` (pending trade). `GameScreen`
