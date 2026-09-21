@@ -4,6 +4,7 @@ import { CUE_LEAD_SECONDS, eventSeconds } from "../game";
 import { sfx } from "../audio/sfx";
 import { effectsBus } from "../scene/effectsBus";
 import { pawnPath } from "../scene/pawnPath";
+import { HURRY_RATE, pace } from "./pace";
 import type { ViewState } from "./playbackView";
 import { applyEvent, beginReplay, viewOf } from "./playbackView";
 
@@ -33,8 +34,8 @@ export interface Playback {
   readonly enqueue: (after: GameState) => void;
   /** Resets the view to a state without replaying anything. */
   readonly reset: (state: GameState) => void;
-  /** Finishes the current step at once. */
-  readonly skip: () => void;
+  /** Plays the rest of this replay at double speed (see pace): faster, never skipped. */
+  readonly hurry: () => void;
   /** The scene reports the walking pawn has arrived. */
   readonly onPawnArrive: () => void;
 }
@@ -43,7 +44,8 @@ export interface Playback {
  * Replays the events of each action one at a time: shows the banner, runs
  * the matching animation (bills flying, a card sliding, the pawn walking),
  * waits, then updates what the table shows. Decisions are held back until
- * the replay is over, so everyone at the table follows what happened.
+ * the replay is over, so everyone at the table follows what happened. A
+ * hurry (Space) doubles the pace of everything until the replay ends.
  */
 export function usePlayback(initial: GameState | null, options: PlaybackOptions): Playback {
   const [view, setView] = useState<ViewState>(() =>
@@ -62,7 +64,7 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
   const scale = useRef(options.bannerSeconds / 3);
   scale.current = options.bannerSeconds / 3;
 
-  const wait = (seconds: number) => new Promise<void>((resolve) => setTimeout(resolve, seconds * 1000));
+  const wait = (seconds: number) => pace.wait(seconds);
 
   const animate = useCallback((event: GameEvent, before: ViewState): Promise<void> => {
     switch (event.type) {
@@ -149,6 +151,8 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
     setCurrent(null);
     running.current = false;
     setBusy(false);
+    // The next action starts at the table's own pace again.
+    pace.set(1);
   }, [animate]);
 
   const enqueue = useCallback(
@@ -175,11 +179,7 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
     setView(viewRef.current);
   }, []);
 
-  const skip = useCallback(() => {
-    effectsBus.flush();
-    arriveResolve.current?.();
-    skipResolve.current?.();
-  }, []);
+  const hurry = useCallback(() => pace.set(HURRY_RATE), []);
 
   const onPawnArrive = useCallback(() => {
     arriveResolve.current?.();
@@ -188,5 +188,5 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
 
   useEffect(() => () => effectsBus.flush(), []);
 
-  return { view, busy, current, walk, enqueue, reset, skip, onPawnArrive };
+  return { view, busy, current, walk, enqueue, reset, hurry, onPawnArrive };
 }

@@ -9,6 +9,7 @@ import { pawnPosition } from "./hexLayout";
 import { pawnKnocks } from "./pawnKnocks";
 import { PAWN_SPACING_RATIO } from "./pawnSpots";
 import { pawnTracker } from "./pawnTracker";
+import { pace } from "../ui/pace";
 import { boardToWorld } from "./tileGeometry";
 import { TokenShape } from "./Token";
 
@@ -90,7 +91,7 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     if (!node) return;
     const steps = path.current.length - 1;
     const wasMoving = progress.current < steps;
-    if (wasMoving) progress.current = Math.min(steps, progress.current + delta * (isJump.current ? JUMP_SPEED : SPEED));
+    if (wasMoving) progress.current = Math.min(steps, progress.current + delta * pace.rate * (isJump.current ? JUMP_SPEED : SPEED));
     const t = progress.current;
     const from = Math.floor(t);
     const frac = t - from;

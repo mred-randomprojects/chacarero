@@ -41,7 +41,7 @@ import { TradeScreen } from "./ui/TradeScreen";
 import { usePlayback } from "./ui/usePlayback";
 
 const ERROR_MS = 3_500;
-/** Space/Enter pressed this soon after a prompt appears are taken as leftover banner-skipping, not as the decision. */
+/** Space/Enter pressed this soon after a prompt appears are taken as leftover banner-hurrying, not as the decision. */
 const PROMPT_GRACE_MS = 400;
 
 export interface GameScreenProps {
@@ -106,7 +106,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   /** The user took the camera (drag, wheel, a camera key); the director lets go until the next turn. */
   const [freeLook, setFreeLook] = useState(false);
   const playback = usePlayback(game, { bannerSeconds: settings.bannerSeconds });
-  const { view, walk, enqueue, reset, skip } = playback;
+  const { view, walk, enqueue, reset, hurry } = playback;
   const busy = playback.busy || throwing !== null;
   const previous = useRef<{ game: GameState; seq: number } | null>(null);
   const pendingReplay = useRef<GameState | null>(null);
@@ -462,22 +462,23 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const onSelect = useCallback((index: number) => setSelected((current) => (current === index ? null : index)), []);
   const closePanel = useCallback(() => setSelected(null), []);
 
-  // Keyboard: space/enter skip a replay, shake the dice (hold space) or press the prompt's highlighted button;
+  // Keyboard: space/enter hurry a replay (2×), shake the dice (hold space) or press the prompt's highlighted button;
   // digits sit at a player's seat, 0/T/M views, L list, C trade, coma settings.
   useEffect(() => {
     const onDown = (event: KeyboardEvent) => {
       if (isTyping(event) || ownsSpace(event)) return;
       if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
+        // The key's auto-repeat never does more than the first press did: a held Space hurries once.
+        if (event.repeat) return;
         if (throwing) {
           diceHurry.requested += 1;
           return;
         }
         if (playback.busy) {
-          skip();
+          hurry();
           return;
         }
-        if (event.repeat) return;
         if (canRoll) {
           if (event.key === " ") startShake();
           return;
@@ -526,7 +527,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing, peek, peekSeat]);
+  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, hurry, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing, peek, peekSeat]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -626,7 +627,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         dispatch={dispatch}
       />
       <div className="stage">
-        <Banner state={game} event={playback.current} onSkip={skip} />
+        <Banner state={game} event={playback.current} onHurry={hurry} />
         <Prompt
           state={game}
           you={you}

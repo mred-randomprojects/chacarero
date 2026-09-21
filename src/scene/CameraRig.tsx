@@ -6,6 +6,7 @@ import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import type { CameraView } from "./cameraViews";
 import { orbitView, tiltView, zoomView } from "./cameraViews";
 import { cameraTracker, pawnTracker } from "./pawnTracker";
+import { pace } from "../ui/pace";
 
 export type FlightStyle = "direct" | "arc";
 
@@ -266,11 +267,13 @@ export function CameraRig({ goTo, chase: chaseId, onUserControl }: CameraRigProp
     };
   }, [camera, domElement, here]);
 
-  useFrame((_, delta) => {
+  useFrame((_, rawDelta) => {
     const orbit = controls.current;
     if (!orbit) return;
     cameraTracker.position.copy(camera.position);
     cameraTracker.target.copy(orbit.target);
+    // The camera keeps up with a hurried replay: same lag behind the pawn, same flights, in replay time.
+    const delta = rawDelta * pace.rate;
     const offset = chase.current;
     if (offset) {
       if (pawnTracker.moving) settle.current = 0.7;

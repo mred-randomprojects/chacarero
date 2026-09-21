@@ -3,7 +3,8 @@ import type { GameEvent, GameState } from "../game";
 export interface BannerProps {
   readonly state: GameState;
   readonly event: GameEvent | null;
-  readonly onSkip: () => void;
+  /** Play the rest of the replay at double speed. */
+  readonly onHurry: () => void;
 }
 
 function playerOf(event: GameEvent): string | null {
@@ -35,19 +36,20 @@ const ICONS: Readonly<Record<GameEvent["type"], string>> = {
 
 /**
  * The one event being replayed right now, big and centre-stage, with a
- * button to hurry it along. One at a time, so the whole table follows.
+ * button to hurry it along (double speed, never a jump to the end). One at
+ * a time, so the whole table follows.
  */
-export function Banner({ state, event, onSkip }: BannerProps) {
+export function Banner({ state, event, onHurry }: BannerProps) {
   if (!event) return null;
   const playerId = playerOf(event);
   const color = playerId ? (state.players.find((p) => p.id === playerId)?.color ?? "#000") : "#7a5230";
   return (
-    <div className={`banner ${event.type}`} key={event.text} onClick={onSkip} role="status">
+    <div className={`banner ${event.type}`} key={event.text} onClick={onHurry} role="status">
       <span className="dot" style={{ background: color }} />
       <span className="icon">{ICONS[event.type]}</span>
       <span className="text">{event.text}</span>
-      <button type="button" className="skip" onClick={onSkip} title={event.type === "move" ? "Saltear la caminata (Enter / espacio)" : "Continuar (Enter / espacio)"}>
-        {event.type === "move" ? "▸▸" : "▸"}
+      <button type="button" className="skip" onClick={onHurry} title="Apurar: todo al doble de velocidad (Enter / espacio)">
+        ▸▸
       </button>
     </div>
   );

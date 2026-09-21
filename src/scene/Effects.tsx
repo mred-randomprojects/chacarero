@@ -13,6 +13,7 @@ import type { ActiveEffect } from "./effectsBus";
 import { effectsBus } from "./effectsBus";
 import { sfx } from "../audio/sfx";
 import { pawnTracker } from "./pawnTracker";
+import { pace } from "../ui/pace";
 
 export interface EffectsProps {
   readonly anchors: Anchors;
@@ -143,7 +144,7 @@ function MoneyFlight({ anchors, from, to, amount, onDone }: MoneyFlightProps) {
   }, []);
 
   useFrame((_, delta) => {
-    t.current += delta;
+    t.current += delta * pace.rate;
     bills.forEach((bill, i) => {
       const mesh = refs.current[i];
       if (!mesh) return;
@@ -215,7 +216,7 @@ function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
   }, []);
 
   useFrame((_, delta) => {
-    t.current += delta;
+    t.current += delta * pace.rate;
     const k = Math.min(1, t.current / DEED_FLIGHT);
     const node = mesh.current;
     if (!node) return;
@@ -263,7 +264,7 @@ function BuildingDrop({ anchors, deedId, chacras, estancia, removed, onDone }: B
   const restY = 0.02 + size[1] / 2;
 
   useFrame((_, delta) => {
-    t.current += delta;
+    t.current += delta * pace.rate;
     const k = Math.min(1, t.current / DROP_SECONDS);
     const node = mesh.current;
     if (!node) return;
@@ -332,7 +333,7 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
       startedHide.current = true;
       t.current = 0;
     }
-    t.current += delta;
+    t.current += delta * pace.rate;
     // Face down in the slot (the back on top), facing the camera while up in the air.
     const flat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2);
     const facing = camera.quaternion.clone();
