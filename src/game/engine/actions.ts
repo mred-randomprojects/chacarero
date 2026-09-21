@@ -142,6 +142,17 @@ function charge(state: GameState, debtorId: string, amount: number, to: Creditor
   return { ...next, pendingDebts: [...next.pendingDebts, debt] };
 }
 
+/**
+ * Puts a payment on a player's account without moving the money: the game
+ * stops at `awaitingPayment` so they pay it themselves (or raise the cash
+ * first). Rent works this way — the table asks before the bills fly.
+ */
+function bill(state: GameState, debtorId: string, amount: number, to: Creditor, reason: string): GameState {
+  if (amount <= 0) return state;
+  const debt: Debt = { debtorId, amount, to, reason };
+  return { ...state, pendingDebts: [...state.pendingDebts, debt] };
+}
+
 // ---------- turn flow ----------
 
 /** Decides what comes after the current move is fully resolved. */
@@ -252,7 +263,7 @@ function resolveDeedLanding(state: GameState, deedId: DeedId): GameState {
     // Company rent depends on the dice that brought the visitor here, so spell it out.
     reason = `alquiler de ${name}: dados ${state.dice[0]}+${state.dice[1]} = ${diceTotal(state)} × ${rent / diceTotal(state)}`;
   }
-  next = charge(next, current.id, rent, player(owner.id), reason);
+  next = bill(next, current.id, rent, player(owner.id), reason);
   return continueTurn(next);
 }
 

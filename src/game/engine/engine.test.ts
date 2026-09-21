@@ -268,11 +268,17 @@ describe("jail", () => {
 });
 
 describe("rent", () => {
-  it("collects the bare rent for an owned campo", () => {
+  it("asks before the money moves: the table stops at the payment, and paying collects the bare rent", () => {
     let state = withHolding(game(), "formosa-centro", { ownerId: "beto" });
     state = roll(state, undefined, [1, 1]);
+    // Nothing has moved yet: the visitor is told the amount and pays it themselves.
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "ana", amount: 40, to: { type: "player", playerId: "beto" }, reason: /alquiler/ });
+    expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH);
+    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH);
+    state = settlePayment(state);
     expect(getPlayer(state, "ana").cash).toBe(STARTING_CASH - 40);
     expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 40);
+    expect(state.events.map((e) => e.type)).toEqual(["transfer"]);
     expect(state.phase).toEqual({ type: "awaitingRoll" });
   });
 
@@ -339,7 +345,8 @@ describe("cards", () => {
     state = withHolding(state, "fc-belgrano", { ownerId: "beto" });
     state = onSuerte(state); // 15 -> 12 FC Belgrano
     expect(currentPlayer(state).position).toBe(12);
-    expect(currentPlayer(state).cash).toBe(STARTING_CASH - 500);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", amount: 500 });
+    expect(settlePayment(state).players[0]?.cash).toBe(STARTING_CASH - 500);
   });
 
   it("sends the player to jail", () => {
@@ -616,7 +623,7 @@ describe("edge cases", () => {
 
   it("company rent uses the dice that brought you there", () => {
     let state = withHolding(game(), "petrolera", { ownerId: "beto" });
-    state = roll(state, undefined, [3, 5]);
+    state = settlePayment(roll(state, undefined, [3, 5]));
     expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 800);
   });
 
@@ -625,7 +632,8 @@ describe("edge cases", () => {
     state = withHolding(state, "bodega", { ownerId: "beto" });
     state = roll(withPlayer(state, "ana", { position: 12 }), undefined, [1, 2]); // Suerte -> Bodega
     expect(currentPlayer(state).position).toBe(16);
-    expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 300);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "ana", amount: 300 });
+    expect(getPlayer(settlePayment(state), "beto").cash).toBe(STARTING_CASH + 300);
   });
 
   it("the bankrupt player's creditor inherits mortgaged deeds as mortgaged", () => {
@@ -804,9 +812,11 @@ describe("three doubles clawback", () => {
 });
 
 describe("visible company rent", () => {
-  it("spells out the dice and multiplier in the log", () => {
+  it("spells out the dice and multiplier in the payment and in the log", () => {
     let state = withHolding(game(), "petrolera", { ownerId: "beto" });
     state = roll(state, undefined, [3, 5]);
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", reason: expect.stringContaining("dados 3+5 = 8 × 100") });
+    state = settlePayment(state);
     expect(state.log.at(-1)?.text).toContain("dados 3+5 = 8 × 100");
   });
 });

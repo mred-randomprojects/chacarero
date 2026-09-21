@@ -258,16 +258,20 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
     case "awaitingPayment": {
       const debtor = getPlayer(state, phase.debtorId);
       const missing = phase.amount - debtor.cash;
-      const to = phase.to.type === "bank" ? "al Banco" : `a ${getPlayer(state, phase.to.playerId).name}`;
+      const creditor = phase.to.type === "bank" ? null : getPlayer(state, phase.to.playerId);
       const stuck = !canRaiseCash(state, debtor.id);
       const action: ActionRequest = { type: "settlePayment" };
+      const rent = /^alquiler/i.test(phase.reason);
       return (
-        <div className="prompt urgent">
+        <div className="prompt urgent payment">
           <h3>
-            <TokenIcon token={debtor.token} size={20} /> {debtor.name} debe {pesos(phase.amount)} {to}
+            <TokenIcon token={debtor.token} size={20} /> {debtor.name} {rent ? "paga alquiler" : "debe"} {creditor ? <>a <TokenIcon token={creditor.token} size={20} /> {creditor.name}</> : "al Banco"}
           </h3>
+          {/* The figure is the point: big enough to read from across the room before anything moves. */}
+          <p className="amount-big">{pesos(phase.amount)}</p>
           <p>
-            {phase.reason}. {missing > 0 ? `Le faltan ${pesos(missing)}: tiene que vender construcciones o hipotecar.` : "Ya tiene la plata."}
+            {phase.reason.charAt(0).toUpperCase() + phase.reason.slice(1)}.{" "}
+            {missing > 0 ? `Le faltan ${pesos(missing)}: tiene que vender construcciones o hipotecar.` : `Tiene ${pesos(debtor.cash)}; nada se mueve hasta que pague.`}
           </p>
           {mine(action) ? (
             <div className="buttons">

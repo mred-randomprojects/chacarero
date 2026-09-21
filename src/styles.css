@@ -724,6 +724,30 @@ button.danger {
   margin-top: 10px;
 }
 
+/* The amount a player must pay, big enough to read from across the room. */
+.prompt .amount-big {
+  margin: 6px 0 0;
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.5);
+  animation: amount-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes amount-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .prompt .buttons button.primary {
   font-size: 1.05rem;
 }
