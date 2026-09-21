@@ -296,6 +296,14 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — batch 2 shipped; second look done.** Production build green;
+  hot-seat and online (two tabs, opening throws) checked in the browser: the
+  observer's screen keeps showing the thrower until the replay ends. Remaining
+  known limits: the in-hand rattle is a scripted rhythm (no hands drawn); dice
+  collisions are position-corrected, not simulated; the offer panel sits at a
+  fixed 52% from the left, so on very narrow windows it may overlap the lifted
+  card's edge; a quick *tap* of Space still does not throw (hold it, or click).
+  Not built (not asked): drawn hands for the shake, a rapier physics world.
 - **2026-09-21 — B1, B13, B21, B22, G.1 (`97f9994`, `66dec6a`).** `--radius`
   token (3px) for panels, 0 for card-like elements; token picker 46px + names
   (setup card 560px wide); `PlayerCards` are buttons calling `onFocus` →
