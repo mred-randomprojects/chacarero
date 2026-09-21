@@ -204,14 +204,14 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B9, B11, B17. The camera is the audience
 
-- [ ] B9.1 The camera follows the pawn hop by hop, close behind it, looking
+- [x] B9.1 The camera follows the pawn hop by hop, close behind it, looking
       inward across the board.
-- [ ] B11.1 Movement is slower: no rush, seeing things move is the fun. Replay
+- [x] B11.1 Movement is slower: no rush, seeing things move is the fun. Replay
       timings (clock allowance) stay in sync with the scene speeds.
-- [ ] B17.1 Every replayed happening gets a camera cue: money flying between
+- [x] B17.1 Every replayed happening gets a camera cue: money flying between
       piles, a deed flying from the bank to a seat, a building dropping, going
       to jail, a bankruptcy. Not just the pawn and the turn start.
-- [ ] B17.2 A landing gets a small flourish (settle on the tile; the deed lift
+- [x] B17.2 A landing gets a small flourish (settle on the tile; the deed lift
       is the flourish for a free deed).
 
 ## B12. Cards say what the real ones say
@@ -296,6 +296,13 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — camera theatre B9/B11/B17 (`208f83b`).** `SECONDS_PER_SQUARE`
+  (0.42) and `CUE_LEAD_SECONDS` in `timing.ts` are the single source of pace
+  (Pawn speed, replay holds, clock). `pawnTracker` now has `kind` + `outward`;
+  `CameraRig` chases pawns from outside the ring and flights at the current
+  angle; `MoneyFlight`/`DeedFlight` publish to the tracker; `GameScreen` cues
+  `pushIn` for building/jail and a seat flight for bankruptcy, keyed on
+  `playback.current`. The landing flourish is the chase settle + the deed lift.
 - **2026-09-21 — dice B3–B6, B14 (`2bbf2c9`).** `src/scene/diceThrow.ts` (pure:
   `landingSpots`, `separate`, `deflectFromPawns`, `flightHeight`, tested) and a
   rewritten `Dice.tsx` with modes rest/grab/shake/fly/settle/present; callbacks
