@@ -71,6 +71,15 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     pawnTracker.moving = true;
   }, [route, routeId, jump, position]);
 
+  // The state jumped (a reset, a reconnect that skipped steps): stand on the new square at once.
+  useEffect(() => {
+    if (route !== null) return;
+    const steps = path.current.length - 1;
+    if (progress.current < steps) return;
+    path.current = [position];
+    progress.current = 0;
+  }, [position, route]);
+
   useFrame((_, delta) => {
     const node = group.current;
     if (!node) return;

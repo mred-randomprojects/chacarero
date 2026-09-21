@@ -71,6 +71,20 @@ export function tiltView(view: CameraView, angle: number): CameraView {
   return { position: [tx + dx * scale, ty + y, tz + dz * scale], target: view.target };
 }
 
+/**
+ * Close-up of the pawn standing on `square`: from just outside the ring,
+ * low enough that the piece fills the foreground, with the board beyond it.
+ */
+export function pawnView(layout: HexLayout, square: number): CameraView {
+  const tile = layout.tiles[square];
+  if (!tile) throw new Error(`No tile ${square}`);
+  const outward = { x: -tile.up.x, y: -tile.up.y };
+  const eye = { x: tile.center.x + outward.x * 4.2, y: tile.center.y + outward.y * 4.2 };
+  // Aim just past the piece so it sits in the lower-middle of the frame, above the HUD cards.
+  const look = { x: tile.center.x + tile.up.x * 0.5, y: tile.center.y + tile.up.y * 0.5 };
+  return { position: boardToWorld(eye, 3.1), target: boardToWorld(look, 0.45) };
+}
+
 /** Close-up of one tile, from outside the board so its text reads the right way up. */
 export function squareView(layout: HexLayout, index: number): CameraView {
   const tile = layout.tiles[index];

@@ -27,7 +27,7 @@ export interface SceneProps extends BoardProps, CameraRigProps {
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene({ goTo, followPawn, diceSide, throwerId, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
+export function Scene({ goTo, followPawn, onUserControl, diceSide, throwerId, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
   const obstacles = useMemo<readonly PawnObstacle[]>(() => board.pawns.map((pawn, slot) => ({ id: pawn.id, position: pawnWorld(BOARD_LAYOUT, pawn.position, slot) })), [board.pawns]);
   const thrower = board.pawns.find((p) => p.id === throwerId);
@@ -67,7 +67,7 @@ export function Scene({ goTo, followPawn, diceSide, throwerId, shaking, throwing
           <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} target={target} obstacles={obstacles} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
         </>
       )}
-      <CameraRig goTo={goTo} followPawn={followPawn} />
+      <CameraRig goTo={goTo} followPawn={followPawn} onUserControl={onUserControl} />
     </Canvas>
   );
 }

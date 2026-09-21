@@ -6,7 +6,8 @@ import { currentPlayer, getSquare } from "./game";
 import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
-import { OVERVIEW, TOP_DOWN, seatView, squareView } from "./scene/cameraViews";
+import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
+import type { FlightStyle } from "./scene/CameraRig";
 import type { DiceThrow } from "./scene/Dice";
 import { diceHurry } from "./scene/pawnKnocks";
 import { Scene } from "./scene/Scene";
@@ -45,7 +46,11 @@ interface Flight {
   readonly id: number;
   readonly view: CameraView;
   readonly seconds?: number;
+  readonly style?: FlightStyle;
 }
+
+/** The turn-to-turn flight: long enough to read as a swoop from one pawn to the next. */
+const TURN_FLIGHT_SECONDS = 1.5;
 
 /** The trade dialog's contents; `id` remounts it so a fresh draft starts clean. */
 interface OpenTrade {
@@ -82,6 +87,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const tradeCounter = useRef(0);
   const [goTo, setGoTo] = useState<Flight | null>(null);
   const goToCounter = useRef(0);
+  /** The user took the camera (drag, wheel, a camera key); the director lets go until the next turn. */
+  const [freeLook, setFreeLook] = useState(false);
   const playback = usePlayback(game, { bannerSeconds: settings.bannerSeconds });
   const { view, walk, enqueue, reset, skip, onPawnArrive } = playback;
   const busy = playback.busy || throwing !== null;
@@ -124,24 +131,39 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const currentSide = sideOf(currentPlayer(game).id);
   const mySide = you ? sideOf(you) : currentSide;
 
-  const flyTo = useCallback((cameraView: CameraView, seconds?: number) => {
+  const flyTo = useCallback((cameraView: CameraView, seconds?: number, style?: FlightStyle) => {
     goToCounter.current += 1;
-    setGoTo(seconds === undefined ? { id: goToCounter.current, view: cameraView } : { id: goToCounter.current, view: cameraView, seconds });
+    setGoTo({ id: goToCounter.current, view: cameraView, ...(seconds === undefined ? {} : { seconds }), ...(style === undefined ? {} : { style }) });
   }, []);
-  const flyToSeat = useCallback((side: number) => flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, side)), [flyTo]);
-  const focusSquare = useCallback((index: number) => flyTo(squareView(BOARD_LAYOUT, index), 0.45), [flyTo]);
+  /** A deliberate look somewhere: the director steps aside until the next turn. */
+  const lookAt = useCallback(
+    (cameraView: CameraView, seconds?: number) => {
+      setFreeLook(true);
+      flyTo(cameraView, seconds);
+    },
+    [flyTo],
+  );
+  const flyToSeat = useCallback((side: number) => lookAt(seatView(BOARD_LAYOUT, SLAB_MARGIN, side)), [lookAt]);
+  const focusSquare = useCallback((index: number) => lookAt(squareView(BOARD_LAYOUT, index), 0.45), [lookAt]);
 
-  // Sit at your own seat online; at a shared table, with whoever is on turn.
+  /**
+   * The director: at the start of every turn, everyone's camera swoops to a
+   * close-up of the pawn whose turn it is (during the opening throws, to the
+   * thrower's seat). A screen that took the camera re-joins here.
+   */
   const currentPlayerId = currentPlayer(game).id;
+  const currentPosition = currentPlayer(game).position;
+  const opening = game.phase.type === "openingRoll";
+  const director = settings.followTurn;
+  const directorCue = useCallback(() => {
+    setFreeLook(false);
+    flyTo(opening ? seatView(BOARD_LAYOUT, SLAB_MARGIN, currentSide) : pawnView(BOARD_LAYOUT, currentPosition), TURN_FLIGHT_SECONDS, "arc");
+  }, [flyTo, opening, currentSide, currentPosition]);
   useEffect(() => {
-    if (you !== null && !settings.followTurn) return;
-    flyToSeat(you !== null && !settings.followTurn ? mySide : currentSide);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the player changing
-  }, [currentPlayerId, settings.followTurn]);
-  useEffect(() => {
-    if (you !== null) flyToSeat(mySide);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the table appears
-  }, []);
+    if (director) directorCue();
+    else if (you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the turn changing or the director being switched
+  }, [currentPlayerId, director]);
 
   /**
    * A new seq means something happened. Consecutive steps are replayed; a
@@ -267,8 +289,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       if (key >= "1" && key <= "6") {
         const seat = seats[Number(key) - 1];
         if (seat) flyToSeat(seat.side);
-      } else if (key === "0") flyTo(OVERVIEW);
-      else if (key === "t") flyTo(TOP_DOWN);
+      } else if (key === "0") lookAt(OVERVIEW);
+      else if (key === "t") lookAt(TOP_DOWN);
       else if (key === "m") flyToSeat(mySide);
       else if (key === "l") setShowList((v) => !v);
       else if (key === "c") proposeTrade();
@@ -286,7 +308,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
+  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -324,7 +346,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         colorOf={colorOf}
         onPawnArrive={onPawnArrive}
         goTo={goTo}
-        followPawn={settings.followPawn && walk !== null}
+        followPawn={settings.followPawn && walk !== null && !(director && freeLook)}
+        onUserControl={() => setFreeLook(true)}
         diceSide={shakingSeat}
         throwerId={session.shakingPlayerId ?? currentPlayerId}
         shaking={diceShaking}
@@ -355,11 +378,12 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         />
       </div>
       <CameraBar
-        followTurn={settings.followTurn}
-        onToggleFollow={() => onSettings({ ...settings, followTurn: !settings.followTurn })}
+        mode={!director ? "off" : freeLook ? "free" : "following"}
+        onFollow={directorCue}
+        onToggleDirector={() => onSettings({ ...settings, followTurn: !settings.followTurn })}
         onMySeat={() => flyToSeat(mySide)}
-        onOverview={() => flyTo(OVERVIEW)}
-        onTopDown={() => flyTo(TOP_DOWN)}
+        onOverview={() => lookAt(OVERVIEW)}
+        onTopDown={() => lookAt(TOP_DOWN)}
       />
       {showList && (
         <PropertiesList

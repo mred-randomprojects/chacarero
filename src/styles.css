@@ -1506,3 +1506,8 @@ button.link {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+.camera-bar button.rejoin {
+  background: var(--gold);
+  color: var(--ink);
+}

@@ -39,7 +39,7 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
             <input type="checkbox" checked={settings.muted} onChange={(e) => set("muted", e.target.checked)} /> Silenciar
           </label>
           <label className="check">
-            <input type="checkbox" checked={settings.followTurn} onChange={(e) => set("followTurn", e.target.checked)} /> La cámara se sienta con el jugador de turno
+            <input type="checkbox" checked={settings.followTurn} onChange={(e) => set("followTurn", e.target.checked)} /> La cámara sigue la partida (se acerca al peón de turno; si la agarrás, te suelta hasta el turno siguiente)
           </label>
           <label className="check">
             <input type="checkbox" checked={settings.followPawn} onChange={(e) => set("followPawn", e.target.checked)} /> La cámara sigue al peón cuando se mueve

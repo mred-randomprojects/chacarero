@@ -7,16 +7,22 @@ import type { CameraView } from "./cameraViews";
 import { orbitView, tiltView, zoomView } from "./cameraViews";
 import { pawnTracker } from "./pawnTracker";
 
+export type FlightStyle = "direct" | "arc";
+
 export interface CameraRigProps {
-  /** Changing `id` flies the camera to `view`. */
-  readonly goTo: { readonly id: number; readonly view: CameraView; readonly seconds?: number } | null;
+  /** Changing `id` flies the camera to `view`; an `arc` flight rises away from the table and dives back in. */
+  readonly goTo: { readonly id: number; readonly view: CameraView; readonly seconds?: number; readonly style?: FlightStyle } | null;
   /** While true the orbit target tracks the moving pawn (see pawnTracker). */
   readonly followPawn: boolean;
+  /** The user grabbed the camera (drag, wheel or a camera key): the director should let go. */
+  readonly onUserControl: () => void;
 }
 
 /** Flight length for presets (seats, overview). Relative nudges use QUICK. */
 const FLIGHT_SECONDS = 0.7;
 const QUICK_SECONDS = 0.3;
+/** Height an arc flight climbs at its midpoint, as a share of the distance flown (clamped). */
+const ARC_RISE = 0.45;
 /** Camera offset while chasing a pawn: close and fairly steep, so the tile is readable. */
 const CHASE_DISTANCE = 11;
 const CHASE_HEIGHT = 9;
@@ -25,16 +31,23 @@ function easeInOut(x: number): number {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
+/** Slow start, fast middle, soft landing: the arc accelerates away and brakes into the new pawn. */
+function easeInOutQuart(x: number): number {
+  return x < 0.5 ? 8 * x * x * x * x : 1 - Math.pow(-2 * x + 2, 4) / 2;
+}
+
 /**
  * Orbit controls plus smooth flights to preset views. Mouse/touch orbiting
  * keeps working between flights; a flight in progress is cancelled by any
  * drag so the user always wins.
  */
-export function CameraRig({ goTo, followPawn }: CameraRigProps) {
+export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera);
   const domElement = useThree((s) => s.gl.domElement);
-  const flight = useRef<{ t: number; seconds: number; from: CameraView; to: CameraView } | null>(null);
+  const flight = useRef<{ t: number; seconds: number; from: CameraView; to: CameraView; style: FlightStyle } | null>(null);
+  const userControl = useRef(onUserControl);
+  userControl.current = onUserControl;
   const lastId = useRef<number | null>(null);
   /** Camera offset from the target while chasing; null when not chasing. */
   const chase = useRef<Vector3 | null>(null);
@@ -51,7 +64,7 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
     if (!goTo || goTo.id === lastId.current) return;
     lastId.current = goTo.id;
     chase.current = null;
-    flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from: here(), to: goTo.view };
+    flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from: here(), to: goTo.view, style: goTo.style ?? "direct" };
   }, [goTo, here]);
 
   // Start or stop chasing the pawn. The chase keeps the current azimuth but
@@ -109,7 +122,8 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
       }
       event.preventDefault();
       chase.current = null;
-      flight.current = { t: 0, seconds: QUICK_SECONDS, from: here(), to };
+      userControl.current();
+      flight.current = { t: 0, seconds: QUICK_SECONDS, from: here(), to, style: "direct" };
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -136,6 +150,7 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
       event.stopPropagation();
       chase.current = null;
       flight.current = null;
+      userControl.current();
       grab.current = { point, moved: false, startX: event.clientX, startY: event.clientY };
       domElement.setPointerCapture(event.pointerId);
     };
@@ -165,6 +180,7 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
         seconds: QUICK_SECONDS,
         from: here(),
         to: { position: [camera.position.x + dx, camera.position.y, camera.position.z + dz], target: [current.point.x, 0, current.point.z] },
+        style: "direct",
       };
       event.preventDefault();
     };
@@ -197,10 +213,16 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
     const current = flight.current;
     if (!current) return;
     current.t = Math.min(current.seconds, current.t + delta);
-    const k = easeInOut(current.t / current.seconds);
+    const arc = current.style === "arc";
+    const k = (arc ? easeInOutQuart : easeInOut)(current.t / current.seconds);
     const lerp = (a: readonly [number, number, number], b: readonly [number, number, number]) =>
       new Vector3(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
     camera.position.copy(lerp(current.from.position, current.to.position));
+    if (arc) {
+      // Climb away from the table on the way out, dive back in on the way down.
+      const span = Math.hypot(current.to.position[0] - current.from.position[0], current.to.position[2] - current.from.position[2]);
+      camera.position.y += Math.min(14, Math.max(3, span * ARC_RISE)) * Math.sin(k * Math.PI);
+    }
     orbit.target.copy(lerp(current.from.target, current.to.target));
     orbit.update();
     if (current.t >= current.seconds) flight.current = null;
@@ -218,6 +240,7 @@ export function CameraRig({ goTo, followPawn }: CameraRigProps) {
       onStart={() => {
         flight.current = null;
         chase.current = null;
+        userControl.current();
       }}
     />
   );

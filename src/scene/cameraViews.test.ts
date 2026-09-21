@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OVERVIEW, orbitView, seatView, tiltView, zoomView } from "./cameraViews";
+import { OVERVIEW, orbitView, pawnView, seatView, tiltView, zoomView } from "./cameraViews";
 import { computeHexLayout } from "./hexLayout";
 
 const layout = computeHexLayout({ innerRadius: 10, tileDepth: 2.4, cornerExtension: 0.9 });
@@ -20,6 +20,19 @@ describe("seatView", () => {
     const angleA = Math.atan2(a.position[2], a.position[0]);
     const angleB = Math.atan2(b.position[2], b.position[0]);
     expect(Math.abs(((angleB - angleA + Math.PI * 3) % (Math.PI * 2)) - Math.PI)).toBeCloseTo(Math.PI / 3, 6);
+  });
+});
+
+describe("pawnView", () => {
+  it("stands outside the ring behind the square, low, looking in across it", () => {
+    const view = pawnView(layout, 3);
+    const tile = layout.tiles[3];
+    if (!tile) throw new Error("no tile");
+    const eyeRadius = Math.hypot(view.position[0], view.position[2]);
+    const tileRadius = Math.hypot(tile.center.x, tile.center.y);
+    expect(eyeRadius).toBeGreaterThan(tileRadius);
+    expect(view.position[1]).toBeLessThan(6);
+    expect(Math.hypot(view.target[0], view.target[2])).toBeLessThan(tileRadius);
   });
 });
 
