@@ -266,50 +266,50 @@ camera and pawn positions during a scripted run), not just screenshots.
 
 ## C1. No seat flights; the seat view is an instant peek
 
-- [ ] C1.1 The director never flies to a player's seat by itself (not during the
+- [x] C1.1 The director never flies to a player's seat by itself (not during the
       opening throws, not anywhere): it stays on the pawns/the board.
-- [ ] C1.2 Looking at your own side (deeds and money) is a **snap**: the number
+- [x] C1.2 Looking at your own side (deeds and money) is a **snap**: the number
       key / the player card / "Mi lugar" jump there instantly; pressing again
       (or Escape) snaps back to where the camera was. No flight.
 
 ## C2, C5, C8, C10. Pawns teleport and the camera does not follow the first player
 
-- [ ] C10.1 Pawns never teleport: the scene's pawn positions come from the
+- [x] C10.1 Pawns never teleport: the scene's pawn positions come from the
       replayed view (the position changes when the move event is applied, not
       when the state arrives). Test.
-- [ ] C2.1 The camera follows the walking pawn hop by hop for every player,
+- [x] C2.1 The camera follows the walking pawn hop by hop for every player,
       every turn — verified by sampling the camera target against the pawn
       position during a scripted run.
-- [ ] C5.1 A plain click on the board (selecting a square) must not hand the
+- [x] C5.1 A plain click on the board (selecting a square) must not hand the
       camera to the user; only a real drag or the wheel does. (This is why the
       director died for one player and came back for the next.)
-- [ ] C8.1 The director cue at the start of a turn fires even when the same
+- [x] C8.1 The director cue at the start of a turn fires even when the same
       player throws last in the opening and then starts.
 
 ## C3. The landing is framed
 
-- [ ] C3.1 When the pawn arrives, the camera settles on the square it stopped on
+- [x] C3.1 When the pawn arrives, the camera settles on the square it stopped on
       before the landing is announced (works even if the chase was skipped).
 
 ## C4, C9. Flights are visible from start to end, and followed
 
-- [ ] C4.1 A deed (or bills) flying to a seat never vanishes: the view applies
+- [x] C4.1 A deed (or bills) flying to a seat never vanishes: the view applies
       the event the moment the flight lands, so the card is on the table the
       instant the flying one disappears.
-- [ ] C9.1 The camera frames both ends of a flight (from and to) and follows the
+- [x] C9.1 The camera frames both ends of a flight (from and to) and follows the
       object; verified by sampling.
 
 ## C6, C7. The lifted deed is a fixed-size 2D card; the Suerte card shows everywhere at once
 
-- [ ] C6.1 The deed on offer is an HTML image (same artwork) at a fixed size in
+- [x] C6.1 The deed on offer is an HTML image (same artwork) at a fixed size in
       the centre-left of the screen with a float-up animation — never clipped
       by the table.
-- [ ] C7.1 The small Suerte/Destino card in the action bar appears at the same
+- [x] C7.1 The small Suerte/Destino card in the action bar appears at the same
       moment as the big one (both from the view's card on the table).
 
 ## Verification
 
-- [ ] V.1 Dev hook exposes the camera and pawn trackers; a scripted browser run
+- [x] V.1 Dev hook exposes the camera and pawn trackers; a scripted browser run
       through the opening, a roll, a walk, a landing, a buy and the deed flight
       asserts that the camera target stays near the moving thing throughout.
 
@@ -353,6 +353,22 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — batch 3 shipped and measured (`4087705`).** Sampled with the
+  dev frame stepper at 60 fps: six opening throws with the camera target never
+  leaving Salida; a 6-square walk followed hop by hop (camera target median
+  0.76 / max 1.36 units from the pawn, camera 4.7–5.1 behind) and framed on
+  arrival (target 1.0 from the pawn); a click mid-walk changed nothing (median
+  0.76 after it) while a drag hands over; the deed flight ended at 2.26 s and
+  the card at the seat appeared at 2.29 s (no sample without a card); the money
+  flight framed from the bank pile to the player's pile; the Suerte card's small
+  and big versions at 0.02/0.04 s and the Aplicar prompt only after the rise
+  (1.55 s); the seat peek snaps and returns to the exact camera. Two more root
+  causes found while measuring: `Pawn.onArrive` reported the start square (so
+  the landing flight went back to Salida), and drawn cards were revealed before
+  they were on the table (the request resolved at once). Note for future
+  measurements: a hidden browser pane throttles rAF to 1 fps — always
+  `__chacareroFrames.run(60)` first. This browser also had `bannerSeconds: 1`
+  saved in localStorage from an old test, which shortens every hold.
 - **2026-09-21 — batch 3 captured.** Root causes found by reading: (a) `Pawn`'s
   "teleport when the state jumps" effect fired on every real-state change because
   pawn positions came from `game`, not the view — the pawn jumped to its

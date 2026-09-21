@@ -22,8 +22,10 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 - **Fichas**: al armar la mesa cada jugador elige su ficha (tractor, vaca,
   caballo, mate, bota, oveja, gallo o sombrero); la ficha fija el color y el
   ícono con que el juego te muestra en todos lados, y una ficha tomada queda
-  bloqueada para los demás. Un clic en la tarjeta de un jugador (abajo) lleva
-  la cámara a su lado de la mesa: sus escrituras y su plata.
+  bloqueada para los demás. Un clic en la tarjeta de un jugador (abajo), o su
+  número, muestra al instante su lado de la mesa (sus escrituras y su plata);
+  el mismo clic, la misma tecla o `Escape` vuelven al instante a donde estaba
+  la cámara. Es un vistazo, no un vuelo: la partida sigue.
 - **Quién empieza**: antes del primer turno cada uno tira una vez; el más
   alto empieza y los empatados vuelven a tirar.
 - **El turno, paso a paso**: mantené apretado el botón (o la barra
@@ -35,8 +37,8 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   clic, con la cámara pegada atrás, salto a salto. Si caés en Suerte o
   Destino, levantás la tarjeta: sale del mazo, se da vuelta frente a la
   cámara y la aplicás cuando la leíste. Si caés en una escritura libre, la
-  escritura se levanta grande frente a la cámara con todo lo que dice al
-  lado: comprás o la mandás a remate. Cada cosa que pasa se anuncia de a una
+  escritura sube grande a la pantalla (siempre del mismo tamaño) con todo lo
+  que dice al lado: comprás o la mandás a remate. Cada cosa que pasa se anuncia de a una
   y se ve en la mesa: los billetes vuelan de una pila a otra (y entre las
   tarjetas de los jugadores, abajo de la pantalla), las escrituras van del
   Banco a tu lado, las chacras caen sobre el campo. `Enter` o un clic en el
@@ -50,10 +52,12 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   apura.)
 - **Cámara**: por defecto todas las pantallas ven lo mismo: al empezar cada
   turno la cámara vuela (sube, y baja) hasta el peón del jugador de turno,
-  sigue al peón cuando camina y las tarjetas y los dados se le ponen
-  enfrente. Si arrastrás, usás la rueda o una tecla de cámara, esa pantalla
-  queda libre hasta el turno siguiente (o hasta apretar *Volver a la
-  partida*); el botón *Sigue la partida* la apaga del todo. `⌥ Option/Alt +
+  lo sigue de cerca salto a salto, se queda en el casillero donde cae, acompaña
+  los billetes y las escrituras que cruzan la mesa, y las tarjetas y los dados
+  se le ponen enfrente. Nunca se va sola al lugar de un jugador. Si arrastrás
+  o usás la rueda (un clic no cuenta), esa pantalla queda libre hasta el turno
+  siguiente (o hasta apretar *Volver a la partida*); el botón *Sigue la
+  partida* la apaga del todo. `⌥ Option/Alt +
   arrastrar` agarra la mesa y la desliza; `⌥ + clic` centra la vista en ese
   punto; doble clic en un casillero o en una escritura acerca la cámara ahí.
   Teclado: `← → ↑ ↓` giran e inclinan, `+ −` acercan, `1`–`6` te sientan en
@@ -122,6 +126,11 @@ bun run build
   primer turno, sin apuro. En desarrollo, `window.__chacarero.getGame()` /
   `setGame(estado)` en la consola permiten inspeccionar o reemplazar el
   estado de la partida local.
+- **Verificar la cámara y las animaciones sin mirar**: en desarrollo,
+  `window.__chacareroFrames.run(60)` mueve la escena con un temporizador (una
+  pestaña oculta no anima con `requestAnimationFrame`), y
+  `window.__chacarero.trackers` expone la posición de la cámara y de lo que se
+  está moviendo, para muestrear desde la consola o un script.
 - **Online desde una sola PC**: levantá el servidor, armá una mesa y usá
   *Abrir otra pestaña como otro jugador* en la sala (solo en desarrollo), o
   abrí a mano `?mesa=CODIGO&jugador=otro`: cada pestaña con un `jugador`

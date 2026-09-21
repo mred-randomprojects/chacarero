@@ -59,7 +59,18 @@ The same artwork everywhere: on the felt, lifted in front of the camera, in a
 hand on the trade screen, in a prompt. Square corners. Railway and company
 deeds carry the printed explanation.
 
-## 7. Build exactly what was asked
+## 7. Verify by measuring, not by looking
+
+Screenshots are not proof that motion is right. In development the scene can
+be driven from a timer (`window.__chacareroFrames.run(60)`, needed because a
+hidden tab throttles `requestAnimationFrame` to 1 fps) and
+`window.__chacarero.trackers` exposes the camera and the moving thing: sample
+them during a scripted run and assert (the camera target stays within a unit
+of the walking pawn, the card at the seat appears the frame the flying one
+vanishes, the seat peek returns to the exact previous camera). Do this for
+every camera or animation change before calling it done.
+
+## 8. Build exactly what was asked
 
 No unrequested features or options — offer extras in one line and let Maxi
 decide. Track batches of work in `docs/NEXT_FEATURES.md` (status boxes plus a
