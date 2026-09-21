@@ -86,10 +86,10 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 8. Suerte / Destino cards, and calmer timers
 
-- [ ] 8.1 Landing on Suerte/Destino first prompts the player to draw the card.
-- [ ] 8.2 The card slides out of its deck, comes up to the screen and flips so the text
+- [x] 8.1 Landing on Suerte/Destino first prompts the player to draw the card.
+- [x] 8.2 The card slides out of its deck, comes up to the screen and flips so the text
       can be read; then a prompt to apply it once read.
-- [ ] 8.3 Countdowns are not shown until the last minute of a decision; the clocks keep
+- [x] 8.3 Countdowns are not shown until the last minute of a decision; the clocks keep
       working underneath (defaults still fire for absent players).
 
 ## 9. 2D board map on a key press
@@ -189,6 +189,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — draw step + calm timers (8) (`117c528`).** Phase
+  `awaitingDraw { deck }` + `drawCard` action/request (protocol, timing default,
+  `roll()` helper walk through it). `ChanceCard` in `Effects.tsx` slides out of
+  the deck face down (`SLIDE_SECONDS`) before the rise-and-flip. `Countdown` in
+  `Prompt.tsx` renders nothing above 60 s remaining.
 - **2026-09-21 — camera director (5, 7) (`c0b7983`).** `pawnView()` in
   `cameraViews.ts`; `CameraRig` flights take `style: "arc"` (rise + quartic ease)
   and report user input through `onUserControl`; `GameScreen` keeps `freeLook`
