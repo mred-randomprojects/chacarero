@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GameState } from "../game";
-import { acceptTrade, bid, counterTrade, createGame, decline, passBid, proposeTrade, rejectTrade, roll } from "../game";
+import { acceptTrade, bid, cancelTrade, counterTrade, createGame, decline, passBid, proposeTrade, rejectTrade, roll } from "../game";
 import { soundsForTransition } from "./gameSounds";
 
 const players = [
@@ -26,8 +26,9 @@ describe("soundsForTransition", () => {
     expect(soundsForTransition(start, proposed)).toEqual(["open"]);
     const countered = counterTrade(proposed, { deeds: [], cash: 500 }, { deeds: ["salta-sur"], cash: 0 });
     expect(soundsForTransition(proposed, countered)).toEqual(["open"]);
-    expect(soundsForTransition(countered, acceptTrade(countered))).toEqual(["dealDone"]);
-    expect(soundsForTransition(countered, rejectTrade(countered))).toEqual(["close"]);
+    expect(soundsForTransition(countered, acceptTrade(countered), "acceptTrade")).toEqual(["dealDone", "auctionWon"]);
+    expect(soundsForTransition(countered, rejectTrade(countered), "rejectTrade")).toEqual(["sadTrombone"]);
+    expect(soundsForTransition(countered, cancelTrade(countered), "cancelTrade")).toEqual(["close"]);
   });
 
   it("stays quiet when nobody bid and plays the fanfare on game over", () => {

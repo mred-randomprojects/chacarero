@@ -27,6 +27,8 @@ import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
 import { TopBar } from "./ui/TopBar";
+import type { TradeOutcomeView } from "./ui/TradeOutcome";
+import { TradeOutcome } from "./ui/TradeOutcome";
 import type { TradeDraft, TradeScreenMode } from "./ui/TradeScreen";
 import { TradeScreen } from "./ui/TradeScreen";
 import { usePlayback } from "./ui/usePlayback";
@@ -85,6 +87,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const [showList, setShowList] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [trade, setTrade] = useState<OpenTrade | null>(null);
+  const [outcome, setOutcome] = useState<TradeOutcomeView | null>(null);
   const tradeCounter = useRef(0);
   const [goTo, setGoTo] = useState<Flight | null>(null);
   const goToCounter = useRef(0);
@@ -179,7 +182,11 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       reset(game);
       return;
     }
-    soundsForTransition(before.game, game).forEach((name, i) => setTimeout(() => sfx.play(name), i * 140));
+    soundsForTransition(before.game, game, session.lastAction).forEach((name, i) => setTimeout(() => sfx.play(name), i * 140));
+    if (before.game.phase.type === "awaitingTradeResponse" && (session.lastAction === "acceptTrade" || session.lastAction === "rejectTrade")) {
+      const { trade: settled } = before.game.phase;
+      setOutcome({ id: seq, kind: session.lastAction === "acceptTrade" ? "accepted" : "rejected", fromId: settled.fromId, toId: settled.toId });
+    }
     const landing = game.moves.at(-1)?.to;
     if (landing !== undefined) setSelected(landing);
     if (session.lastAction === "rollDice" && game.dice) {
@@ -457,6 +464,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
           onClose={() => setTrade(null)}
         />
       )}
+      {outcome && <TradeOutcome key={outcome.id} outcome={outcome} state={game} onDone={() => setOutcome(null)} />}
       {error && <div className="toast">{error}</div>}
     </div>
   );
