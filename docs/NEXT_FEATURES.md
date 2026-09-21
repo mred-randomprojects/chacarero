@@ -22,14 +22,14 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 2. Opening roll: who starts
 
-- [ ] 2.1 Before the first turn every player throws the dice once, in seat order, with
+- [x] 2.1 Before the first turn every player throws the dice once, in seat order, with
       the same hold-to-shake interaction as a normal roll.
-- [ ] 2.2 Highest total starts. Ties re-roll among the tied players only, until one
+- [x] 2.2 Highest total starts. Ties re-roll among the tied players only, until one
       wins.
-- [ ] 2.3 It must feel interactive: each throw gets the close-up (item 1), a banner
+- [x] 2.3 It must feel interactive: each throw gets the close-up (item 1), a banner
       ("Lautaro sacó 9"), a scoreboard of the rolls so far, and a final "Empieza
       Lautaro" with the camera flying to them.
-- [ ] 2.4 Works online (server rolls, clock defaults apply) and in hot-seat mode.
+- [x] 2.4 Works online (server rolls, clock defaults apply) and in hot-seat mode.
 
 ## 3. Player cards at the bottom of the screen
 
@@ -189,6 +189,12 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — opening roll (2) (`5d7f821`).** Phase `openingRoll { contenders,
+  rolls }` in `state.ts`; `openingRoll()` in `actions.ts` driven by the normal
+  `rollDice` request (so the server, the clock defaults and the hold-to-shake UI
+  needed no new message). `currentPlayerIndex` points at whoever must throw, so
+  the camera/seat logic follows for free. Scoreboard prompt in `Prompt.tsx`.
+  `canManageHoldings` is false during the opening. Tests: engine + room.
 - **2026-09-21 — dice close-up + landing near the pawn (1, 10) (`b552be4`).**
   `Dice.tsx` gained a `present` mode (rise into the camera, hold, return; the
   `onSettled` callback fires after it). Throws aim at `throwTarget()` in
