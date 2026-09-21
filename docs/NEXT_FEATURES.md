@@ -112,20 +112,20 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 11 + 14 + 15 + 16. Trade menu redesign
 
-- [ ] 11.1 A big, beautiful trade screen, split in two: what you offer and what you
+- [x] 11.1 A big, beautiful trade screen, split in two: what you offer and what you
       want. Deeds and cash on both sides.
-- [ ] 14.1 First step: one big button per other player (token icon + colour + name) to
+- [x] 14.1 First step: one big button per other player (token icon + colour + name) to
       pick who you negotiate with.
-- [ ] 15.1 Each side shows a 2D minimap grid of that player's deeds: every deed has a
+- [x] 15.1 Each side shows a 2D minimap grid of that player's deeds: every deed has a
       fixed slot on the grid (by province / railways / companies), owned ones are
       lit, the rest are ghosts.
-- [ ] 15.2 Hovering a slot shows the full card big (colour, price, rent…); clicking
+- [x] 15.2 Hovering a slot shows the full card big (colour, price, rent…); clicking
       toggles it into the offer / the request.
-- [ ] 15.3 A cash amount can be set on each side.
-- [ ] 16.1 Each side shows its total value: the sum of the deeds' face prices (not what
+- [x] 15.3 A cash amount can be set on each side.
+- [x] 16.1 Each side shows its total value: the sum of the deeds' face prices (not what
       was paid for them) plus the cash, so the fairness of the trade is visible at a
       glance.
-- [ ] 11.2 The other player answers from their screen (accept / reject / counter),
+- [x] 11.2 The other player answers from their screen (accept / reject / counter),
       seeing the same layout.
 
 ## 12. Faster moves, and the path lights up
@@ -189,6 +189,12 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — trade screen (11, 14, 15, 16) (`1b596ed`).** `src/ui/TradeScreen.tsx`
+  replaces `TradeDialog.tsx` (`OfferItems` moved to `OfferItems.tsx` for the compact
+  prompt). Modes: `compose` (draft) and `review` (pending trade). `GameScreen`
+  opens review automatically for the responder once the proposal's replay ends
+  (effect on `[seq, busy]`); the prompt's "Ver en grande" opens it for anyone.
+  Grid slots are fixed in `SLOTS` (provinces × zones, FF.CC., Cías.).
 - **2026-09-21 — 2D map (9) (`c259b78`).** `src/ui/BoardMap.tsx`: SVG from
   `BOARD_LAYOUT` (board y flipped), `HexMap` + `MapStats`, tabs Mapa/Lista; the
   list body is now `PropertiesTable` in `PropertiesList.tsx` (modal wrapper gone).
