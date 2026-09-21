@@ -25,6 +25,17 @@ function replay(view: ViewState, after: GameState): { steps: ViewState[]; end: V
 }
 
 describe("playback view: step by step", () => {
+  it("hands the turn to the next player only once the replay is over", () => {
+    let state = createGame({ players, random: () => 0.5 });
+    expect(state.phase.type).toBe("openingRoll");
+    const thrown = rollDice(state, undefined, [2, 1]);
+    expect(thrown.currentPlayerIndex).toBe(1);
+    const { steps, end } = replay(viewOf(state), thrown);
+    for (const step of steps) expect(step.currentPlayerId).toBe("ana");
+    expect(end.currentPlayerId).toBe("beto");
+    state = thrown;
+  });
+
   it("lifts a free deed only once the pawn has arrived and the replay is over", () => {
     const rolled = rollDice(game(), undefined, [1, 2]);
     const landed = movePawn(rolled); // 3: Formosa Norte, free

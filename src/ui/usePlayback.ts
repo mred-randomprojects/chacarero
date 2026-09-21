@@ -71,7 +71,9 @@ function baseSeconds(event: GameEvent): number {
  * the replay is over, so everyone at the table follows what happened.
  */
 export function usePlayback(initial: GameState | null, options: PlaybackOptions): Playback {
-  const [view, setView] = useState<ViewState>(() => (initial ? viewOf(initial) : { cash: {}, holdings: {}, phase: { type: "gameOver", winnerId: "" }, cardOnTable: null, deedOnOffer: null }));
+  const [view, setView] = useState<ViewState>(() =>
+    initial ? viewOf(initial) : { cash: {}, holdings: {}, phase: { type: "gameOver", winnerId: "" }, currentPlayerId: "", cardOnTable: null, deedOnOffer: null },
+  );
   const [current, setCurrent] = useState<GameEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const [walk, setWalk] = useState<Walk | null>(null);

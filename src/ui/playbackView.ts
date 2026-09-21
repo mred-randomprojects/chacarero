@@ -12,6 +12,8 @@ export interface ViewState {
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
   /** The phase the table is at; the real one only once the replay has caught up. */
   readonly phase: Phase;
+  /** Whose turn the table shows it is (lags like the phase). */
+  readonly currentPlayerId: string;
   /** Suerte/Destino card face up on the table. */
   readonly cardOnTable: Card | null;
   /** Deed lifted in front of everyone: on offer to the player who landed on it, or under the hammer. */
@@ -39,6 +41,7 @@ export function viewOf(state: GameState): ViewState {
     cash: Object.fromEntries(state.players.map((p) => [p.id, p.cash])),
     holdings: state.holdings,
     phase: state.phase,
+    currentPlayerId: state.players[state.currentPlayerIndex]?.id ?? "",
     cardOnTable: cardIn(state.phase),
     deedOnOffer: offeredDeedIn(state.phase),
   };

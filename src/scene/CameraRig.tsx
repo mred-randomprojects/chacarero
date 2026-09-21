@@ -5,13 +5,19 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import type { CameraView } from "./cameraViews";
 import { orbitView, tiltView, zoomView } from "./cameraViews";
-import { pawnTracker } from "./pawnTracker";
+import { cameraTracker, pawnTracker } from "./pawnTracker";
 
 export type FlightStyle = "direct" | "arc";
 
+/** Where a flight goes; without `position` the camera stays put and only turns towards `target`. */
+export interface FlightView {
+  readonly position?: readonly [number, number, number];
+  readonly target: readonly [number, number, number];
+}
+
 export interface CameraRigProps {
   /** Changing `id` flies the camera to `view`; an `arc` flight rises away from the table and dives back in. */
-  readonly goTo: { readonly id: number; readonly view: CameraView; readonly seconds?: number; readonly style?: FlightStyle } | null;
+  readonly goTo: { readonly id: number; readonly view: FlightView; readonly seconds?: number; readonly style?: FlightStyle } | null;
   /** While true the orbit target tracks the moving pawn (see pawnTracker). */
   readonly followPawn: boolean;
   /** The user grabbed the camera (drag, wheel or a camera key): the director should let go. */
@@ -64,7 +70,8 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
     if (!goTo || goTo.id === lastId.current) return;
     lastId.current = goTo.id;
     chase.current = null;
-    flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from: here(), to: goTo.view, style: goTo.style ?? "direct" };
+    const from = here();
+    flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from, to: { position: goTo.view.position ?? from.position, target: goTo.view.target }, style: goTo.style ?? "direct" };
   }, [goTo, here]);
 
   // Start or stop chasing the pawn. The chase keeps the current azimuth but
@@ -198,6 +205,8 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
   useFrame((_, delta) => {
     const orbit = controls.current;
     if (!orbit) return;
+    cameraTracker.position.copy(camera.position);
+    cameraTracker.target.copy(orbit.target);
     const offset = chase.current;
     if (offset) {
       if (pawnTracker.moving) settle.current = 0.7;

@@ -10,3 +10,12 @@ export const pawnTracker = {
   /** True while some pawn is mid-route. */
   moving: false,
 };
+
+/**
+ * Where the camera is and what it looks at, written every frame by the rig
+ * so the director (outside the canvas) can start flights from here.
+ */
+export const cameraTracker = {
+  position: new Vector3(0, 36, 24),
+  target: new Vector3(0, 0, 2),
+};

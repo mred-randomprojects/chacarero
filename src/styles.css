@@ -2227,3 +2227,38 @@ button.link {
     transform: translateX(6px);
   }
 }
+
+/* ---------- doubles ---------- */
+
+.doubles-flash {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  z-index: 8;
+  padding: 6px 26px;
+  font-family: "Lobster", Georgia, serif;
+  font-size: 4rem;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(242, 194, 28, 0.8), 0 4px 10px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: doubles-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.4), doubles-out 0.4s ease-in 1.15s forwards;
+}
+
+@keyframes doubles-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.4) rotate(-6deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) rotate(-3deg);
+  }
+}
+
+@keyframes doubles-out {
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.3) rotate(-3deg);
+  }
+}

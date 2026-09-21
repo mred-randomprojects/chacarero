@@ -7,11 +7,13 @@ import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
-import type { FlightStyle } from "./scene/CameraRig";
+import type { FlightStyle, FlightView } from "./scene/CameraRig";
 import type { DiceThrow } from "./scene/Dice";
 import { diceHurry } from "./scene/pawnKnocks";
+import { cameraTracker } from "./scene/pawnTracker";
 import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
+import { Vector3 } from "three";
 import type { Session } from "./session/types";
 import { ActionBar } from "./ui/ActionBar";
 import { Banner } from "./ui/Banner";
@@ -46,7 +48,7 @@ export interface GameScreenProps {
 
 interface Flight {
   readonly id: number;
-  readonly view: CameraView;
+  readonly view: FlightView;
   readonly seconds?: number;
   readonly style?: FlightStyle;
 }
@@ -125,19 +127,39 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         inJail: p.inJail,
         jailCards: p.getOutOfJailCards,
         bankrupt: p.bankrupt,
-        isCurrent: i === game.currentPlayerIndex,
+        isCurrent: p.id === view.currentPlayerId,
       },
     }));
-  }, [game, view.cash]);
+  }, [game, view.cash, view.currentPlayerId]);
 
   const sideOf = useCallback((playerId: string) => seats.find((s) => s.playerId === playerId)?.side ?? 0, [seats]);
-  const currentSide = sideOf(currentPlayer(game).id);
+  /** The player the table shows on turn: the real one only once the replay has caught up. */
+  const shownPlayer = game.players.find((p) => p.id === view.currentPlayerId) ?? currentPlayer(game);
+  const currentSide = sideOf(shownPlayer.id);
   const mySide = you ? sideOf(you) : currentSide;
 
   const flyTo = useCallback((cameraView: CameraView, seconds?: number, style?: FlightStyle) => {
     goToCounter.current += 1;
     setGoTo({ id: goToCounter.current, view: cameraView, ...(seconds === undefined ? {} : { seconds }), ...(style === undefined ? {} : { style }) });
   }, []);
+  /**
+   * The director pushes the camera in towards a point on the table: it moves
+   * along the line it already looks down, stopping `distance` away, and looks
+   * at the point. Reads as "the camera leans in", from any angle.
+   */
+  const pushIn = useCallback(
+    (point: readonly [number, number, number], distance: number, seconds: number) => {
+      const at = new Vector3(point[0], point[1], point[2]);
+      const away = cameraTracker.position.clone().sub(at);
+      if (away.length() < 1e-3) away.set(0, 1, 1);
+      away.setLength(distance);
+      const eye = at.clone().add(away);
+      eye.y = Math.max(2.2, eye.y);
+      goToCounter.current += 1;
+      setGoTo({ id: goToCounter.current, view: { position: [eye.x, eye.y, eye.z], target: point }, seconds });
+    },
+    [],
+  );
   /** A deliberate look somewhere: the director steps aside until the next turn. */
   const lookAt = useCallback(
     (cameraView: CameraView, seconds?: number) => {
@@ -155,21 +177,22 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
    * thrower's seat). A screen that took the camera re-joins here.
    */
   const currentPlayerId = currentPlayer(game).id;
-  const currentPosition = currentPlayer(game).position;
-  const opening = game.phase.type === "openingRoll";
+  const shownPlayerId = shownPlayer.id;
+  const shownPosition = shownPlayer.position;
+  const opening = view.phase.type === "openingRoll";
   const director = settings.followTurn;
   const directorCue = useCallback(() => {
     setFreeLook(false);
-    flyTo(opening ? seatView(BOARD_LAYOUT, SLAB_MARGIN, currentSide) : pawnView(BOARD_LAYOUT, currentPosition), TURN_FLIGHT_SECONDS, "arc");
-  }, [flyTo, opening, currentSide, currentPosition]);
+    flyTo(opening ? seatView(BOARD_LAYOUT, SLAB_MARGIN, currentSide) : pawnView(BOARD_LAYOUT, shownPosition), TURN_FLIGHT_SECONDS, "arc");
+  }, [flyTo, opening, currentSide, shownPosition]);
   const mounted = useRef(false);
   useEffect(() => {
     if (director) directorCue();
     // Director off: sit at your own seat once, when the table appears, and otherwise leave the camera alone.
     else if (!mounted.current && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide));
     mounted.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the turn changing or the director being switched
-  }, [currentPlayerId, director]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the turn the table shows changing, or the director being switched
+  }, [shownPlayerId, director]);
 
   /**
    * A new seq means something happened. Consecutive steps are replayed; a
@@ -371,8 +394,26 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
 
   const shown = selected ?? hovered;
   const openList = () => setShowList(true);
-  const shakingSeat = session.shakingPlayerId ? sideOf(session.shakingPlayerId) : currentSide;
   const diceShaking = shaking || (session.shakingPlayerId !== null && session.shakingPlayerId !== you);
+
+  // The dice on the felt: everyone looks at them where they landed, then they come up to the camera.
+  const onDiceLanded = useCallback(
+    (_id: number, at: Vector3) => {
+      if (director && !freeLook) pushIn([at.x, at.y, at.z], 7, 0.7);
+    },
+    [director, freeLook, pushIn],
+  );
+  const [doublesFlash, setDoublesFlash] = useState<number | null>(null);
+  const onDicePresenting = useCallback((id: number, doubles: boolean) => {
+    if (!doubles) return;
+    setDoublesFlash(id);
+    sfx.play("auctionWon", { volume: 0.7 });
+  }, []);
+  useEffect(() => {
+    if (doublesFlash === null) return;
+    const timer = setTimeout(() => setDoublesFlash(null), 1_600);
+    return () => clearTimeout(timer);
+  }, [doublesFlash]);
 
   return (
     <div className="app">
@@ -393,22 +434,23 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onUserControl={() => setFreeLook(true)}
         deedOnOffer={offeredDeed}
         cardOnTable={view.cardOnTable}
-        diceSide={shakingSeat}
         throwerId={session.shakingPlayerId ?? currentPlayerId}
         shaking={diceShaking}
         throwing={throwing}
+        onDiceLanded={onDiceLanded}
+        onDicePresenting={onDicePresenting}
         onDiceSettled={onDiceSettled}
       />
       <div className="left-column">
         <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openList} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
-      <PlayerCards state={game} cash={view.cash} you={you} offline={session.offline} />
+      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} />
       <MoneyFlights />
       {offeredDeed === null && (
         <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
       )}
-      <ActionBar state={game} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
+      <ActionBar state={game} shownPlayer={shownPlayer} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
       <div className="stage">
         <Banner state={game} event={playback.current} onSkip={skip} />
         <Prompt
@@ -463,6 +505,11 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         />
       )}
       {outcome && <TradeOutcome key={outcome.id} outcome={outcome} state={game} onDone={() => setOutcome(null)} />}
+      {doublesFlash !== null && (
+        <div key={doublesFlash} className="doubles-flash" aria-live="polite">
+          ¡DOBLES!
+        </div>
+      )}
       {error && <div className="toast">{error}</div>}
     </div>
   );

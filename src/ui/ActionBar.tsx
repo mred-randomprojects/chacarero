@@ -1,4 +1,4 @@
-import type { ActionRequest, GameState } from "../game";
+import type { ActionRequest, GameState, Player } from "../game";
 import { JAIL_BAIL, currentPlayer, pesos } from "../game";
 import { canAct } from "./perspective";
 import { TokenIcon } from "./TokenIcon";
@@ -7,6 +7,8 @@ export type Dispatch = (action: ActionRequest) => void;
 
 export interface ActionBarProps {
   readonly state: GameState;
+  /** The player the table shows on turn (lags the real one during a replay). */
+  readonly shownPlayer: Player;
   readonly you: string | null;
   readonly busy: boolean;
   readonly shaking: boolean;
@@ -60,8 +62,9 @@ function Dice({ dice, rollAgain }: { readonly dice: readonly [number, number] | 
 }
 
 /** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
-export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
-  const player = currentPlayer(state);
+export function ActionBar({ state, shownPlayer, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
+  // The buttons act on the real state; the name and the dice shown follow the table.
+  const player = busy ? shownPlayer : currentPlayer(state);
   const { phase } = state;
   const rolling = phase.type === "openingRoll" || phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
   const mine = canAct(state, you, { type: "rollDice" });

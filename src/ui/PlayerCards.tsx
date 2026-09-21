@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { GameState } from "../game";
-import { currentPlayer, pesos } from "../game";
+import { pesos } from "../game";
 import { partyKey } from "./partyKey";
 import { TokenIcon } from "./TokenIcon";
 
@@ -9,6 +9,8 @@ export interface PlayerCardsProps {
   readonly state: GameState;
   /** Cash as the table shows it right now (lags the real state during a replay). */
   readonly cash: Readonly<Record<string, number>>;
+  /** Whose turn the table shows (lags the same way). */
+  readonly currentId: string;
   readonly you: string | null;
   readonly offline: ReadonlySet<string>;
 }
@@ -74,12 +76,11 @@ function PlayerCard({ player, cash, isCurrent, isYou, away }: CardProps) {
  * name, cash and status per player, the one on turn lit up, plus the bank
  * at the end so money flights have somewhere to go.
  */
-export function PlayerCards({ state, cash, you, offline }: PlayerCardsProps) {
-  const current = currentPlayer(state);
+export function PlayerCards({ state, cash, currentId, you, offline }: PlayerCardsProps) {
   return (
     <div className="player-cards">
       {state.players.map((player) => (
-        <PlayerCard key={player.id} player={player} cash={cash[player.id] ?? player.cash} isCurrent={player.id === current.id} isYou={player.id === you} away={offline.has(player.id)} />
+        <PlayerCard key={player.id} player={player} cash={cash[player.id] ?? player.cash} isCurrent={player.id === currentId} isYou={player.id === you} away={offline.has(player.id)} />
       ))}
       <div className="player-card bank" data-party={partyKey({ type: "bank" })}>
         <span className="pc-bank-icon">🏦</span>
