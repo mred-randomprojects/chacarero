@@ -6,7 +6,10 @@ export type SceneEffect =
   | { readonly kind: "deed"; readonly deedId: DeedId; readonly from: Party; readonly to: Party }
   | { readonly kind: "building"; readonly deedId: DeedId; readonly chacras: number; readonly estancia: boolean; readonly removed: boolean }
   | { readonly kind: "revealCard"; readonly deck: "suerte" | "destino"; readonly cardId: string; readonly playerId: string }
-  | { readonly kind: "hideCard" };
+  | { readonly kind: "hideCard" }
+  /** Lifts a deed from the bank pile up in front of the camera (a free deed on offer); stays until `hideDeed`. */
+  | { readonly kind: "presentDeed"; readonly deedId: DeedId }
+  | { readonly kind: "hideDeed" };
 
 export interface ActiveEffect {
   readonly id: number;

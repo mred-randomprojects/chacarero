@@ -1511,3 +1511,64 @@ button.link {
   background: var(--gold);
   color: var(--ink);
 }
+
+/* ---------- deed on offer ---------- */
+
+.stage:has(.deed-offer) {
+  left: auto;
+  right: 16px;
+  transform: none;
+  width: min(560px, calc(100% - 32px));
+}
+
+.prompt.deed-offer {
+  --band: var(--green);
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 0 18px;
+  padding: 0 18px 12px;
+  border-left: 0;
+  overflow: hidden;
+}
+
+.deed-offer-band {
+  grid-column: 1 / -1;
+  height: 14px;
+  margin: 0 -18px 10px;
+  background: var(--band);
+}
+
+.deed-offer-price {
+  font-size: 1.1rem;
+  color: var(--ink) !important;
+}
+
+.deed-offer-details {
+  padding: 2px 0 0 14px;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.deed-offer-details h4 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.deed-offer-details .rent {
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 700px) {
+  .prompt.deed-offer {
+    grid-template-columns: 1fr;
+  }
+
+  .deed-offer-details {
+    padding: 8px 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+  }
+}

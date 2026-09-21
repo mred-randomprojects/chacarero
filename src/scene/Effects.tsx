@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import { DoubleSide, Quaternion, Vector3 } from "three";
-import type { Card } from "../game";
+import type { Card, DeedId } from "../game";
 import { ALL_CARDS, getDeed } from "../game";
 import type { Anchors } from "./anchors";
 import { deedAnchor, moneyAnchor, partyYaw } from "./anchors";
@@ -41,6 +41,7 @@ export function Effects({ anchors }: EffectsProps) {
   useEffect(() => effectsBus.subscribe(setActive), []);
 
   const [shownCard, setShownCard] = useState<{ card: Card; hiding: ActiveEffect | null } | null>(null);
+  const [shownDeed, setShownDeed] = useState<{ deedId: DeedId; hiding: ActiveEffect | null } | null>(null);
   useEffect(() => {
     for (const entry of active) {
       if (entry.effect.kind === "revealCard") {
@@ -48,10 +49,18 @@ export function Effects({ anchors }: EffectsProps) {
         if (card) setShownCard((current) => current?.card.id === card.id ? current : { card, hiding: null });
       }
       if (entry.effect.kind === "hideCard") setShownCard((current) => (current ? { ...current, hiding: entry } : null));
+      if (entry.effect.kind === "presentDeed") {
+        const { deedId } = entry.effect;
+        setShownDeed((current) => (current?.deedId === deedId && !current.hiding ? current : { deedId, hiding: null }));
+      }
+      if (entry.effect.kind === "hideDeed") setShownDeed((current) => (current ? { ...current, hiding: entry } : null));
     }
-    // A hideCard with nothing shown resolves immediately.
-    for (const entry of active) if (entry.effect.kind === "hideCard" && !shownCard) entry.resolve();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- shownCard read for the no-op case only
+    // A hide with nothing shown resolves immediately.
+    for (const entry of active) {
+      if (entry.effect.kind === "hideCard" && !shownCard) entry.resolve();
+      if (entry.effect.kind === "hideDeed" && !shownDeed) entry.resolve();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- shownCard/shownDeed read for the no-op case only
   }, [active]);
 
   return (
@@ -78,7 +87,102 @@ export function Effects({ anchors }: EffectsProps) {
           onHidden={() => setShownCard(null)}
         />
       )}
+      {shownDeed && (
+        <PresentedDeed
+          key={shownDeed.deedId}
+          anchors={anchors}
+          deedId={shownDeed.deedId}
+          presenting={active.find((e) => e.effect.kind === "presentDeed" && e.effect.deedId === shownDeed.deedId) ?? null}
+          hiding={shownDeed.hiding}
+          onHidden={() => setShownDeed(null)}
+        />
+      )}
     </group>
+  );
+}
+
+// ---------- a deed on offer ----------
+
+interface PresentedDeedProps {
+  readonly anchors: Anchors;
+  readonly deedId: DeedId;
+  readonly presenting: ActiveEffect | null;
+  readonly hiding: ActiveEffect | null;
+  readonly onHidden: () => void;
+}
+
+const PRESENT_SECONDS = 0.9;
+const DEED_HIDE_SECONDS = 0.5;
+/** The offered deed floats this far in front of the camera, left of centre, this many times its table size. */
+const DEED_DISTANCE = 6;
+const DEED_LEFT = 1.35;
+const DEED_SCALE = 2.0;
+
+/**
+ * The deed a player just landed on, lifted from the bank pile up in front of
+ * the camera so the whole table sees what is on offer. It tracks the camera
+ * while up, and drops back onto the pile when the decision is made.
+ */
+function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: PresentedDeedProps) {
+  const camera = useThree((s) => s.camera);
+  const mesh = useRef<Mesh>(null);
+  const texture = useMemo(() => deedCardTexture(getDeed(deedId), { ownerId: "", chacras: 0, estancia: false, mortgaged: false }, 3), [deedId]);
+  const pile = useMemo(() => deedAnchor(anchors, { type: "bank" }), [anchors]);
+  const t = useRef(0);
+  const presented = useRef(false);
+  const startedHide = useRef(false);
+  const hover = useRef(new Vector3());
+  const hoverQuat = useRef(new Quaternion());
+
+  useEffect(() => {
+    sfx.play("cardDraw", { volume: 0.8 });
+  }, []);
+
+  useFrame((_, delta) => {
+    const node = mesh.current;
+    if (!node) return;
+    if (hiding && !startedHide.current) {
+      startedHide.current = true;
+      t.current = 0;
+    }
+    t.current += delta;
+    const flat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
+    if (!hiding) {
+      const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const right = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      hover.current.copy(camera.position).addScaledVector(forward, DEED_DISTANCE).addScaledVector(right, -DEED_LEFT);
+      hover.current.y = Math.max(1.2, hover.current.y);
+      hoverQuat.current.copy(camera.quaternion);
+    }
+    if (hiding) {
+      const k = Math.min(1, t.current / DEED_HIDE_SECONDS);
+      const e = easeInOut(k);
+      node.position.copy(arc(hover.current, pile, e, 1));
+      node.quaternion.copy(hoverQuat.current).slerp(flat, e);
+      node.scale.setScalar(DEED_SCALE + (1 - DEED_SCALE) * e);
+      if (k >= 1) {
+        hiding.resolve();
+        onHidden();
+      }
+      return;
+    }
+    const k = Math.min(1, t.current / PRESENT_SECONDS);
+    const e = easeInOut(k);
+    node.position.copy(arc(pile, hover.current, e, 2.5));
+    node.quaternion.copy(flat).slerp(hoverQuat.current, e);
+    node.scale.setScalar(1 + (DEED_SCALE - 1) * e);
+    if (k >= 1 && !presented.current) {
+      presented.current = true;
+      presenting?.resolve();
+    }
+  });
+
+  return (
+    <mesh ref={mesh}>
+      <planeGeometry args={[1.15, 1.63]} />
+      {/* Unlit so the print reads the same from every angle. */}
+      <meshBasicMaterial map={texture} side={DoubleSide} />
+    </mesh>
   );
 }
 

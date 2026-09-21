@@ -1,6 +1,9 @@
+import type { CSSProperties } from "react";
 import type { ActionRequest, GameState } from "../game";
 import { MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
 import type { Dispatch } from "./ActionBar";
+import { DeedDetails } from "./DeedDetails";
+import { bandColor } from "../scene/cardTextures";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./TradeDialog";
 import { useNow } from "./useNow";
@@ -159,36 +162,50 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
     case "awaitingBuyDecision": {
       const deed = getDeed(phase.deedId);
       const action: ActionRequest = { type: "buy" };
+      const kind = deed.kind === "campo" ? "Este campo" : deed.kind === "ferrocarril" ? "Este ferrocarril" : "Esta compañía";
       return (
-        <div className="prompt">
-          <h3>
-            <TokenIcon token={player.token} size={20} /> {player.name} cayó en {deedName(deed)}
-          </h3>
-          <p>
-            Está libre: ¿la compra por {pesos(deed.price)}? Si no, sale a remate.
-            {mine(action) && player.cash < deed.price ? ` Tenés ${pesos(player.cash)}: podés hipotecar o vender antes.` : ""}
-          </p>
-          {mine(action) ? (
-            <div className="buttons">
-              <button type="button" className="primary" disabled={player.cash < deed.price} onClick={() => dispatch(action)}>
-                Comprar por {pesos(deed.price)}
-              </button>
-              <button type="button" onClick={() => dispatch({ type: "decline" })}>
-                No comprar
-              </button>
-              <button type="button" onClick={onManage}>
-                Mis propiedades
-              </button>
-              {canTrade && (
-                <button type="button" onClick={onTrade}>
-                  Canjear
+        <div className="prompt deed-offer" style={{ "--band": bandColor(deed) } as CSSProperties}>
+          <div className="deed-offer-band" />
+          <div className="deed-offer-main">
+            <h3>
+              <TokenIcon token={player.token} size={20} /> {player.name} cayó en {deedName(deed)}
+            </h3>
+            <p className="deed-offer-price">
+              {kind} está libre. Valor <strong>{pesos(deed.price)}</strong>
+            </p>
+            <p>
+              {mine(action)
+                ? player.cash < deed.price
+                  ? `Tenés ${pesos(player.cash)}: podés hipotecar o vender antes, o mandarla a remate.`
+                  : "¿La comprás, o sale a remate para toda la mesa?"
+                : "Si no la compra, sale a remate para toda la mesa."}
+            </p>
+            {mine(action) ? (
+              <div className="buttons">
+                <button type="button" className="primary" disabled={player.cash < deed.price} onClick={() => dispatch(action)}>
+                  Comprar por {pesos(deed.price)}
                 </button>
-              )}
-            </div>
-          ) : (
-            waiting(action)
-          )}
-          <Countdown deadline={deadline} now={now} />
+                <button type="button" className="danger" onClick={() => dispatch({ type: "decline" })}>
+                  Mandar a remate
+                </button>
+                <button type="button" onClick={onManage}>
+                  Mis propiedades
+                </button>
+                {canTrade && (
+                  <button type="button" onClick={onTrade}>
+                    Canjear
+                  </button>
+                )}
+              </div>
+            ) : (
+              waiting(action)
+            )}
+            <Countdown deadline={deadline} now={now} />
+          </div>
+          <div className="deed-offer-details">
+            <h4>Lo que dice la escritura</h4>
+            <DeedDetails deed={deed} />
+          </div>
         </div>
       );
     }

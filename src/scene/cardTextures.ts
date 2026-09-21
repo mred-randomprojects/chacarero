@@ -47,12 +47,14 @@ export function bandColor(deed: Deed): string {
  * A deed card as it lies on the table: colour band, name, price, rent ladder,
  * plus the current buildings and a "HIPOTECADA" stamp. Cached per state.
  */
-export function deedCardTexture(deed: Deed, holding: Holding): CanvasTexture {
-  const key = `${deed.id}|${holding.chacras}|${holding.estancia ? 1 : 0}|${holding.mortgaged ? 1 : 0}`;
+export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): CanvasTexture {
+  const key = `${deed.id}|${holding.chacras}|${holding.estancia ? 1 : 0}|${holding.mortgaged ? 1 : 0}|${scale}`;
   const cached = cardCache.get(key);
   if (cached) return cached;
 
-  const [element, ctx] = canvas(CARD_W, CARD_H);
+  // Drawn at the base size in a scaled context, so a close-up card stays crisp.
+  const [element, ctx] = canvas(CARD_W * scale, CARD_H * scale);
+  ctx.scale(scale, scale);
   ctx.fillStyle = "#f7f2e4";
   ctx.fillRect(0, 0, CARD_W, CARD_H);
   ctx.fillStyle = bandColor(deed);

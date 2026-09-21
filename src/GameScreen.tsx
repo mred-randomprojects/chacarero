@@ -9,6 +9,7 @@ import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
 import type { FlightStyle } from "./scene/CameraRig";
 import type { DiceThrow } from "./scene/Dice";
+import { effectsBus } from "./scene/effectsBus";
 import { diceHurry } from "./scene/pawnKnocks";
 import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
@@ -190,6 +191,16 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     enqueue(before.game, game);
   }, [game, seq, session.lastAction, enqueue, reset]);
 
+  // A free deed on offer (or under the hammer): lift it from the bank pile in front of everyone until it is decided.
+  const offeredDeed = !busy && game.phase.type === "awaitingBuyDecision" ? game.phase.deedId : !busy && game.phase.type === "auction" ? game.phase.auction.deedId : null;
+  useEffect(() => {
+    if (!offeredDeed) return;
+    void effectsBus.request({ kind: "presentDeed", deedId: offeredDeed });
+    return () => {
+      void effectsBus.request({ kind: "hideDeed" });
+    };
+  }, [offeredDeed]);
+
   const onDiceSettled = useCallback(
     (id: number) => {
       if (!throwing || throwing.id !== id) return;
@@ -360,7 +371,9 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       </div>
       <PlayerCards state={game} cash={view.cash} you={you} offline={session.offline} />
       <MoneyFlights />
-      <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
+      {offeredDeed === null && (
+        <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
+      )}
       <ActionBar state={game} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
       <div className="stage">
         <Banner state={game} event={playback.current} onSkip={skip} />
