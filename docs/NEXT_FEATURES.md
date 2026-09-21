@@ -216,7 +216,7 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B12. Cards say what the real ones say
 
-- [ ] B12.1 Railway and company deeds carry the explanatory text of the physical
+- [x] B12.1 Railway and company deeds carry the explanatory text of the physical
       cards (on the table texture, the lifted card and the details panel), not
       just the number ladder.
 
@@ -296,6 +296,8 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — B12 card text (next commit after `9e5ee60`).** `deedText()` in
+  `describe.ts` (tested), drawn by `deedCardTexture` and `DeedDetails`.
 - **2026-09-21 — B8, B16, B20 (`9e5ee60`).** `src/ui/hotkeys.ts` (`actionHotkeys`,
   `actionForKey`, `UI_KEYS`; tested in actionRequest.test) + `Key.tsx` badge;
   `primaryAction` limited to move/draw/ack/endTurn (test updated). Trade key is
