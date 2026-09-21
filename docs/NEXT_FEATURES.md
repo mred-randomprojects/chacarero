@@ -145,9 +145,9 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 17. Trade outcome celebration
 
-- [ ] 17.1 Accepted: a handshake + confetti + happy sound.
-- [ ] 17.2 Rejected: sad trombone + a small "no deal" animation.
-- [ ] 17.3 Sound throughout (cards, dice, money, trade outcome).
+- [x] 17.1 Accepted: a handshake + confetti + happy sound.
+- [x] 17.2 Rejected: sad trombone + a small "no deal" animation.
+- [x] 17.3 Sound throughout (cards, dice, money, trade outcome).
 
 ---
 
@@ -189,6 +189,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — trade outcome (17) (`9f14f18`).** `src/ui/TradeOutcome.tsx`
+  (card + canvas confetti; `key={seq}` remounts per outcome), set from the seq
+  effect in `GameScreen` when the previous phase was a trade response and the
+  action was accept/reject. `sfx.play("sadTrombone")` is synthesised in
+  `sfx.ts`; `soundsForTransition(before, after, action)` picks jingle vs trombone.
 - **2026-09-21 — trade whenever + composing (13) (`0fe4268`).** `canProposeTrade`
   is now a deny-list (openingRoll, auction, awaitingTradeResponse, gameOver).
   `composing` message in the protocol → `Room.composingPlayerId`; `fireDeadline`
