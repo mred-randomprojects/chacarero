@@ -234,11 +234,11 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B19. Real cards in the trade screen (and beyond)
 
-- [ ] B19.1 The preview in the middle is the real card (same artwork as on the
+- [x] B19.1 The preview in the middle is the real card (same artwork as on the
       table), not a restyled table.
-- [ ] B19.2 What is on the table on each side is shown as a fan of real cards,
+- [x] B19.2 What is on the table on each side is shown as a fan of real cards,
       like a hand, not as a text list.
-- [ ] B19.3 The same real-card artwork is used wherever deeds are listed in the
+- [x] B19.3 The same real-card artwork is used wherever deeds are listed in the
       HUD (the compact trade prompt at least).
 
 ## B21. Square corners
@@ -296,6 +296,10 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — B19 real cards.** `deedCardDataUrl()` in `cardTextures.ts`;
+  `src/ui/DeedCard.tsx` (`DeedCard`, `Hand`) used by `TradeScreen` (preview +
+  hands) and `OfferItems` (compact prompt). Grid slots stay schematic (too small
+  for artwork).
 - **2026-09-21 — B12 card text (next commit after `9e5ee60`).** `deedText()` in
   `describe.ts` (tested), drawn by `deedCardTexture` and `DeedDetails`.
 - **2026-09-21 — B8, B16, B20 (`9e5ee60`).** `src/ui/hotkeys.ts` (`actionHotkeys`,
