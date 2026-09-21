@@ -172,17 +172,17 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B3–B6, B14. Dice that behave
 
-- [ ] B3.1 Shaking must look like dice in a cupped hand: a rhythmic rattle in
+- [x] B3.1 Shaking must look like dice in a cupped hand: a rhythmic rattle in
       front of the camera (the hands are the camera), not random jitter above
       the seat.
-- [ ] B4.1 After the dice come to rest, wait ~1.5 s so everyone can read them on
+- [x] B4.1 After the dice come to rest, wait ~1.5 s so everyone can read them on
       the table, then do the close-up.
-- [ ] B5.1 Dice never teleport: every relocation is a visible flight (grabbing
+- [x] B5.1 Dice never teleport: every relocation is a visible flight (grabbing
       them from where they lie into the hands, throwing, the close-up and back to
       exactly where they landed).
-- [ ] B6.1 The two dice never pass through each other: separated landing spots
+- [x] B6.1 The two dice never pass through each other: separated landing spots
       and mid-flight separation so they read as solid.
-- [ ] B14.1 Doubles: the dice glow gold for a moment and "¡DOBLES!" flashes on
+- [x] B14.1 Doubles: the dice glow gold for a moment and "¡DOBLES!" flashes on
       screen.
 
 ## B7, B15, B18. Step by step, and nothing gets stuck
@@ -296,6 +296,13 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — dice B3–B6, B14 (`2bbf2c9`).** `src/scene/diceThrow.ts` (pure:
+  `landingSpots`, `separate`, `deflectFromPawns`, `flightHeight`, tested) and a
+  rewritten `Dice.tsx` with modes rest/grab/shake/fly/settle/present; callbacks
+  `onLanded` (director pushes the camera in, `pushIn()` in GameScreen using
+  `cameraTracker`), `onPresenting` (doubles flash + jingle), `onSettled`. The seat
+  frame is no longer used by the dice (hands = camera). Also found: the turn cue
+  fired from the real state; `ViewState.currentPlayerId` fixes it (test added).
 - **2026-09-21 — B7/B15/B18 view-state stepping (`5902545`).** `ViewState` now
   has `phase`, `cardOnTable`, `deedOnOffer` (`src/ui/playbackView.ts`, pure,
   tested); `usePlayback.enqueue(after)` calls `beginReplay` then applies events
