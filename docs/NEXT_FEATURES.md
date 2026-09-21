@@ -315,6 +315,91 @@ camera and pawn positions during a scripted run), not just screenshots.
 
 ---
 
+# Batch 4 (2026-09-21, third review — the camera as a rule, Space as a pace, rent as a question)
+
+Maxi played again and sent ten notes. Same conventions. Three of them turned out
+to be bugs found by measuring the previous batch (a Space auto-repeat cut the
+walk; the chase died after a landing and never restarted for the next move;
+the turn cue compared itself with the previous cue instead of with the camera).
+
+## D1. Catastro: the deed grid as the `L` overlay, with owners and previews
+
+- [ ] D1.1 `L` opens on a new first tab, **Catastro**: the trade screen's deed
+      grid for the whole table — every deed in its fixed slot (province
+      columns, zones as rows, railways, companies), lit in the owner's colour
+      **with the owner's token icon on it** (the owner must never read as the
+      property's colour band), buildings and mortgage state; free deeds are
+      ghosts. Mapa and Lista stay as the other tabs. (Items 1, 6)
+- [ ] D1.2 Hovering a slot (or a tile on the Mapa tab) shows the real card big
+      beside it; clicking selects the square (its panel opens). (Item 1)
+- [ ] D1.3 The Mapa tab marks the owner with their token icon too, not only a
+      colour strip. (Item 1)
+
+## D2. Trade: each side's value, never the subtraction
+
+- [ ] D2.1 Under the balance bar, each side's face value labelled with its
+      player ("Jugador 1 da $7.400 · Jugador 2 da $10.200"); the "X da $Y más"
+      line goes. (Item 2)
+
+## D3. Space hurries (2×), nothing teleports
+
+- [ ] D3.1 Space/Enter (and the banner's button) during a replay play it at
+      double speed — the pawn hops faster, flights and drops go faster, banners
+      hold half as long — instead of jumping to the end. (Items 3, 9)
+- [ ] D3.2 The OS key auto-repeat can no longer cut a walk: a repeated Space
+      only re-asks for the hurry already in effect. (Root cause of "the pawn
+      appeared at the destination": `skip()` ran before the `repeat` check.)
+
+## D4. Suerte/Destino: the camera backs off with the card
+
+- [ ] D4.1 When a card rises to the screen the camera pulls back and up along
+      its own line of sight at the same moment, so the card never cuts through
+      the table. (Item 4)
+
+## D5. The camera is bound to the pawn, every walk
+
+- [ ] D5.1 The chase restarts for every walk (keyed on the walk itself, not on
+      "a walk exists"): a second move in the same action — the leap to jail
+      after landing on Marche preso, a card moving the pawn — is followed too.
+      Measured. (Item 5; root cause: the landing flight killed the chase and
+      the next walk, batched into the same render, never restarted it.)
+- [ ] D5.2 A walk backwards is followed exactly like a walk forwards. Measured.
+      (Item 5)
+
+## D6. Marche preso: one wide shot, no spinning
+
+- [ ] D6.1 The leap to jail is slower and higher, framed from above with both
+      squares in view (no chase from behind across the board, which flipped
+      the camera), then one lean-in on the jail. (Item 7)
+
+## D7. Back to the pawn after every action
+
+- [ ] D7.1 When a replay ends and the table waits for the next decision, the
+      camera returns to the pawn of the player on turn — unless it is already
+      there, or the user took the camera. After paying bail, buying, an
+      auction, a trade: back to the pawn. (Item 8)
+- [ ] D7.2 The turn-start cue checks where the camera actually is, not what
+      the last cue was: the first round now gets its close-up for every
+      player, not only the first. (Root cause found while measuring.)
+
+## D8. Rent is asked for, and the amount is big
+
+- [ ] D8.1 Landing on someone else's deed no longer moves the money by itself:
+      the table stops at the payment with the amount **big** on screen and a
+      Pagar [P] button (sell / mortgage / negotiate as before); paying then
+      flies the bills. Taxes and cards keep paying as before. (Item 10)
+- [ ] D8.2 Online tables run the engine on the room server, so the droplet
+      needs `./deploy.sh` for D8.1 to apply there (hot-seat gets it at once).
+
+## Verification
+
+- [ ] V.2 Scripted runs sampling the trackers: a backward walk, the Marche
+      preso leap, the return to the pawn after a payment, the first-round turn
+      cue, and Space during a walk (2× pace, arrival at the destination, no
+      teleport).
+
+---
+
 ## Structural analysis
 
 What the requirements touch, from the bottom of the stack up:
