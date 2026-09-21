@@ -148,6 +148,22 @@ export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): Canvas
   return tex;
 }
 
+const dataUrlCache = new Map<string, string>();
+
+/**
+ * The same deed card as an image for the HTML side (the trade screen, the
+ * prompts), so a card looks the same in the hand as on the table.
+ */
+export function deedCardDataUrl(deed: Deed, holding: Holding, scale = 2): string {
+  const key = `${deed.id}|${holding.chacras}|${holding.estancia ? 1 : 0}|${holding.mortgaged ? 1 : 0}|${scale}`;
+  const cached = dataUrlCache.get(key);
+  if (cached) return cached;
+  const image = deedCardTexture(deed, holding, scale).image as HTMLCanvasElement;
+  const url = image.toDataURL("image/png");
+  dataUrlCache.set(key, url);
+  return url;
+}
+
 export interface PlateInfo {
   readonly name: string;
   readonly color: string;

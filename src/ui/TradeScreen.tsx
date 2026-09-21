@@ -4,7 +4,7 @@ import type { Deed, DeedId, GameState, Player, Trade, TradeOffer } from "../game
 import { DEEDS, PROVINCE_NAMES, ZONE_NAMES, canTradeDeed, checkTrade, deedName, getDeed, getPlayer, mortgageTransferFee, pesos, tradeBalance } from "../game";
 import { bandColor } from "../scene/cardTextures";
 import type { Dispatch } from "./ActionBar";
-import { DeedDetails } from "./DeedDetails";
+import { DeedCard, Hand } from "./DeedCard";
 import { Key } from "./Key";
 import { TokenIcon } from "./TokenIcon";
 
@@ -189,17 +189,12 @@ function Side({ state, owner, title, offer, onChange, onHover }: SideProps) {
           </div>
         )}
       </div>
-      <ul className="trade-picked">
-        {offer.deeds.map((id) => (
-          <li key={id}>
-            <span className="swatch" style={{ background: bandColor(getDeed(id)) }} />
-            {deedName(getDeed(id))}
-            {state.holdings[id]?.mortgaged && <span className="mortgaged"> hipotecada · {pesos(mortgageTransferFee(id))} al Banco</span>}
-          </li>
-        ))}
-        {offer.cash > 0 && <li>💵 {pesos(offer.cash)}</li>}
-        {offer.deeds.length === 0 && offer.cash === 0 && <li className="offer-nothing">nada</li>}
-      </ul>
+      <div className="trade-hand">
+        <Hand state={state} deeds={offer.deeds} cash={offer.cash} width={92} {...(onChange ? { onRemove: toggle } : {})} empty="Nada sobre la mesa" />
+        {offer.deeds.some((id) => state.holdings[id]?.mortgaged) && (
+          <p className="mortgaged">Hipotecada: quien la recibe le paga al Banco el 10 % ({offer.deeds.filter((id) => state.holdings[id]?.mortgaged).map((id) => pesos(mortgageTransferFee(id))).join(", ")}).</p>
+        )}
+      </div>
       <p className="trade-value">
         Valor <strong>{pesos(value)}</strong>
       </p>
@@ -207,27 +202,12 @@ function Side({ state, owner, title, offer, onChange, onHover }: SideProps) {
   );
 }
 
-/** A deed, big, the way it is printed: band, name, price and the ladder. */
+/** A deed, big, exactly as printed on the table. */
 function DeedPreview({ state, deedId }: { readonly state: GameState; readonly deedId: DeedId }) {
-  const deed = getDeed(deedId);
   const holding = state.holdings[deedId];
   return (
-    <div className="deed-preview" style={{ "--band": bandColor(deed) } as CSSProperties}>
-      <div className="deed-preview-band">
-        {deed.kind === "campo" ? (
-          <>
-            <strong>{PROVINCE_NAMES[deed.province]}</strong>
-            <span>{ZONE_NAMES[deed.zone]}</span>
-          </>
-        ) : (
-          <>
-            <span>{deed.kind === "ferrocarril" ? "Ferrocarril" : "Compañía"}</span>
-            <strong>{shortName(deed)}</strong>
-          </>
-        )}
-      </div>
-      <p className="deed-preview-price">{pesos(deed.price)}</p>
-      <DeedDetails deed={deed} />
+    <div className="deed-preview">
+      <DeedCard state={state} deedId={deedId} width={250} />
       {holding?.mortgaged && <p className="deed-preview-flag">Hipotecada: quien la recibe paga {pesos(mortgageTransferFee(deedId))} al Banco.</p>}
     </div>
   );
