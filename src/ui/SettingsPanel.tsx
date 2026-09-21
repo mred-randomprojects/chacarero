@@ -44,6 +44,11 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
           <label className="check">
             <input type="checkbox" checked={settings.followPawn} onChange={(e) => set("followPawn", e.target.checked)} /> La cámara sigue al peón cuando se mueve
           </label>
+          <p className="controls">
+            <strong>Controles.</strong> Arrastrar gira la cámara · rueda acerca · ⌥+arrastrar mueve la mesa · ⌥+clic centra · doble clic en un
+            casillero o una escritura acerca · ← → ↑ ↓ giran e inclinan · + − acercan · 1-6 el lugar de cada jugador · M mi lugar · 0 general ·
+            T desde arriba · L propiedades · C canje · espacio mezcla los dados · Enter / espacio apuran un aviso o aprietan el botón destacado.
+          </p>
           <p className="credits">Sonidos: Kenney.nl (CC0).</p>
         </div>
       </div>

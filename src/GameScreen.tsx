@@ -15,13 +15,15 @@ import { ActionBar } from "./ui/ActionBar";
 import { Banner } from "./ui/Banner";
 import { CameraBar } from "./ui/CameraBar";
 import { LogPanel } from "./ui/LogPanel";
-import { PlayersPanel } from "./ui/PlayersPanel";
+import { MoneyFlights } from "./ui/MoneyFlights";
+import { PlayerCards } from "./ui/PlayerCards";
 import { Prompt } from "./ui/Prompt";
 import { primaryAction, tradeProposer } from "./ui/perspective";
 import { PropertiesList } from "./ui/PropertiesList";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
+import { TopBar } from "./ui/TopBar";
 import type { TradeDraft } from "./ui/TradeDialog";
 import { TradeDialog } from "./ui/TradeDialog";
 import { usePlayback } from "./ui/usePlayback";
@@ -324,19 +326,11 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onDiceSettled={onDiceSettled}
       />
       <div className="left-column">
-        <PlayersPanel
-          state={game}
-          cash={view.cash}
-          you={you}
-          offline={session.offline}
-          roomCode={session.roomCode}
-          connection={session.connection}
-          onShowList={openList}
-          onTrade={proposer ? proposeTrade : null}
-          onLeave={session.leave}
-        />
+        <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openList} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
+      <PlayerCards state={game} cash={view.cash} you={you} offline={session.offline} />
+      <MoneyFlights />
       <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
       <ActionBar state={game} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
       <div className="stage">
@@ -360,7 +354,6 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onMySeat={() => flyToSeat(mySide)}
         onOverview={() => flyTo(OVERVIEW)}
         onTopDown={() => flyTo(TOP_DOWN)}
-        onSettings={() => setShowSettings(true)}
       />
       {showList && (
         <PropertiesList

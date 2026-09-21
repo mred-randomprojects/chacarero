@@ -174,7 +174,6 @@ button.danger {
 
 /* ---------- overlays ---------- */
 
-.players,
 .panel,
 .actions,
 .log {
@@ -197,61 +196,6 @@ button.danger {
   flex-direction: column;
   gap: 12px;
   max-height: calc(100% - 140px);
-}
-
-.players {
-  padding: 12px 16px 10px;
-  flex: none;
-}
-
-.players ul {
-  list-style: none;
-  margin: 10px 0 4px;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.players li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.players li.current {
-  background: rgba(31, 94, 46, 0.14);
-  font-weight: 700;
-}
-
-.players li.bankrupt {
-  opacity: 0.5;
-  text-decoration: line-through;
-}
-
-.players .name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.players .status {
-  font-size: 0.85rem;
-  color: var(--red);
-  font-weight: 700;
-}
-
-.players .cash {
-  font-variant-numeric: tabular-nums;
-}
-
-.players .turn {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
-  color: var(--muted);
 }
 
 .log {
@@ -534,7 +478,6 @@ button.danger {
   color: #fff;
 }
 
-.camera-bar .hint,
 .actions .hint {
   flex-basis: 100%;
   font-size: 0.75rem;
@@ -562,18 +505,6 @@ button.danger {
   100% {
     transform: translate(1px, -1px) rotate(0.5deg);
   }
-}
-
-.players-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
-}
-
-.players-footer button {
-  font-size: 0.85rem;
-  padding: 4px 10px;
 }
 
 .blockers {
@@ -1040,26 +971,11 @@ button.link {
 
 .lobby .host,
 .lobby .offline,
-.players .offline,
+.top-meta .offline,
 .tagline .offline {
   font-size: 0.8rem;
   color: var(--muted);
   font-weight: 700;
-}
-
-.players .room-code {
-  margin: 4px 0 0;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.players .room-code strong {
-  color: var(--ink);
-  letter-spacing: 0.1em;
-}
-
-.players li.away {
-  opacity: 0.55;
 }
 
 .waiting-for {
@@ -1337,4 +1253,215 @@ button.link {
 
 .seat-name input {
   flex: 1;
+}
+
+/* ---------- top bar ---------- */
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.top-bar h1 {
+  font-size: 1.7rem;
+}
+
+.top-meta {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.top-meta strong {
+  color: var(--ink);
+  letter-spacing: 0.1em;
+}
+
+.top-buttons {
+  display: flex;
+  gap: 4px;
+  flex-basis: 100%;
+}
+
+.top-buttons button {
+  font-size: 0.85rem;
+  padding: 4px 9px;
+}
+
+.log {
+  max-height: 22vh;
+}
+
+/* ---------- player cards ---------- */
+
+.player-cards {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100% - 560px);
+  z-index: 4;
+}
+
+.player-card {
+  --player-color: #7a5230;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: clamp(112px, 12vw, 160px);
+  padding: 8px 10px 8px 8px;
+  background: var(--panel);
+  border-radius: 12px;
+  border-bottom: 5px solid var(--player-color);
+  box-shadow: var(--shadow);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.25s ease-out;
+}
+
+.player-card.current {
+  transform: translateY(-8px) scale(1.06);
+  box-shadow: 0 0 0 3px var(--gold), 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.player-card.bankrupt {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.player-card.away {
+  opacity: 0.6;
+}
+
+.player-card.bank {
+  width: auto;
+  min-width: 104px;
+  border-bottom-color: #7a5230;
+  background: rgba(233, 226, 207, 0.96);
+}
+
+.pc-token {
+  flex: none;
+}
+
+.pc-bank-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.pc-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.pc-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-you {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--player-color);
+  color: #fff;
+}
+
+.pc-cash {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-card.bankrupt .pc-cash {
+  color: var(--red);
+  text-decoration: line-through;
+}
+
+.pc-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+}
+
+.player-card.bank .pc-status {
+  color: var(--muted);
+}
+
+/* ---------- HUD money flights ---------- */
+
+.hud-flights {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.hud-bill {
+  position: absolute;
+  left: -34px;
+  top: -17px;
+  width: 68px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.7);
+  will-change: transform, opacity;
+}
+
+.hud-amount {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  will-change: transform, opacity;
+}
+
+.hud-amount.minus {
+  color: #ff6b5e;
+}
+
+.hud-amount.plus {
+  color: #7be07f;
+}
+
+.settings .controls {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .player-cards {
+    max-width: calc(100% - 32px);
+    bottom: 110px;
+  }
 }
