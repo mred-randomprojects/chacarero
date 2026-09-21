@@ -153,12 +153,21 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const currentSide = sideOf(shownPlayer.id);
   const mySide = you ? sideOf(you) : currentSide;
 
+  /** Where the last flight was sent, while nothing else has moved the camera since (a chase, the user). */
+  const lastFlight = useRef<CameraView | null>(null);
   const flyTo = useCallback((cameraView: CameraView, seconds?: number, style?: FlightStyle) => {
+    lastFlight.current = cameraView;
     goToCounter.current += 1;
     setGoTo({ id: goToCounter.current, view: cameraView, ...(seconds === undefined ? {} : { seconds }), ...(style === undefined ? {} : { style }) });
   }, []);
   /** Where the camera is right now (the rig writes it every frame). */
   const here = useCallback((): CameraView => ({ position: cameraTracker.position.toArray(), target: cameraTracker.target.toArray() }), []);
+  /** Already there, or already on the way there: flying again would only restart the same flight with a hitch. */
+  const heading = useCallback((target: CameraView) => viewsMatch(here(), target) || (lastFlight.current !== null && viewsMatch(lastFlight.current, target)), [here]);
+  const takeCamera = useCallback(() => {
+    lastFlight.current = null;
+    setFreeLook(true);
+  }, []);
 
   /**
    * A peek at a player's side of the table (their deeds and money): an
@@ -234,10 +243,10 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     (seconds = TURN_FLIGHT_SECONDS, style: FlightStyle = "arc") => {
       setFreeLook(false);
       const target = pawnView(BOARD_LAYOUT, shownPosition);
-      if (viewsMatch(here(), target)) return;
+      if (heading(target)) return;
       shot(target, seconds, style);
     },
-    [shot, here, shownPosition],
+    [shot, heading, shownPosition],
   );
   const mounted = useRef(false);
   const turnKey = `${shownPlayerId}|${opening}|${director}`;
@@ -325,6 +334,10 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   // A walk is chased from behind; a leap (to jail) is watched from a wide shot instead, so the
   // camera never swings across the board after it.
   const chasing = settings.followPawn && !(director && freeLook) && walk !== null && !walk.jump ? walk.id : null;
+  // A chase moves the camera on its own: the last flight no longer says where it is.
+  useEffect(() => {
+    if (chasing !== null) lastFlight.current = null;
+  }, [chasing]);
   /** A shot that keeps both ends of a flight in view (the piles, the pawn, the seat), from the side the camera is on. */
   const frameBoth = useCallback(
     (a: Vector3, b: Vector3, seconds: number) => {
@@ -600,7 +613,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onPawnArrive={onPawnArrive}
         goTo={goTo}
         chase={chasing}
-        onUserControl={() => setFreeLook(true)}
+        onUserControl={takeCamera}
         cardOnTable={view.cardOnTable}
         throwerId={session.shakingPlayerId ?? shownPlayerId}
         shaking={diceShaking}
