@@ -22,14 +22,17 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 - **Fichas**: al armar la mesa cada jugador elige su ficha (tractor, vaca,
   caballo, mate, bota, oveja, gallo o sombrero); la ficha fija el color y el
   ícono con que el juego te muestra en todos lados, y una ficha tomada queda
-  bloqueada para los demás.
+  bloqueada para los demás. Un clic en la tarjeta de un jugador (abajo) lleva
+  la cámara a su lado de la mesa: sus escrituras y su plata.
 - **Quién empieza**: antes del primer turno cada uno tira una vez; el más
   alto empieza y los empatados vuelven a tirar.
 - **El turno, paso a paso**: mantené apretado el botón (o la barra
-  espaciadora) para mezclar los dados, soltá para tirar. Los dados caen al
-  lado de tu peón (si le pegan a una ficha, la sacuden) y después suben a la
-  cámara para que todos lean el resultado; los casilleros que vas a recorrer
-  se iluminan en orden y movés el peón con un clic. Si caés en Suerte o
+  espaciadora): los dados vuelan de la mesa a tus manos y se mezclan delante
+  de la cámara; soltá para tirar. Caen al lado de tu peón (si le pegan a una
+  ficha, la sacuden), quedan un momento en el paño para que todos los lean y
+  recién después suben a la cámara (un doble brilla en dorado); los
+  casilleros que vas a recorrer se iluminan en orden y movés el peón con un
+  clic, con la cámara pegada atrás, salto a salto. Si caés en Suerte o
   Destino, levantás la tarjeta: sale del mazo, se da vuelta frente a la
   cámara y la aplicás cuando la leíste. Si caés en una escritura libre, la
   escritura se levanta grande frente a la cámara con todo lo que dice al
@@ -149,6 +152,9 @@ se despliega al droplet con `./deploy.sh` (ver `deploy/README.md`).
   los casilleros dibujadas en canvas, y los componentes de react-three-fiber.
 - `src/ui/` — HUD: tarjetas de jugadores, barra superior, avisos y prompts,
   pantalla de canje, mapa 2D, panel de escrituras.
+- `docs/GUIDELINES.md` — las reglas de cómo tiene que sentirse y construirse el
+  juego (una sola escena 3D, la cámara como público, paso a paso, nada se
+  teletransporta, teclas seguras). Leerlas antes de tocar algo.
 - `docs/NEXT_FEATURES.md` — el último lote de funciones pedidas, con su
   estado y las notas de implementación para quien siga.
 - `docs/REGLAS.md` — reglas completas. `docs/FUENTES.md` — de dónde sale cada
