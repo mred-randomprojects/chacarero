@@ -27,8 +27,8 @@ export function TopBar({ state, roomCode, connection, onShowList, onTrade, onSet
         Turno {state.turn}
       </span>
       <div className="top-buttons">
-        <button type="button" onClick={onShowList} title="Propiedades (L)">
-          Propiedades
+        <button type="button" onClick={onShowList} title="Mapa del tablero y lista de propiedades (L)">
+          Mapa
         </button>
         {onTrade && (
           <button type="button" onClick={onTrade} title="Proponer un canje (C)">

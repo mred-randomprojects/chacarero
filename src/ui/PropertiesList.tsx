@@ -22,9 +22,8 @@ import {
 import type { Dispatch } from "./ActionBar";
 import { TokenIcon } from "./TokenIcon";
 
-export interface PropertiesListProps {
+export interface PropertiesTableProps {
   readonly state: GameState;
-  readonly onClose: () => void;
   readonly onSelect: (squareIndex: number) => void;
   /** When given, the active player's rows get build/sell/mortgage buttons. */
   readonly dispatch?: Dispatch;
@@ -36,8 +35,8 @@ const SQUARE_INDEX = new Map(
   SQUARES.flatMap((square) => (square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania" ? [[square.deedId, square.index] as const] : [])),
 );
 
-/** Modal with every deed on the board: owner, buildings, mortgage and the rent a visitor would pay now. */
-export function PropertiesList({ state, onClose, onSelect, dispatch, you = null, busy = false }: PropertiesListProps) {
+/** Every deed on the board, grouped by province: owner, buildings, mortgage and the rent a visitor would pay now. */
+export function PropertiesTable({ state, onSelect, dispatch, you = null, busy = false }: PropertiesTableProps) {
   const canManage = dispatch !== undefined && canManageHoldings(state);
   const active = canManage ? activePlayer(state) : null;
   const me = active && (you === null || active.id === you) ? active : null;
@@ -58,15 +57,7 @@ export function PropertiesList({ state, onClose, onSelect, dispatch, you = null,
   groups.push({ label: "Compañías", color: "#7a5230", ids: DEEDS.filter((d) => d.kind === "compania").map((d) => d.id) });
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
-        <header>
-          <h2>Propiedades</h2>
-          <button type="button" className="close" onClick={onClose} aria-label="Cerrar">
-            ×
-          </button>
-        </header>
-        <div className="modal-body">
+    <div className="properties-table">
           {groups.map((group) => (
             <section key={group.label}>
               <h3>
@@ -112,8 +103,6 @@ export function PropertiesList({ state, onClose, onSelect, dispatch, you = null,
               </table>
             </section>
           ))}
-        </div>
-      </div>
     </div>
   );
 }

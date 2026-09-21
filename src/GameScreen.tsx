@@ -22,7 +22,7 @@ import { MoneyFlights } from "./ui/MoneyFlights";
 import { PlayerCards } from "./ui/PlayerCards";
 import { Prompt } from "./ui/Prompt";
 import { primaryAction, tradeProposer } from "./ui/perspective";
-import { PropertiesList } from "./ui/PropertiesList";
+import { BoardMap } from "./ui/BoardMap";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
@@ -409,7 +409,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onTopDown={() => lookAt(TOP_DOWN)}
       />
       {showList && (
-        <PropertiesList
+        <BoardMap
           state={game}
           dispatch={dispatch}
           you={you}
