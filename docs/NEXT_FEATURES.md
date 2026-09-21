@@ -324,67 +324,67 @@ the turn cue compared itself with the previous cue instead of with the camera).
 
 ## D1. Catastro: the deed grid as the `L` overlay, with owners and previews
 
-- [ ] D1.1 `L` opens on a new first tab, **Catastro**: the trade screen's deed
+- [x] D1.1 `L` opens on a new first tab, **Catastro**: the trade screen's deed
       grid for the whole table — every deed in its fixed slot (province
       columns, zones as rows, railways, companies), lit in the owner's colour
       **with the owner's token icon on it** (the owner must never read as the
       property's colour band), buildings and mortgage state; free deeds are
       ghosts. Mapa and Lista stay as the other tabs. (Items 1, 6)
-- [ ] D1.2 Hovering a slot (or a tile on the Mapa tab) shows the real card big
+- [x] D1.2 Hovering a slot (or a tile on the Mapa tab) shows the real card big
       beside it; clicking selects the square (its panel opens). (Item 1)
-- [ ] D1.3 The Mapa tab marks the owner with their token icon too, not only a
+- [x] D1.3 The Mapa tab marks the owner with their token icon too, not only a
       colour strip. (Item 1)
 
 ## D2. Trade: each side's value, never the subtraction
 
-- [ ] D2.1 Under the balance bar, each side's face value labelled with its
+- [x] D2.1 Under the balance bar, each side's face value labelled with its
       player ("Jugador 1 da $7.400 · Jugador 2 da $10.200"); the "X da $Y más"
       line goes. (Item 2)
 
 ## D3. Space hurries (2×), nothing teleports
 
-- [ ] D3.1 Space/Enter (and the banner's button) during a replay play it at
+- [x] D3.1 Space/Enter (and the banner's button) during a replay play it at
       double speed — the pawn hops faster, flights and drops go faster, banners
       hold half as long — instead of jumping to the end. (Items 3, 9)
-- [ ] D3.2 The OS key auto-repeat can no longer cut a walk: a repeated Space
+- [x] D3.2 The OS key auto-repeat can no longer cut a walk: a repeated Space
       only re-asks for the hurry already in effect. (Root cause of "the pawn
       appeared at the destination": `skip()` ran before the `repeat` check.)
 
 ## D4. Suerte/Destino: the camera backs off with the card
 
-- [ ] D4.1 When a card rises to the screen the camera pulls back and up along
+- [x] D4.1 When a card rises to the screen the camera pulls back and up along
       its own line of sight at the same moment, so the card never cuts through
       the table. (Item 4)
 
 ## D5. The camera is bound to the pawn, every walk
 
-- [ ] D5.1 The chase restarts for every walk (keyed on the walk itself, not on
+- [x] D5.1 The chase restarts for every walk (keyed on the walk itself, not on
       "a walk exists"): a second move in the same action — the leap to jail
       after landing on Marche preso, a card moving the pawn — is followed too.
       Measured. (Item 5; root cause: the landing flight killed the chase and
       the next walk, batched into the same render, never restarted it.)
-- [ ] D5.2 A walk backwards is followed exactly like a walk forwards. Measured.
+- [x] D5.2 A walk backwards is followed exactly like a walk forwards. Measured.
       (Item 5)
 
 ## D6. Marche preso: one wide shot, no spinning
 
-- [ ] D6.1 The leap to jail is slower and higher, framed from above with both
+- [x] D6.1 The leap to jail is slower and higher, framed from above with both
       squares in view (no chase from behind across the board, which flipped
       the camera), then one lean-in on the jail. (Item 7)
 
 ## D7. Back to the pawn after every action
 
-- [ ] D7.1 When a replay ends and the table waits for the next decision, the
+- [x] D7.1 When a replay ends and the table waits for the next decision, the
       camera returns to the pawn of the player on turn — unless it is already
       there, or the user took the camera. After paying bail, buying, an
       auction, a trade: back to the pawn. (Item 8)
-- [ ] D7.2 The turn-start cue checks where the camera actually is, not what
+- [x] D7.2 The turn-start cue checks where the camera actually is, not what
       the last cue was: the first round now gets its close-up for every
       player, not only the first. (Root cause found while measuring.)
 
 ## D8. Rent is asked for, and the amount is big
 
-- [ ] D8.1 Landing on someone else's deed no longer moves the money by itself:
+- [x] D8.1 Landing on someone else's deed no longer moves the money by itself:
       the table stops at the payment with the amount **big** on screen and a
       Pagar [P] button (sell / mortgage / negotiate as before); paying then
       flies the bills. Taxes and cards keep paying as before. (Item 10)
@@ -393,7 +393,7 @@ the turn cue compared itself with the previous cue instead of with the camera).
 
 ## Verification
 
-- [ ] V.2 Scripted runs sampling the trackers: a backward walk, the Marche
+- [x] V.2 Scripted runs sampling the trackers: a backward walk, the Marche
       preso leap, the return to the pawn after a payment, the first-round turn
       cue, and Space during a walk (2× pace, arrival at the destination, no
       teleport).
@@ -437,6 +437,28 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-21 — batch 4 shipped and measured** (`5d3cca6` camera, `51ea219`
+  hurry, `c532e90` rent, `adb46e7` trade, `7853989` Catastro, `71310ec`).
+  Sampled with the frame stepper: the Marche preso leap is now 1.6 s long
+  under a wide shot (camera y 16, target the board centre, both squares in
+  frame) followed by the jail lean-in — before, the camera sat 22 units
+  from the leaping pawn; a backward walk (36→33) is chased at median 0.95
+  units; the full card flow (draw → camera backs off to y 7.2 keeping its
+  target → Aplicar → walk chased → landing framed → back at the pawn); paying
+  bail frames the bills and is back at the pawn 1 s after the banner; the
+  first-round turn cue flies to P2 at Salida after P1's walk (it used to be
+  swallowed by the last-cue comparison); Space at 0.8 s of a 2.9 s walk
+  finishes it at 1.86 s with every square walked, and a `repeat` keydown
+  changes nothing; a hurried bail banner takes 1.2 s instead of 2.24 s.
+  Landing on a rival's deed stops at `awaitingPayment` with the figure at
+  3rem; Pagar flies the bills and the camera returns to the pawn.
+  Measurement note, again: a hidden browser pane throttles rAF to 1 fps and
+  makes a 0.7 s flight look 2 s late — `__chacareroFrames.run(60)` first.
+  Open: D8.2 (the droplet's room server still charges rent on the spot until
+  `./deploy.sh` is run). Known limits: the L overlay's Catastro has no pins
+  (the Mapa tab keeps them); a hurry lasts until the current replay ends, the
+  next action starts at 1×.
 
 - **2026-09-21 — batch 3 shipped and measured (`4087705`).** Sampled with the
   dev frame stepper at 60 fps: six opening throws with the camera target never

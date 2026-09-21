@@ -36,25 +36,33 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   casilleros que vas a recorrer se iluminan en orden y movés el peón con un
   clic, con la cámara pegada atrás, salto a salto. Si caés en Suerte o
   Destino, levantás la tarjeta: sale del mazo, se da vuelta frente a la
-  cámara y la aplicás cuando la leíste. Si caés en una escritura libre, la
-  escritura sube grande a la pantalla (siempre del mismo tamaño) con todo lo
-  que dice al lado: comprás o la mandás a remate. Cada cosa que pasa se anuncia de a una
-  y se ve en la mesa: los billetes vuelan de una pila a otra (y entre las
-  tarjetas de los jugadores, abajo de la pantalla), las escrituras van del
-  Banco a tu lado, las chacras caen sobre el campo. `Enter` o un clic en el
-  aviso apura el paso (o saltea la caminata del peón).
+  cámara (la cámara retrocede para que se vea entera) y la aplicás cuando la
+  leíste. Si caés en una escritura libre, la escritura sube grande a la
+  pantalla (siempre del mismo tamaño) con todo lo que dice al lado: comprás o
+  la mandás a remate. Si caés en una escritura ajena, nadie te saca la plata
+  solo: la mesa se detiene con el alquiler **en grande** y pagás con `Pagar
+  [P]` (antes podés vender, hipotecar o negociar). Cada cosa que pasa se
+  anuncia de a una y se ve en la mesa: los billetes vuelan de una pila a otra
+  (y entre las tarjetas de los jugadores, abajo de la pantalla), las
+  escrituras van del Banco a tu lado, las chacras caen sobre el campo.
+  `Espacio`, `Enter` o un clic en el aviso apuran lo que queda de la jugada al
+  doble de velocidad: nada se saltea, el peón camina todos los casilleros.
 - **Teclas**: cada botón muestra la suya (`Comprar [C]`, `Mandar a remate
   [R]`, `Pagar [P]`, `Ofertar [B]`, `Pasar [X]`, `Aceptar [A]`, `Rechazar
-  [X]`, `Contraofertar [O]`, `Negociar [N]`, `Mapa [L]`…). **Espacio / Enter**
+  [X]`, `Contraofertar [O]`, `Negociar [N]`, `Catastro [L]`…). **Espacio / Enter**
   solo hacen el paso inofensivo del momento: mover el peón, levantar o
   aplicar la tarjeta, terminar el turno; nunca compran, ofertan ni aceptan un
   canje. (Con los dados en la mano, Espacio los mezcla; durante un aviso, lo
   apura.)
 - **Cámara**: por defecto todas las pantallas ven lo mismo: al empezar cada
   turno la cámara vuela (sube, y baja) hasta el peón del jugador de turno,
-  lo sigue de cerca salto a salto, se queda en el casillero donde cae, acompaña
+  lo sigue de cerca salto a salto (también para atrás, también el segundo
+  movimiento de una misma jugada), se queda en el casillero donde cae, acompaña
   los billetes y las escrituras que cruzan la mesa, y las tarjetas y los dados
-  se le ponen enfrente. Nunca se va sola al lugar de un jugador. Si arrastrás
+  se le ponen enfrente. El peón del jugador de turno es el centro: después de
+  cada jugada (pagar, comprar, un remate, un canje) la cámara vuelve a él. Ir
+  preso se ve desde arriba, de un lado al otro del tablero, sin marearse.
+  Nunca se va sola al lugar de un jugador. Si arrastrás
   o usás la rueda (un clic no cuenta), esa pantalla queda libre hasta el turno
   siguiente (o hasta apretar *Volver a la partida*); el botón *Sigue la
   partida* la apaga del todo. `⌥ Option/Alt +
@@ -63,12 +71,15 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   Teclado: `← → ↑ ↓` giran e inclinan, `+ −` acercan, `1`–`6` te sientan en
   el lugar de cada jugador, `M` en el del jugador de turno, `0` vista
   general, `T` desde arriba.
-- **Mapa** (`L` o el botón): un mapa 2D del tablero con el color de cada
-  casillero, quién es dueño de qué (rayado si está hipotecado), las chacras
-  y estancias, un pin con la ficha de cada jugador donde está parado, y las
-  cuentas al costado (escrituras libres, lo que tiene cada uno, lo que le
-  queda al Banco). Clic en un casillero lo fija; la lista completa está en la
-  segunda pestaña.
+- **Catastro** (`L` o el botón): todas las escrituras en su casillero fijo
+  (la misma grilla de la pantalla de canje), cada una con la ficha y el color
+  de su dueño (la banda de arriba es siempre el color de la propiedad), sus
+  chacras y estancias, hipotecada si lo está; las libres se leen en gris.
+  Pasás el mouse y la escritura se ve grande al costado, con las cuentas
+  debajo (escrituras libres, lo que tiene cada uno); clic en una abre su
+  casillero. La segunda pestaña es el **Mapa** 2D del tablero (dueños con su
+  ficha, pines de los jugadores donde están parados) y la tercera la lista
+  completa para construir e hipotecar.
 - **Ajustes** (`,` o el engranaje): ritmo de los avisos, tiempo para decidir
   (o sin límite), volumen, qué hace la cámara sola, y la lista de controles.
 - **Sonido**: dados que se mezclan y rebotan, pasos del peón, cartas, plata,

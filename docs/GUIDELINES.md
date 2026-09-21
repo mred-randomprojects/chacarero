@@ -27,6 +27,17 @@ Practically: every replayed event needs a camera cue (`GameScreen` cues off
 `playback.current` and the pawn/flight tracker), and every animation is slow
 enough to be watched. Seeing things move is part of the fun. No rush.
 
+The pawn of the player on turn is the centre of the play: the camera flies to
+it when the turn starts and **comes back to it after every action** (paying,
+buying, an auction, a trade), unless the user took the camera or a card is
+being held up. Every walk is chased, keyed on the walk itself — a second move
+in the same action is followed too. A leap across the board (jail) is watched
+from a wide shot instead of chased from behind.
+
+Hurrying is a pace, not a jump: Space/Enter during a replay run everything at
+2× (`src/ui/pace.ts`, read by the animations and the replay's own holds).
+Nothing is ever skipped; nothing teleports.
+
 ## 3. Step by step, and only from the table's own view
 
 The real game state runs ahead (the server or the engine resolves a whole
