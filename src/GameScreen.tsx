@@ -10,7 +10,7 @@ import type { Anchors } from "./scene/anchors";
 import { deedAnchor, moneyAnchor } from "./scene/anchors";
 import { BOARD_LAYOUT, SLAB_MARGIN, TABLE_Y } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
-import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
+import { OVERVIEW, TOP_DOWN, backOffView, pawnView, seatView, squareView, viewsMatch } from "./scene/cameraViews";
 import type { FlightStyle, FlightView } from "./scene/CameraRig";
 import type { DiceThrow } from "./scene/Dice";
 import { diceHurry } from "./scene/pawnKnocks";
@@ -61,6 +61,11 @@ interface Flight {
 
 /** The turn-to-turn flight: long enough to read as a swoop from one pawn to the next. */
 const TURN_FLIGHT_SECONDS = 1.5;
+/** When a Suerte/Destino card rises: at least this much further back, and far enough that a card
+ * held `CARD_AHEAD` units in front of the camera (see Effects) floats above `CARD_CLEARANCE`. */
+const CARD_BACK_OFF = 1.35;
+const CARD_AHEAD = 9;
+const CARD_CLEARANCE = 2.8;
 
 /** The trade screen's contents; `id` remounts it so a fresh draft starts clean. */
 interface OpenTrade {
@@ -149,6 +154,39 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     goToCounter.current += 1;
     setGoTo({ id: goToCounter.current, view: cameraView, ...(seconds === undefined ? {} : { seconds }), ...(style === undefined ? {} : { style }) });
   }, []);
+  /** Where the camera is right now (the rig writes it every frame). */
+  const here = useCallback((): CameraView => ({ position: cameraTracker.position.toArray(), target: cameraTracker.target.toArray() }), []);
+
+  /**
+   * A peek at a player's side of the table (their deeds and money): an
+   * instant snap there, and the same key snaps back to where the camera was.
+   * Not a flight, and not a hand-over: the play goes on from wherever it is —
+   * and any flight the play makes ends the peek (its way back is stale).
+   */
+  const [peek, setPeek] = useState<{ readonly side: number; readonly back: CameraView } | null>(null);
+  const peekSeat = useCallback(
+    (side: number) => {
+      if (peek && peek.side === side) {
+        setPeek(null);
+        flyTo(peek.back, 0);
+        return;
+      }
+      const back = peek ? peek.back : here();
+      setPeek({ side, back });
+      flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, side), 0);
+    },
+    [flyTo, here, peek],
+  );
+  const flyToSeat = peekSeat;
+
+  /** Every shot the director (or a deliberate look) makes goes through here, so a peek never outlives it. */
+  const shot = useCallback(
+    (cameraView: CameraView, seconds?: number, style?: FlightStyle) => {
+      setPeek(null);
+      flyTo(cameraView, seconds, style);
+    },
+    [flyTo],
+  );
   /**
    * The director pushes the camera in towards a point on the table: it moves
    * along the line it already looks down, stopping `distance` away, and looks
@@ -162,72 +200,64 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       away.setLength(distance);
       const eye = at.clone().add(away);
       eye.y = Math.max(2.2, eye.y);
-      goToCounter.current += 1;
-      setGoTo({ id: goToCounter.current, view: { position: [eye.x, eye.y, eye.z], target: point }, seconds });
+      shot({ position: [eye.x, eye.y, eye.z], target: point }, seconds);
     },
-    [],
+    [shot],
   );
   /** A deliberate look somewhere: the director steps aside until the next turn. */
   const lookAt = useCallback(
     (cameraView: CameraView, seconds?: number) => {
       setFreeLook(true);
-      flyTo(cameraView, seconds);
+      shot(cameraView, seconds);
     },
-    [flyTo],
+    [shot],
   );
   const focusSquare = useCallback((index: number) => lookAt(squareView(BOARD_LAYOUT, index), 0.45), [lookAt]);
 
   /**
-   * A peek at a player's side of the table (their deeds and money): an
-   * instant snap there, and the same key snaps back to where the camera was.
-   * Not a flight, and not a hand-over: the play goes on from wherever it is.
-   */
-  const [peek, setPeek] = useState<{ readonly side: number; readonly back: CameraView } | null>(null);
-  const peekSeat = useCallback(
-    (side: number) => {
-      if (peek && peek.side === side) {
-        setPeek(null);
-        flyTo(peek.back, 0);
-        return;
-      }
-      const back = peek ? peek.back : { position: cameraTracker.position.toArray(), target: cameraTracker.target.toArray() };
-      setPeek({ side, back });
-      flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, side), 0);
-    },
-    [flyTo, peek],
-  );
-  const flyToSeat = peekSeat;
-
-  /**
-   * The director: at the start of every turn, everyone's camera swoops to a
-   * close-up of the pawn whose turn it is (the opening throws all happen at
-   * Salida, so the camera settles there once). A screen that took the camera
-   * re-joins here.
+   * The director's home shot is the pawn of the player on turn: the camera
+   * swoops there when a turn starts (a screen that took the camera re-joins),
+   * and comes back to it whenever a replay ends and the table waits for the
+   * next decision — after paying, buying, an auction, a trade. Nothing flies
+   * when the camera already stands there (the opening throws all happen at
+   * Salida; a landing was just framed).
    */
   const currentPlayerId = currentPlayer(game).id;
   const shownPlayerId = shownPlayer.id;
   const shownPosition = view.positions[shownPlayer.id] ?? shownPlayer.position;
   const opening = view.phase.type === "openingRoll";
   const director = settings.followTurn;
-  const lastCue = useRef<CameraView | null>(null);
-  const directorCue = useCallback(() => {
-    setFreeLook(false);
-    setPeek(null);
-    const target = pawnView(BOARD_LAYOUT, shownPosition);
-    // The same view as the last cue (every opening throw is at Salida): no flight, the camera is already there.
-    const last = lastCue.current;
-    if (last && last.position.every((v, i) => v === target.position[i]) && last.target.every((v, i) => v === target.target[i])) return;
-    lastCue.current = target;
-    flyTo(target, TURN_FLIGHT_SECONDS, "arc");
-  }, [flyTo, shownPosition]);
+  const directorCue = useCallback(
+    (seconds = TURN_FLIGHT_SECONDS, style: FlightStyle = "arc") => {
+      setFreeLook(false);
+      const target = pawnView(BOARD_LAYOUT, shownPosition);
+      if (viewsMatch(here(), target)) return;
+      shot(target, seconds, style);
+    },
+    [shot, here, shownPosition],
+  );
   const mounted = useRef(false);
+  const turnKey = `${shownPlayerId}|${opening}|${director}`;
+  const seenTurn = useRef<string | null>(null);
   useEffect(() => {
-    if (director) directorCue();
-    // Director off: sit at your own seat once, when the table appears, and otherwise leave the camera alone.
-    else if (!mounted.current && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide), 0);
+    const newTurn = seenTurn.current !== turnKey;
+    seenTurn.current = turnKey;
+    const first = !mounted.current;
     mounted.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the turn the table shows changing, the opening ending, or the director being switched
-  }, [shownPlayerId, opening, director]);
+    if (!director) {
+      // Director off: sit at your own seat once, when the table appears, and otherwise leave the camera alone.
+      if (first && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide), 0);
+      return;
+    }
+    if (newTurn) {
+      directorCue();
+      return;
+    }
+    // Back to the pawn once the action has been shown (or the table was reset under it);
+    // a screen that took the camera keeps it, and a card held up to the screen keeps its shot.
+    if (!busy && !freeLook && view.cardOnTable === null) directorCue(0.7, "direct");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the turn the table shows changing, the opening ending, the director being switched, a replay ending, or the shown pawn being put elsewhere
+  }, [turnKey, busy, shownPosition]);
 
   /**
    * A new seq means something happened. Consecutive steps are replayed; a
@@ -259,13 +289,20 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   // A free deed on offer (or under the hammer) is lifted in front of everyone; the table's own view says when.
   const offeredDeed = view.deedOnOffer;
 
-  // The pawn stopped: settle the camera on that square before the landing is announced.
+  // The pawn stopped: settle the camera on that square before the landing is announced —
+  // unless the pawn is about to move again (marched to jail from Marche preso: the wide
+  // shot of the leap comes next) or just leapt (the wide shot holds until the jail lean-in).
   const onPawnArrive = useCallback(
     (pawnId: string, square: number) => {
       playback.onPawnArrive();
-      if (director && !freeLook && pawnId === shownPlayerId) flyTo(pawnView(BOARD_LAYOUT, square), 0.6);
+      if (!director || freeLook || pawnId !== shownPlayerId || walk?.jump) return;
+      const events = game.events;
+      const index = events.findIndex((e) => e.type === "move" && e.playerId === pawnId && e.to === square);
+      const next = index >= 0 ? events[index + 1] : undefined;
+      if (next?.type === "move" && next.playerId === pawnId) return;
+      shot(pawnView(BOARD_LAYOUT, square), 0.6);
     },
-    [playback, director, freeLook, shownPlayerId, flyTo],
+    [playback, director, freeLook, shownPlayerId, walk?.jump, game.events, shot],
   );
 
   // Once the table has caught up with a move, the square the pawn stopped on is the one to look at.
@@ -282,24 +319,39 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
    * building dropping, someone marched to jail, a bankruptcy).
    */
   const current = playback.current;
-  const following = settings.followPawn && !(director && freeLook) && walk !== null;
+  // A walk is chased from behind; a leap (to jail) is watched from a wide shot instead, so the
+  // camera never swings across the board after it.
+  const chasing = settings.followPawn && !(director && freeLook) && walk !== null && !walk.jump ? walk.id : null;
   /** A shot that keeps both ends of a flight in view (the piles, the pawn, the seat), from the side the camera is on. */
-  const frameBoth = useCallback((a: Vector3, b: Vector3, seconds: number) => {
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    const span = a.distanceTo(b);
-    const distance = Math.min(22, Math.max(7, span * 0.85 + 5));
-    const dir = cameraTracker.position.clone().sub(mid);
-    dir.y = 0;
-    if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1);
-    dir.setLength(distance * 0.7);
-    const eye = mid.clone().add(dir);
-    eye.y = mid.y + distance * 0.72;
-    goToCounter.current += 1;
-    setGoTo({ id: goToCounter.current, view: { position: [eye.x, eye.y, eye.z], target: [mid.x, mid.y, mid.z] }, seconds });
-  }, []);
+  const frameBoth = useCallback(
+    (a: Vector3, b: Vector3, seconds: number) => {
+      const mid = a.clone().add(b).multiplyScalar(0.5);
+      const span = a.distanceTo(b);
+      const distance = Math.min(22, Math.max(7, span * 0.85 + 5));
+      const dir = cameraTracker.position.clone().sub(mid);
+      dir.y = 0;
+      if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1);
+      dir.setLength(distance * 0.7);
+      const eye = mid.clone().add(dir);
+      eye.y = mid.y + distance * 0.72;
+      shot({ position: [eye.x, eye.y, eye.z], target: [mid.x, mid.y, mid.z] }, seconds);
+    },
+    [shot],
+  );
   useEffect(() => {
     if (!current || !director || freeLook) return;
     switch (current.type) {
+      case "move": {
+        // A leap across the board: both squares in one wide shot from above.
+        const from = BOARD_LAYOUT.tiles[current.from];
+        const to = BOARD_LAYOUT.tiles[current.to];
+        if (current.kind === "jump" && from && to) frameBoth(new Vector3(...boardToWorld(from.center, 0.2)), new Vector3(...boardToWorld(to.center, 0.2)), 0.5);
+        break;
+      }
+      case "card":
+        // The card comes up to the screen: back off so it floats clear of the table, still looking at the same spot.
+        shot(backOffView(here(), CARD_BACK_OFF, CARD_AHEAD, CARD_CLEARANCE), 0.7);
+        break;
       case "transfer":
         frameBoth(moneyAnchor(anchors, current.from), moneyAnchor(anchors, current.to), 0.5);
         break;
@@ -541,7 +593,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         colorOf={colorOf}
         onPawnArrive={onPawnArrive}
         goTo={goTo}
-        followPawn={following}
+        chase={chasing}
         onUserControl={() => setFreeLook(true)}
         cardOnTable={view.cardOnTable}
         throwerId={session.shakingPlayerId ?? shownPlayerId}
@@ -591,7 +643,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       </div>
       <CameraBar
         mode={!director ? "off" : freeLook ? "free" : "following"}
-        onFollow={directorCue}
+        onFollow={() => directorCue()}
         onToggleDirector={() => onSettings({ ...settings, followTurn: !settings.followTurn })}
         onMySeat={() => flyToSeat(mySide)}
         onOverview={() => lookAt(OVERVIEW)}

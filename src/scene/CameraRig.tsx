@@ -18,8 +18,12 @@ export interface FlightView {
 export interface CameraRigProps {
   /** Changing `id` flies the camera to `view`; an `arc` flight rises away from the table and dives back in. */
   readonly goTo: { readonly id: number; readonly view: FlightView; readonly seconds?: number; readonly style?: FlightStyle } | null;
-  /** While true the orbit target tracks the moving pawn (see pawnTracker). */
-  readonly followPawn: boolean;
+  /**
+   * The walk to chase, by id (see pawnTracker): every new id restarts the
+   * chase, so a second move in the same action is followed even when the
+   * landing flight of the first one had taken the camera. Null: no chase.
+   */
+  readonly chase: number | null;
   /** The user grabbed the camera (drag, wheel or a camera key): the director should let go. */
   readonly onUserControl: () => void;
 }
@@ -50,7 +54,7 @@ function easeInOutQuart(x: number): number {
  * keeps working between flights; a flight in progress is cancelled by any
  * drag so the user always wins.
  */
-export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
+export function CameraRig({ goTo, chase: chaseId, onUserControl }: CameraRigProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera);
   const domElement = useThree((s) => s.gl.domElement);
@@ -137,7 +141,7 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
   // the ring, the offset following its square); a flight keeps the camera's
   // current angle. When it ends the camera simply stays where the motion stopped.
   useEffect(() => {
-    if (!followPawn) {
+    if (chaseId === null) {
       chase.current = null;
       return;
     }
@@ -151,7 +155,7 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
     offset.y = FLIGHT_HEIGHT;
     chase.current = offset;
     settle.current = 0.7;
-  }, [followPawn, camera]);
+  }, [chaseId, camera]);
 
   // Relative moves (orbit, tilt, zoom) start from wherever the camera is now.
   useEffect(() => {

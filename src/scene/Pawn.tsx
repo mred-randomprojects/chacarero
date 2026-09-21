@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { sfx } from "../audio/sfx";
 import type { TokenId } from "../game";
-import { SECONDS_PER_SQUARE } from "../game";
+import { JUMP_SECONDS, SECONDS_PER_SQUARE } from "../game";
 import type { HexLayout } from "./hexLayout";
 import { pawnPosition } from "./hexLayout";
 import { pawnKnocks } from "./pawnKnocks";
@@ -35,8 +35,11 @@ export interface PawnProps {
 
 /** Squares per second while hopping: the pace the clock allows for. */
 const SPEED = 1 / SECONDS_PER_SQUARE;
+/** A leap is one step of the path, taken slowly. */
+const JUMP_SPEED = 1 / JUMP_SECONDS;
 const HOP_HEIGHT = 0.55;
-const JUMP_HEIGHT = 2.2;
+/** High enough to clear the whole board on the way to jail, seen from the wide shot that frames the leap. */
+const JUMP_HEIGHT = 4.5;
 /** How long a pawn wobbles after a die bumps it. */
 const KNOCK_SECONDS = 0.8;
 
@@ -87,7 +90,7 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     if (!node) return;
     const steps = path.current.length - 1;
     const wasMoving = progress.current < steps;
-    if (wasMoving) progress.current = Math.min(steps, progress.current + delta * SPEED);
+    if (wasMoving) progress.current = Math.min(steps, progress.current + delta * (isJump.current ? JUMP_SPEED : SPEED));
     const t = progress.current;
     const from = Math.floor(t);
     const frac = t - from;

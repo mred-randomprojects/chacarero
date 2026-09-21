@@ -54,6 +54,30 @@ export function zoomView(view: CameraView, factor: number, min = 3, max = 70): C
   return { position: [tx + dx * k, ty + dy * k, tz + dz * k], target: view.target };
 }
 
+/**
+ * Backs the camera off along its own line of sight so that something floating
+ * `ahead` units in front of it (a card held up to the screen) sits above
+ * `clearance`: at least `factor` further away, more when the camera is low.
+ * The direction is kept, so whatever it looked at stays centred.
+ */
+export function backOffView(view: CameraView, factor: number, ahead: number, clearance: number): CameraView {
+  const [px, py, pz] = view.position;
+  const [tx, ty, tz] = view.target;
+  const distance = Math.hypot(px - tx, py - ty, pz - tz);
+  if (distance < 1e-6) return view;
+  // Height lost per unit travelled along the view direction.
+  const drop = (py - ty) / distance;
+  const height = clearance + ahead * drop;
+  const needed = drop > 1e-6 ? (height - ty) / drop / distance : factor;
+  return zoomView(view, Math.max(factor, needed));
+}
+
+/** True when `a` is within `position`/`target` units of `b`: close enough that flying there would show nothing. */
+export function viewsMatch(a: CameraView, b: CameraView, position = 0.75, target = 0.5): boolean {
+  const gap = (u: readonly [number, number, number], v: readonly [number, number, number]) => Math.hypot(u[0] - v[0], u[1] - v[1], u[2] - v[2]);
+  return gap(a.position, b.position) <= position && gap(a.target, b.target) <= target;
+}
+
 /** Tilts the camera up or down around its target, clamped so it never goes below the table. */
 export function tiltView(view: CameraView, angle: number): CameraView {
   const [px, py, pz] = view.position;

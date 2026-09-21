@@ -12,6 +12,8 @@ import type { ActionRequest } from "./actionRequest";
 
 /** Seconds per pawn square: the scene hops at this pace, and the clock allows for it. No rush. */
 export const SECONDS_PER_SQUARE = 0.42;
+/** Seconds a leap (to jail) takes: one high arc across the board, slow enough to be seen whole. */
+export const JUMP_SECONDS = 1.6;
 /** Seconds the replay waits before a flight or a drop, so the camera can get there first. */
 export const CUE_LEAD_SECONDS = 0.4;
 
@@ -28,7 +30,8 @@ export function eventSeconds(event: GameEvent): number {
     case "log":
       return 2.0;
     case "move": {
-      const distance = event.kind === "jump" ? 1 : Math.abs(event.to - event.from) === 0 ? 0 : (event.to - event.from + 42) % 42;
+      if (event.kind === "jump") return 0.4 + JUMP_SECONDS;
+      const distance = Math.abs(event.to - event.from) === 0 ? 0 : (event.to - event.from + 42) % 42;
       const steps = event.kind === "backward" ? (event.from - event.to + 42) % 42 : distance;
       return 0.4 + steps * SECONDS_PER_SQUARE;
     }
