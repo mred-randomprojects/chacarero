@@ -28,8 +28,8 @@ export function TopBar({ state, roomCode, connection, onShowList, onTrade, onSet
         Turno {state.turn}
       </span>
       <div className="top-buttons">
-        <button type="button" onClick={onShowList} title="Mapa del tablero y lista de propiedades (L)">
-          Mapa <Key k="l" />
+        <button type="button" onClick={onShowList} title="Catastro: todas las escrituras y sus dueños, el mapa y la lista (L)">
+          Catastro <Key k="l" />
         </button>
         {onTrade && (
           <button type="button" onClick={onTrade} title="Proponer un canje (N)">

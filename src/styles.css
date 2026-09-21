@@ -1639,6 +1639,127 @@ button.link {
   opacity: 0.5;
 }
 
+/* The column beside the Catastro / map: the hovered card big, then the numbers. */
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.deed-peek {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.deed-peek .deed-card {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.deed-peek p {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.95rem;
+}
+
+.deed-peek-hint {
+  margin: 0;
+  min-height: 312px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+}
+
+/* The Catastro: the trade grid for the whole table, every slot readable. */
+.deed-grid.catastro {
+  align-self: start;
+  gap: 5px;
+}
+
+.deed-grid.catastro .deed-slot {
+  min-height: 64px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.deed-grid.catastro .deed-slot.free {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed rgba(0, 0, 0, 0.25);
+  color: var(--muted);
+}
+
+.deed-grid.catastro .deed-slot.free:hover {
+  background: #fff;
+  color: var(--ink);
+}
+
+.deed-grid.catastro .deed-slot.free .deed-slot-price {
+  color: #7a8fb0;
+}
+
+/* A held deed: the owner's colour down the left edge and their token in the corner; the band stays the property's. */
+.deed-grid.catastro .deed-slot.held {
+  box-shadow:
+    inset 5px 0 0 var(--player-color),
+    0 2px 5px rgba(0, 0, 0, 0.18);
+}
+
+.deed-grid.catastro .deed-slot.held:hover {
+  box-shadow:
+    inset 5px 0 0 var(--player-color),
+    0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.deed-slot-owner {
+  position: absolute;
+  top: 24%;
+  right: 2px;
+}
+
+.deed-slot-owner .token-icon {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.deed-slot-buildings {
+  position: absolute;
+  top: 27%;
+  left: 8px;
+  display: flex;
+  gap: 2px;
+}
+
+.deed-slot-buildings i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  background: #5cc8f2;
+  border: 1px solid var(--ink);
+}
+
+.deed-slot-buildings i.estancia {
+  width: 16px;
+  background: #f2c21c;
+}
+
+.deed-grid.catastro .deed-slot.held .deed-slot-name,
+.deed-grid.catastro .deed-slot.held .deed-slot-price {
+  padding-left: 8px;
+}
+
+.deed-grid.catastro .deed-slot-flag {
+  top: auto;
+  bottom: 3px;
+  right: 3px;
+}
+
 @media (max-width: 800px) {
   .map-layout {
     grid-template-columns: 1fr;

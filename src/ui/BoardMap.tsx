@@ -1,26 +1,32 @@
 import { useState } from "react";
-import type { GameState, Square } from "../game";
-import { DEEDS, SQUARES, deedName, deedsOwnedBy, getDeed, getToken, pesos } from "../game";
+import type { DeedId, GameState, Square } from "../game";
+import { DEEDS, SQUARES, deedName, deedsOwnedBy, getDeed, getPlayer, getToken, pesos } from "../game";
+import { layoutIndexFor } from "../scene/buildingSpots";
 import { bandColor } from "../scene/cardTextures";
 import type { TileLayout, Vec2 } from "../scene/hexLayout";
 import { pawnPosition } from "../scene/hexLayout";
 import { BOARD_LAYOUT } from "../scene/Board";
 import { PAWN_SPACING_RATIO } from "../scene/pawnSpots";
 import type { Dispatch } from "./ActionBar";
+import { Catastro } from "./Catastro";
+import { DeedCard } from "./DeedCard";
 import { PropertiesTable } from "./PropertiesList";
 import { TokenIcon } from "./TokenIcon";
 
+/** The overlay's tabs: the deed registry, the ring map, the management list. */
+export type BoardTab = "catastro" | "map" | "list";
+
 export interface BoardMapProps {
   readonly state: GameState;
+  readonly tab: BoardTab;
+  readonly onTab: (tab: BoardTab) => void;
   readonly onClose: () => void;
-  /** A square was clicked: select it (its panel opens) and close the map. */
+  /** A square was clicked: select it (its panel opens) and close the overlay. */
   readonly onSelect: (squareIndex: number) => void;
   readonly dispatch: Dispatch;
   readonly you: string | null;
   readonly busy: boolean;
 }
-
-type Tab = "map" | "list";
 
 const CREAM = "#f7f2e4";
 const CORNER = "#dfe8d3";
@@ -63,10 +69,11 @@ function textAngle(tile: TileLayout): number {
 
 /**
  * A flat map of the ring: every square with its colour band, the owner's
- * strip (grey and hatched when mortgaged), buildings, and a pin per player
- * on the square they stand on. Click a square to open its panel.
+ * strip (grey and hatched when mortgaged) with the owner's token on it,
+ * buildings, and a pin per player on the square they stand on. Hovering a
+ * deed shows its card beside the map; click a square to open its panel.
  */
-function HexMap({ state, onSelect }: { readonly state: GameState; readonly onSelect: (index: number) => void }) {
+function HexMap({ state, onSelect, onHover }: { readonly state: GameState; readonly onSelect: (index: number) => void; readonly onHover: (deedId: DeedId | null) => void }) {
   const layout = BOARD_LAYOUT;
   const spacing = layout.tileWidth * PAWN_SPACING_RATIO;
   const radius = layout.outerRadius + 1.2;
@@ -74,7 +81,7 @@ function HexMap({ state, onSelect }: { readonly state: GameState; readonly onSel
   const pins = state.players.filter((p) => !p.bankrupt);
 
   return (
-    <svg className="hex-map" viewBox={`${-radius} ${-radius} ${radius * 2} ${radius * 2}`} role="img" aria-label="Mapa del tablero">
+    <svg className="hex-map" viewBox={`${-radius} ${-radius} ${radius * 2} ${radius * 2}`} role="img" aria-label="Mapa del tablero" onMouseLeave={() => onHover(null)}>
       <defs>
         <pattern id="hatch" patternUnits="userSpaceOnUse" width="0.3" height="0.3" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="0.3" stroke={MORTGAGE} strokeWidth="0.12" />
@@ -91,8 +98,9 @@ function HexMap({ state, onSelect }: { readonly state: GameState; readonly onSel
         const depth = max.y - min.y;
         const owner = holding ? state.players.find((p) => p.id === holding.ownerId) : undefined;
         const labelAt = local(tile, 0, tile.isCorner ? 0 : min.y + depth * 0.42);
+        const ownerAt = local(tile, 0, min.y + depth * 0.2);
         return (
-          <g key={tile.index} className="map-tile" onClick={() => onSelect(tile.index)}>
+          <g key={tile.index} className="map-tile" onClick={() => onSelect(tile.index)} onMouseEnter={() => onHover(deed?.id ?? null)}>
             <title>
               {square.index}. {square.name}
               {deed ? ` · ${pesos(deed.price)}` : ""}
@@ -117,6 +125,15 @@ function HexMap({ state, onSelect }: { readonly state: GameState; readonly onSel
             <text x={labelAt.x} y={-labelAt.y} transform={`rotate(${textAngle(tile)} ${labelAt.x} ${-labelAt.y})`} fontSize={tile.isCorner ? 0.9 : 0.62} fontWeight="800" fill={INK} textAnchor="middle" dominantBaseline="middle">
               {square.index}
             </text>
+            {/* The owner as their token, so their colour is never mistaken for the property's band. */}
+            {owner && (
+              <g transform={`translate(${ownerAt.x} ${-ownerAt.y})`}>
+                <circle r="0.42" fill={owner.color} stroke="#fff" strokeWidth="0.06" />
+                <text fontSize="0.5" textAnchor="middle" dominantBaseline="central">
+                  {getToken(owner.token).icon}
+                </text>
+              </g>
+            )}
           </g>
         );
       })}
@@ -191,34 +208,68 @@ function MapStats({ state }: { readonly state: GameState }) {
   );
 }
 
-/** The board at a glance: a 2D map with a list view on the second tab. `L` opens it. */
-export function BoardMap({ state, onClose, onSelect, dispatch, you, busy }: BoardMapProps) {
-  const [tab, setTab] = useState<Tab>("map");
+/** The card of whatever deed the mouse is on, big, with who holds it; a hint when nothing is. */
+function DeedPeek({ state, deedId }: { readonly state: GameState; readonly deedId: DeedId | null }) {
+  if (deedId === null) return <p className="deed-peek-hint">Pasá el mouse por una escritura para verla grande; clic para abrir su casillero.</p>;
+  const holding = state.holdings[deedId];
+  const owner = holding ? getPlayer(state, holding.ownerId) : null;
+  return (
+    <div className="deed-peek">
+      <DeedCard state={state} deedId={deedId} width={220} />
+      <p>
+        {owner ? (
+          <>
+            <TokenIcon token={owner.token} size={18} /> <strong>{owner.name}</strong>
+            {holding?.mortgaged ? " · hipotecada" : holding?.estancia ? " · estancia" : holding && holding.chacras > 0 ? ` · ${holding.chacras} chacra${holding.chacras > 1 ? "s" : ""}` : ""}
+          </>
+        ) : (
+          "Libre: sigue en el Banco."
+        )}
+      </p>
+    </div>
+  );
+}
+
+const TABS: readonly { readonly id: BoardTab; readonly label: string }[] = [
+  { id: "catastro", label: "Catastro" },
+  { id: "map", label: "Mapa" },
+  { id: "list", label: "Lista" },
+];
+
+/**
+ * The table at a glance, `L` opens it: the Catastro (every deed in its slot,
+ * with its owner), the ring map, and the management list. Hovering a deed on
+ * the first two shows its card big.
+ */
+export function BoardMap({ state, tab, onTab, onClose, onSelect, dispatch, you, busy }: BoardMapProps) {
+  const [hovered, setHovered] = useState<DeedId | null>(null);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal board-map" onClick={(event) => event.stopPropagation()}>
         <header>
-          <h2>Tablero</h2>
+          <h2>Catastro</h2>
           <div className="tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === "map"} className={tab === "map" ? "active" : ""} onClick={() => setTab("map")}>
-              Mapa
-            </button>
-            <button type="button" role="tab" aria-selected={tab === "list"} className={tab === "list" ? "active" : ""} onClick={() => setTab("list")}>
-              Lista
-            </button>
+            {TABS.map(({ id, label }) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : ""} onClick={() => onTab(id)}>
+                {label}
+              </button>
+            ))}
           </div>
           <button type="button" className="close" onClick={onClose} aria-label="Cerrar">
             ×
           </button>
         </header>
         <div className="modal-body">
-          {tab === "map" ? (
-            <div className="map-layout">
-              <HexMap state={state} onSelect={onSelect} />
-              <MapStats state={state} />
-            </div>
-          ) : (
+          {tab === "list" ? (
             <PropertiesTable state={state} onSelect={onSelect} dispatch={dispatch} you={you} busy={busy} />
+          ) : (
+            <div className="map-layout">
+              {tab === "catastro" ? <Catastro state={state} onHover={setHovered} onSelect={(deedId) => onSelect(layoutIndexFor(deedId))} /> : <HexMap state={state} onSelect={onSelect} onHover={setHovered} />}
+              <aside className="map-side">
+                <DeedPeek state={state} deedId={hovered} />
+                <MapStats state={state} />
+              </aside>
+            </div>
           )}
         </div>
       </div>

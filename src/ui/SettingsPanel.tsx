@@ -49,7 +49,7 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
             (todo al doble de velocidad, nada se saltea) o hacen el paso inofensivo del momento (mover, levantar o aplicar la tarjeta, terminar
             el turno); nunca compran, ofertan ni aceptan un canje.
             Cámara: arrastrar gira · rueda acerca · ⌥+arrastrar mueve la mesa · ⌥+clic centra · doble clic en un casillero o una escritura acerca ·
-            ← → ↑ ↓ giran e inclinan · + − acercan · 1-6 el lugar de cada jugador · M mi lugar · 0 general · T desde arriba · L mapa · N negociar.
+            ← → ↑ ↓ giran e inclinan · + − acercan · 1-6 el lugar de cada jugador · M mi lugar · 0 general · T desde arriba · L catastro · N negociar.
           </p>
           <p className="credits">Sonidos: Kenney.nl (CC0).</p>
         </div>

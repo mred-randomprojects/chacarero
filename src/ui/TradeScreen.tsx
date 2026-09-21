@@ -1,10 +1,11 @@
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
-import type { Deed, DeedId, GameState, Player, Trade, TradeOffer } from "../game";
-import { DEEDS, PROVINCE_NAMES, ZONE_NAMES, canTradeDeed, checkTrade, deedName, getDeed, getPlayer, mortgageTransferFee, pesos, tradeBalance } from "../game";
+import type { DeedId, GameState, Player, Trade, TradeOffer } from "../game";
+import { DEEDS, canTradeDeed, checkTrade, deedName, getDeed, getPlayer, mortgageTransferFee, pesos, tradeBalance } from "../game";
 import { bandColor } from "../scene/cardTextures";
 import type { Dispatch } from "./ActionBar";
 import { DeedCard, Hand } from "./DeedCard";
+import { GRID_COLUMNS, GRID_ROWS, SLOTS, columnLabel, shortName } from "./deedGrid";
 import { Key } from "./Key";
 import { TokenIcon } from "./TokenIcon";
 
@@ -44,48 +45,6 @@ const CASH_STEPS = [500, 1_000, 5_000] as const;
 /** Face value of one side: the deeds' printed prices plus the cash. What was actually paid never matters. */
 function offerValue(offer: TradeOffer): number {
   return offer.deeds.reduce((sum, id) => sum + getDeed(id).price, 0) + offer.cash;
-}
-
-// ---------- the fixed grid every deed has a slot in ----------
-
-interface Slot {
-  readonly deed: Deed;
-  readonly column: number;
-  readonly row: number;
-}
-
-const PROVINCE_ORDER = ["formosa", "rioNegro", "salta", "mendoza", "santaFe", "tucuman", "cordoba", "buenosAires"] as const;
-const ZONE_ROW = { sur: 0, centro: 1, norte: 2 } as const;
-
-/** Columns are provinces in board order, then the railways and the companies; rows are zones. Same for every player. */
-const SLOTS: readonly Slot[] = (() => {
-  const slots: Slot[] = [];
-  let rail = 0;
-  let company = 0;
-  for (const deed of DEEDS) {
-    if (deed.kind === "campo") {
-      const column = PROVINCE_ORDER.indexOf(deed.province);
-      // Two-zone provinces skip the middle row so "norte" always sits on top.
-      const row = deed.province === "rioNegro" || deed.province === "tucuman" ? (deed.zone === "sur" ? 0 : 2) : ZONE_ROW[deed.zone];
-      slots.push({ deed, column, row });
-    } else if (deed.kind === "ferrocarril") slots.push({ deed, column: 8, row: rail++ });
-    else slots.push({ deed, column: 9, row: company++ });
-  }
-  return slots;
-})();
-const GRID_COLUMNS = 10;
-const GRID_ROWS = 4;
-
-function shortName(deed: Deed): string {
-  if (deed.kind === "campo") return ZONE_NAMES[deed.zone].replace("Zona ", "");
-  return deed.name.replace(/^Ferrocarril General /, "").replace(/^Compañía /, "").replace("Bartolomé ", "B. ");
-}
-
-function columnLabel(column: number): string {
-  if (column === 8) return "FF.CC.";
-  if (column === 9) return "Cías.";
-  const province = PROVINCE_ORDER[column];
-  return province ? PROVINCE_NAMES[province].replace("Buenos Aires", "Bs. As.") : "";
 }
 
 interface DeedGridProps {

@@ -28,6 +28,7 @@ import { PlayerCards } from "./ui/PlayerCards";
 import { Prompt } from "./ui/Prompt";
 import { UI_KEYS, actionForKey } from "./ui/hotkeys";
 import { canAct, primaryAction, tradeProposer } from "./ui/perspective";
+import type { BoardTab } from "./ui/BoardMap";
 import { BoardMap } from "./ui/BoardMap";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
@@ -96,7 +97,9 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const [selected, setSelected] = useState<number | null>(null);
   const [shaking, setShaking] = useState(false);
   const [throwing, setThrowing] = useState<DiceThrow | null>(null);
-  const [showList, setShowList] = useState(false);
+  /** The Catastro / map / list overlay, by tab; null when closed. */
+  const [overlay, setOverlay] = useState<BoardTab | null>(null);
+  const showList = overlay !== null;
   const [showSettings, setShowSettings] = useState(false);
   const [trade, setTrade] = useState<OpenTrade | null>(null);
   const [outcome, setOutcome] = useState<TradeOutcomeView | null>(null);
@@ -489,7 +492,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         return;
       }
       if (event.key === "Escape") {
-        setShowList(false);
+        setOverlay(null);
         setShowSettings(false);
         setTrade(null);
         closePanel();
@@ -503,7 +506,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       } else if (key === UI_KEYS.overview) lookAt(OVERVIEW);
       else if (key === UI_KEYS.topDown) lookAt(TOP_DOWN);
       else if (key === UI_KEYS.mySeat) flyToSeat(mySide);
-      else if (key === UI_KEYS.map) setShowList((v) => !v);
+      else if (key === UI_KEYS.map) setOverlay((v) => (v ? null : "catastro"));
       else if (key === UI_KEYS.trade) proposeTrade();
       else if (key === UI_KEYS.settings) setShowSettings((v) => !v);
       else if (busy || showList || showSettings || trade !== null || Date.now() - promptReadyAt.current < PROMPT_GRACE_MS) return;
@@ -557,7 +560,9 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   }, [walk, game]);
 
   const shown = selected ?? hovered;
-  const openList = () => setShowList(true);
+  const openCatastro = () => setOverlay("catastro");
+  /** Where selling and mortgaging happen: the list tab. */
+  const openList = () => setOverlay("list");
   const diceShaking = shaking || (session.shakingPlayerId !== null && session.shakingPlayerId !== you);
 
   // The dice on the felt: everyone looks at them where they landed, then they come up to the camera.
@@ -605,7 +610,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onDiceSettled={onDiceSettled}
       />
       <div className="left-column">
-        <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openList} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
+        <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openCatastro} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
       <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} />
@@ -650,16 +655,18 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onOverview={() => lookAt(OVERVIEW)}
         onTopDown={() => lookAt(TOP_DOWN)}
       />
-      {showList && (
+      {overlay && (
         <BoardMap
           state={game}
+          tab={overlay}
+          onTab={setOverlay}
           dispatch={dispatch}
           you={you}
           busy={busy}
-          onClose={() => setShowList(false)}
+          onClose={() => setOverlay(null)}
           onSelect={(index) => {
             setSelected(index);
-            setShowList(false);
+            setOverlay(null);
           }}
         />
       )}
