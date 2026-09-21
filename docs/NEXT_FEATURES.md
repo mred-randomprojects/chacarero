@@ -258,6 +258,63 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ---
 
+# Batch 3 (2026-09-21, second review — things batch 2 claimed and did not deliver)
+
+Maxi played again. Several batch-2 fixes were not actually working; this
+batch fixes them for real and adds programmatic verification (sampling the
+camera and pawn positions during a scripted run), not just screenshots.
+
+## C1. No seat flights; the seat view is an instant peek
+
+- [ ] C1.1 The director never flies to a player's seat by itself (not during the
+      opening throws, not anywhere): it stays on the pawns/the board.
+- [ ] C1.2 Looking at your own side (deeds and money) is a **snap**: the number
+      key / the player card / "Mi lugar" jump there instantly; pressing again
+      (or Escape) snaps back to where the camera was. No flight.
+
+## C2, C5, C8, C10. Pawns teleport and the camera does not follow the first player
+
+- [ ] C10.1 Pawns never teleport: the scene's pawn positions come from the
+      replayed view (the position changes when the move event is applied, not
+      when the state arrives). Test.
+- [ ] C2.1 The camera follows the walking pawn hop by hop for every player,
+      every turn — verified by sampling the camera target against the pawn
+      position during a scripted run.
+- [ ] C5.1 A plain click on the board (selecting a square) must not hand the
+      camera to the user; only a real drag or the wheel does. (This is why the
+      director died for one player and came back for the next.)
+- [ ] C8.1 The director cue at the start of a turn fires even when the same
+      player throws last in the opening and then starts.
+
+## C3. The landing is framed
+
+- [ ] C3.1 When the pawn arrives, the camera settles on the square it stopped on
+      before the landing is announced (works even if the chase was skipped).
+
+## C4, C9. Flights are visible from start to end, and followed
+
+- [ ] C4.1 A deed (or bills) flying to a seat never vanishes: the view applies
+      the event the moment the flight lands, so the card is on the table the
+      instant the flying one disappears.
+- [ ] C9.1 The camera frames both ends of a flight (from and to) and follows the
+      object; verified by sampling.
+
+## C6, C7. The lifted deed is a fixed-size 2D card; the Suerte card shows everywhere at once
+
+- [ ] C6.1 The deed on offer is an HTML image (same artwork) at a fixed size in
+      the centre-left of the screen with a float-up animation — never clipped
+      by the table.
+- [ ] C7.1 The small Suerte/Destino card in the action bar appears at the same
+      moment as the big one (both from the view's card on the table).
+
+## Verification
+
+- [ ] V.1 Dev hook exposes the camera and pawn trackers; a scripted browser run
+      through the opening, a roll, a walk, a landing, a buy and the deed flight
+      asserts that the camera target stays near the moving thing throughout.
+
+---
+
 ## Structural analysis
 
 What the requirements touch, from the bottom of the stack up:
@@ -295,6 +352,16 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-21 — batch 3 captured.** Root causes found by reading: (a) `Pawn`'s
+  "teleport when the state jumps" effect fired on every real-state change because
+  pawn positions came from `game`, not the view — the pawn jumped to its
+  destination, then walked from a stale start; (b) `OrbitControls.onStart`
+  fires on any canvas click, so selecting a square set `freeLook` and killed the
+  director until the next turn cue — and when the same player throws last in the
+  opening and starts, there is no cue at all; (c) the replay applied an event to
+  the view at the end of its hold, after the flying deed had already landed and
+  unmounted, leaving a gap with no card anywhere.
 
 - **2026-09-21 — batch 2 shipped; second look done.** Production build green;
   hot-seat and online (two tabs, opening throws) checked in the browser: the
