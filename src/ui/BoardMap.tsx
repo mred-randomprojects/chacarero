@@ -182,9 +182,9 @@ function MapStats({ state }: { readonly state: GameState }) {
         </ul>
       </section>
       <section>
-        <h3>Banco</h3>
+        <h3>Mazos</h3>
         <p>
-          {state.bank.chacras} chacras y {state.bank.estancias} estancias por vender · Suerte {state.decks.suerte.length} · Destino {state.decks.destino.length}
+          Suerte {state.decks.suerte.length} · Destino {state.decks.destino.length}
         </p>
       </section>
     </div>

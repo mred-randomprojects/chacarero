@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DeedId } from "../types";
-import { JAIL_BAIL, SALIDA_BONUS, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
+import { JAIL_BAIL, SALIDA_BONUS, STARTING_CASH } from "../constants";
 import { TOKEN_IDS } from "../tokens";
 import type { GameState, Holding, NewPlayer, Player } from "./state";
 import { activePlayer, createGame, currentPlayer, getPlayer } from "./state";
@@ -33,7 +33,8 @@ import {
   unmortgage,
   spendJailCard,
 } from "./actions";
-import { canBuildChacra, canTradeDeed, checkTrade, mortgageProceeds, mortgageTransferFee, rentFor, tradeBalance, unmortgageCost } from "./rules";
+import { camposOf } from "../deeds";
+import { canBuildChacra, canBuildEstancia, canTradeDeed, checkTrade, mortgageProceeds, mortgageTransferFee, rentFor, tradeBalance, unmortgageCost } from "./rules";
 
 const ANA: NewPlayer = { id: "ana", name: "Ana", token: "tractor" };
 const BETO: NewPlayer = { id: "beto", name: "Beto", token: "vaca" };
@@ -73,7 +74,6 @@ describe("createGame", () => {
     expect(state.phase).toEqual({ type: "awaitingRoll" });
     expect(state.decks.suerte).toHaveLength(16);
     expect(state.decks.destino).toHaveLength(16);
-    expect(state.bank).toEqual({ chacras: TOTAL_CHACRAS, estancias: TOTAL_ESTANCIAS });
   });
 
   it("can deal a few deeds to each player before the first roll", () => {
@@ -396,7 +396,6 @@ describe("building", () => {
     state = withProvince(state, "ana", FORMOSA);
     state = buildChacra(state, "formosa-sur");
     expect(state.holdings["formosa-sur"]?.chacras).toBe(1);
-    expect(state.bank.chacras).toBe(TOTAL_CHACRAS - 1);
     expect(currentPlayer(state).cash).toBe(STARTING_CASH - 1_000);
     expect(() => buildChacra(state, "formosa-sur")).toThrow(/parejo/);
     state = buildChacra(buildChacra(state, "formosa-centro"), "formosa-norte");
@@ -406,10 +405,8 @@ describe("building", () => {
 
   it("upgrades four chacras to an estancia and sells buildings at half price", () => {
     let state = withProvince(game(), "ana", FORMOSA, 4);
-    state = { ...state, bank: { chacras: TOTAL_CHACRAS - 12, estancias: TOTAL_ESTANCIAS } };
     state = buildEstancia(state, "formosa-sur");
     expect(state.holdings["formosa-sur"]).toMatchObject({ chacras: 0, estancia: true });
-    expect(state.bank).toEqual({ chacras: TOTAL_CHACRAS - 8, estancias: TOTAL_ESTANCIAS - 1 });
     expect(() => sellBuilding(state, "formosa-centro")).toThrow(/parejo/);
     state = sellBuilding(state, "formosa-sur");
     expect(state.holdings["formosa-sur"]).toMatchObject({ chacras: 4, estancia: false });
@@ -574,18 +571,21 @@ describe("edge cases", () => {
     expect(() => payBail(state)).toThrow();
   });
 
-  it("stops building when the bank runs out of chacras", () => {
-    let state = withProvince(game(), "ana", FORMOSA);
-    state = { ...state, bank: { chacras: 0, estancias: TOTAL_ESTANCIAS } };
-    expect(canBuildChacra(state, currentPlayer(state), "formosa-sur")).toMatchObject({ ok: false });
-    expect(() => buildChacra(state, "formosa-sur")).toThrow(/Banco/);
-  });
-
-  it("cannot sell an estancia back if the bank cannot hand out four chacras", () => {
-    let state = withProvince(game(), "ana", FORMOSA);
-    state = FORMOSA.reduce((s, id) => withHolding(s, id, { ownerId: "ana", estancia: true }), state);
-    state = { ...state, bank: { chacras: 3, estancias: TOTAL_ESTANCIAS - 3 } };
-    expect(() => sellBuilding(state, "formosa-sur")).toThrow(/Banco/);
+  it("never runs out of buildings: every province can be fully built at once", () => {
+    // 22 campos × 4 chacras = 88 chacras, far beyond the 32 in the box; the bank keeps selling.
+    const provinces = ["formosa", "rioNegro", "salta", "mendoza", "santaFe", "tucuman", "cordoba", "buenosAires"] as const;
+    let state = withPlayer(game(), "ana", { cash: 1_000_000 });
+    for (const province of provinces) state = withProvince(state, "ana", camposOf(province).map((c) => c.id), 4);
+    for (const province of provinces) {
+      for (const campo of camposOf(province)) {
+        expect(canBuildEstancia(state, currentPlayer(state), campo.id).ok).toBe(true);
+        state = buildEstancia(state, campo.id);
+      }
+    }
+    expect(Object.values(state.holdings).every((h) => h.estancia)).toBe(true);
+    // And selling an estancia always hands back four chacras.
+    state = sellBuilding(state, "formosa-sur");
+    expect(state.holdings["formosa-sur"]).toMatchObject({ chacras: 4, estancia: false });
   });
 
   it("does not let you build while you owe money you cannot cover, but lets you sell", () => {
@@ -637,12 +637,10 @@ describe("edge cases", () => {
     state = declareBankruptcy(state);
     expect(state.holdings["formosa-sur"]?.mortgaged).toBe(true);
     expect(state.holdings["fc-mitre"]?.ownerId).toBe("beto");
-    expect(state.bank.chacras).toBe(TOTAL_CHACRAS);
   });
 
   it("returns buildings to the bank when a player goes bankrupt", () => {
     let state = withProvince(game(), "ana", FORMOSA, 2);
-    state = { ...state, bank: { chacras: TOTAL_CHACRAS - 6, estancias: TOTAL_ESTANCIAS } };
     state = withHolding(state, "buenosAires-norte", { ownerId: "beto", estancia: true });
     state = withPlayer(state, "ana", { position: 37, cash: 10 });
     state = roll(state, undefined, [1, 2]);
@@ -656,7 +654,8 @@ describe("edge cases", () => {
     state = FORMOSA.reduce((s, id) => mortgage(s, id), state);
     expect(() => settlePayment(state)).toThrow();
     state = declareBankruptcy(state);
-    expect(state.bank.chacras).toBe(TOTAL_CHACRAS);
+    // Formosa went to Beto bare: the chacras were sold back, not handed over.
+    expect(FORMOSA.every((id) => state.holdings[id]?.ownerId === "beto" && state.holdings[id]?.chacras === 0)).toBe(true);
     expect(getPlayer(state, "beto").cash).toBe(STARTING_CASH + 10 + 3_000 + 450 + 450 + 540);
   });
 

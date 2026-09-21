@@ -1,5 +1,5 @@
 import type { Card, Deck, DeedId } from "../types";
-import { DEAL_DEEDS_MAX, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
+import { DEAL_DEEDS_MAX, STARTING_CASH } from "../constants";
 import { shuffledDeck } from "../cards";
 import { DEEDS } from "../deeds";
 import type { TokenId } from "../tokens";
@@ -142,7 +142,6 @@ export interface GameState {
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
   /** Card ids, top of the deck first. Cards held by players are absent. */
   readonly decks: { readonly suerte: readonly string[]; readonly destino: readonly string[] };
-  readonly bank: { readonly chacras: number; readonly estancias: number };
   /** Debts waiting to be settled, oldest first; the head is what `awaitingPayment` shows. */
   readonly pendingDebts: readonly Debt[];
   /** Deeds the bank still has to auction this turn (after a bankruptcy to the bank). */
@@ -255,7 +254,6 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
       suerte: shuffledDeck("suerte", random).map((c) => c.id),
       destino: shuffledDeck("destino", random).map((c) => c.id),
     },
-    bank: { chacras: TOTAL_CHACRAS, estancias: TOTAL_ESTANCIAS },
     phase: openingRoll ? { type: "openingRoll", contenders: players.map((p) => p.id), rolls: {} } : { type: "awaitingRoll" },
     dice: null,
     lastCard: null,

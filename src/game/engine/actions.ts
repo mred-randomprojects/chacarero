@@ -607,7 +607,6 @@ export function buildChacra(input: GameState, deedId: DeedId): GameState {
   if (deed.kind !== "campo" || !holding) throw new Error("unreachable");
   let next = transfer(state, who.id, deed.chacraCost, BANK, `una chacra en ${deedName(deed)}`);
   next = setHolding(next, deedId, { ...holding, chacras: holding.chacras + 1 });
-  next = { ...next, bank: { ...next.bank, chacras: next.bank.chacras - 1 } };
   return emit(next, { type: "building", deedId, chacras: holding.chacras + 1, estancia: false, text: `${who.name} construye una chacra en ${deedName(deed)}.` }, who.id);
 }
 
@@ -621,7 +620,6 @@ export function buildEstancia(input: GameState, deedId: DeedId): GameState {
   if (deed.kind !== "campo" || !holding) throw new Error("unreachable");
   let next = transfer(state, who.id, deed.estanciaCost, BANK, `la estancia de ${deedName(deed)}`);
   next = setHolding(next, deedId, { ...holding, chacras: 0, estancia: true });
-  next = { ...next, bank: { chacras: next.bank.chacras + MAX_CHACRAS_PER_CAMPO, estancias: next.bank.estancias - 1 } };
   return emit(next, { type: "building", deedId, chacras: 0, estancia: true, text: `${who.name} levanta una estancia en ${deedName(deed)}.` }, who.id);
 }
 
@@ -637,11 +635,9 @@ export function sellBuilding(input: GameState, deedId: DeedId): GameState {
   let next: GameState;
   if (holding.estancia) {
     next = setHolding(state, deedId, { ...holding, estancia: false, chacras: MAX_CHACRAS_PER_CAMPO });
-    next = { ...next, bank: { chacras: next.bank.chacras - MAX_CHACRAS_PER_CAMPO, estancias: next.bank.estancias + 1 } };
     next = emit(next, { type: "building", deedId, chacras: MAX_CHACRAS_PER_CAMPO, estancia: false, text: `${who.name} vende la estancia de ${deedName(deed)} al Banco.` }, who.id);
   } else {
     next = setHolding(state, deedId, { ...holding, chacras: holding.chacras - 1 });
-    next = { ...next, bank: { ...next.bank, chacras: next.bank.chacras + 1 } };
     next = emit(next, { type: "building", deedId, chacras: holding.chacras - 1, estancia: false, text: `${who.name} vende una chacra de ${deedName(deed)} al Banco.` }, who.id);
   }
   return bankPays(next, who.id, value, `El Banco le paga ${pesos(value)} a ${who.name}.`);
@@ -777,15 +773,12 @@ export function declareBankruptcy(input: GameState): GameState {
   let next = emit(state, { type: "bankrupt", playerId: debtor.id, text: `${debtor.name} quiebra. Sus propiedades pasan a ${partyName(state, to)}.` }, debtor.id);
   let cashToCreditor = debtor.cash;
   const toBank: DeedId[] = [];
-  let { chacras, estancias } = state.bank;
   for (const [id, holding] of Object.entries(state.holdings) as [DeedId, Holding][]) {
     if (holding.ownerId !== debtor.id) continue;
     const deed = getDeed(id);
     if (deed.kind === "campo" && (holding.estancia || holding.chacras > 0)) {
       // Buildings are sold back to the bank at half price; the cash goes to the creditor.
       cashToCreditor += holding.estancia ? (deed.estanciaCost + MAX_CHACRAS_PER_CAMPO * deed.chacraCost) / 2 : (holding.chacras * deed.chacraCost) / 2;
-      if (holding.estancia) estancias += 1;
-      else chacras += holding.chacras;
       next = setHolding(next, id, { ...holding, chacras: 0, estancia: false });
       next = emit(next, { type: "building", deedId: id, chacras: 0, estancia: false, text: `Las construcciones de ${deedName(deed)} vuelven al Banco.` }, debtor.id);
     }
@@ -798,7 +791,6 @@ export function declareBankruptcy(input: GameState): GameState {
       next = emit(next, { type: "deed", deedId: id, from: player(debtor.id), to: BANK, text: `${deedName(deed)} vuelve al Banco.` }, debtor.id);
     }
   }
-  next = { ...next, bank: { chacras, estancias } };
   next = updatePlayer(next, debtor.id, { cash: 0, bankrupt: true, getOutOfJailCards: 0 });
   if (cashToCreditor > 0) {
     if (to.type === "player") {

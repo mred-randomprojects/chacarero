@@ -13,7 +13,8 @@ tradicional (ver [FUENTES.md](FUENTES.md)).
   Río Negro y Tucumán solo tienen Sur y Norte), 4 ferrocarriles y 3 compañías
   (Compañía Petrolera, Bodega e Ingenio).
 - 16 tarjetas de Suerte y 16 de Destino.
-- 32 chacras y 12 estancias.
+- Chacras y estancias (la caja trae 32 y 12; en esta mesa el Banco nunca se
+  queda sin construcciones).
 - 2 dados y billetes de $10, $50, $100, $200, $500, $1.000, $2.000 y $5.000.
 
 ## Preparación

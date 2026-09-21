@@ -12,9 +12,7 @@ export const MAX_JAIL_TURNS = 3;
 export const HELPING_FINE = 800;
 /** Bank fee charged up-front when mortgaging or transferring a mortgaged deed. */
 export const MORTGAGE_INTEREST = 0.1;
-/** Buildings shipped in the box; the bank cannot sell more than these. */
-export const TOTAL_CHACRAS = 32;
-export const TOTAL_ESTANCIAS = 12;
+/** The bank never runs out of chacras or estancias (the box's 32 and 12 are not a rule at this table). */
 export const MAX_CHACRAS_PER_CAMPO = 4;
 /** Consecutive doubles that send you to the Comisaría. */
 export const DOUBLES_TO_JAIL = 3;

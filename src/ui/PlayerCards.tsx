@@ -85,9 +85,6 @@ export function PlayerCards({ state, cash, you, offline }: PlayerCardsProps) {
         <span className="pc-bank-icon">🏦</span>
         <div className="pc-body">
           <div className="pc-name">Banco</div>
-          <div className="pc-status">
-            {state.bank.chacras} chacras · {state.bank.estancias} estancias
-          </div>
         </div>
       </div>
     </div>
