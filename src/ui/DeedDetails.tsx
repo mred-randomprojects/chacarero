@@ -1,8 +1,9 @@
 import type { Deed } from "../game";
-import { pesos } from "../game";
+import { deedText, pesos } from "../game";
 
-/** The rent ladder and costs printed on a deed, as a table. */
+/** The rent ladder and costs printed on a deed, as a table; railways and companies also say it in words. */
 export function DeedDetails({ deed }: { readonly deed: Deed }) {
+  const text = deedText(deed);
   if (deed.kind === "campo") {
     return (
       <table className="rent">
@@ -41,14 +42,38 @@ export function DeedDetails({ deed }: { readonly deed: Deed }) {
   }
   if (deed.kind === "ferrocarril") {
     return (
+      <>
+        <p className="deed-text">{text}</p>
+        <table className="rent">
+          <tbody>
+            {deed.rentByCount.map((rent, i) => (
+              <tr key={i}>
+                <th>
+                  Con {i + 1} {i === 0 ? "ferrocarril" : "ferrocarriles"}
+                </th>
+                <td>{pesos(rent)}</td>
+              </tr>
+            ))}
+            <tr className="sep">
+              <th>Hipoteca</th>
+              <td>{pesos(deed.mortgage)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </>
+    );
+  }
+  return (
+    <>
+      <p className="deed-text">{text}</p>
       <table className="rent">
         <tbody>
-          {deed.rentByCount.map((rent, i) => (
+          {deed.diceMultiplierByCount.map((mult, i) => (
             <tr key={i}>
               <th>
-                Con {i + 1} {i === 0 ? "ferrocarril" : "ferrocarriles"}
+                Con {i + 1} {i === 0 ? "compañía" : "compañías"}
               </th>
-              <td>{pesos(rent)}</td>
+              <td>dados × {mult}</td>
             </tr>
           ))}
           <tr className="sep">
@@ -57,24 +82,6 @@ export function DeedDetails({ deed }: { readonly deed: Deed }) {
           </tr>
         </tbody>
       </table>
-    );
-  }
-  return (
-    <table className="rent">
-      <tbody>
-        {deed.diceMultiplierByCount.map((mult, i) => (
-          <tr key={i}>
-            <th>
-              Con {i + 1} {i === 0 ? "compañía" : "compañías"}
-            </th>
-            <td>dados × {mult}</td>
-          </tr>
-        ))}
-        <tr className="sep">
-          <th>Hipoteca</th>
-          <td>{pesos(deed.mortgage)}</td>
-        </tr>
-      </tbody>
-    </table>
+    </>
   );
 }

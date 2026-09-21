@@ -54,3 +54,10 @@ aparece dos veces en Destino en las dos fuentes, así que se mantiene.
 [docs/REGLAS.md](REGLAS.md) es una reescritura propia a partir del
 reglamento tal como lo resume Wikipedia y de los escaneos del reglamento
 original que circulan en Scribd/pdfcoffee.
+
+## Texto de las escrituras de ferrocarriles y compañías
+
+Las tarjetas físicas explican el alquiler en palabras además del cuadro. El
+texto que muestra el juego (`deedText` en `src/game/describe.ts`) se arma con
+los números verificados de arriba; la redacción es una reconstrucción a partir
+del reglamento, no una transcripción letra por letra de la tarjeta original.

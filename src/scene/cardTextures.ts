@@ -1,6 +1,6 @@
 import { CanvasTexture, SRGBColorSpace } from "three";
 import type { Card, Deed, Holding } from "../game";
-import { PROVINCE_COLORS, PROVINCE_NAMES, ZONE_NAMES, pesos } from "../game";
+import { PROVINCE_COLORS, PROVINCE_NAMES, ZONE_NAMES, deedText, pesos } from "../game";
 import { TILE_FONT } from "./tileTexture";
 
 const CARD_W = 240;
@@ -97,6 +97,21 @@ export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): Canvas
     ctx.textAlign = "right";
     ctx.fillText(value, CARD_W - 16, y);
     y += 22;
+  }
+
+  // Railways and companies explain their rent in words, as the physical card does.
+  const explanation = deedText(deed);
+  if (explanation) {
+    ctx.font = `500 13px ${TILE_FONT}`;
+    ctx.fillStyle = "#3a3631";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    y += 8;
+    for (const line of wrap(ctx, explanation, CARD_W - 32)) {
+      ctx.fillText(line, 16, y);
+      y += 16;
+    }
+    ctx.textBaseline = "middle";
   }
 
   // Buildings strip along the bottom.

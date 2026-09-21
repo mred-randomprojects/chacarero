@@ -2285,3 +2285,10 @@ kbd.key {
 button:disabled kbd.key {
   opacity: 0.4;
 }
+
+.deed-text {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--ink);
+}

@@ -1,7 +1,7 @@
 import { JAIL_BAIL, MAX_JAIL_TURNS, SALIDA_BONUS } from "./constants";
 import { deedName, getDeed } from "./deeds";
 import type { TradeOffer } from "./engine/state";
-import type { Square } from "./types";
+import type { Deed, Square } from "./types";
 
 /** Formats an amount the way the cards do: "$5.000". */
 export function pesos(amount: number): string {
@@ -40,6 +40,23 @@ export function describeSquare(square: Square): string {
     case "marchePreso":
       return "Vas directo a la Comisaría sin pasar por la Salida. Mientras estés preso no cobrás alquileres.";
   }
+}
+
+/**
+ * The explanation printed on a railway or company deed, as on the physical
+ * card, built from the deed's own numbers so the two can never disagree.
+ * Campos need none: their card is the rent ladder itself.
+ */
+export function deedText(deed: Deed): string | null {
+  if (deed.kind === "ferrocarril") {
+    const [one, two, three, four] = deed.rentByCount;
+    return `Alquiler ${pesos(one)}. Si el dueño tiene 2 ferrocarriles, ${pesos(two)}; con 3, ${pesos(three)}; con los 4, ${pesos(four)}.`;
+  }
+  if (deed.kind === "compania") {
+    const [one, two, three] = deed.diceMultiplierByCount;
+    return `Si el dueño tiene una sola compañía, el alquiler es ${one} veces lo que marcan los dados. Con 2 compañías, ${two} veces. Con las 3, ${three} veces.`;
+  }
+  return null;
 }
 
 /** One side of a trade in words: "Formosa Sur, Salta Norte y $2.000", or "nada". */
