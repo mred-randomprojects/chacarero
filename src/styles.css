@@ -1465,3 +1465,44 @@ button.link {
     bottom: 110px;
   }
 }
+
+/* ---------- opening roll ---------- */
+
+.prompt.opening {
+  border-left-color: var(--gold);
+}
+
+.opening-rolls {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.opening-rolls li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 1.05rem;
+}
+
+.opening-rolls li.up {
+  background: rgba(242, 194, 28, 0.25);
+  font-weight: 800;
+}
+
+.opening-rolls li.out {
+  opacity: 0.45;
+}
+
+.opening-rolls .name {
+  flex: 1;
+}
+
+.opening-rolls .roll {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

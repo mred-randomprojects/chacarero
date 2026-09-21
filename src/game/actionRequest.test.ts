@@ -12,7 +12,7 @@ const players = [
 
 describe("allowedPlayerFor", () => {
   it("only lets the player on turn roll, and the bidder on turn bid", () => {
-    let state = createGame({ players, random: () => 0.5 });
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     expect(allowedPlayerFor(state, { type: "rollDice" })).toBe("a");
     expect(allowedPlayerFor(state, { type: "buy" })).toBeNull();
     state = decline(roll(state, undefined, [1, 2]));
@@ -21,7 +21,7 @@ describe("allowedPlayerFor", () => {
   });
 
   it("lets the debtor act during someone else's turn", () => {
-    let state = createGame({ players, random: () => 0.5 });
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     state = { ...state, holdings: { "formosa-norte": { ownerId: "b", chacras: 0, estancia: true, mortgaged: false } }, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 10 } : p)) };
     state = roll(state, undefined, [1, 2]);
     expect(state.phase.type).toBe("awaitingPayment");
@@ -35,12 +35,12 @@ describe("trades", () => {
   const nothing = { deeds: [], cash: 500 };
 
   function pending(): GameState {
-    const state: GameState = { ...createGame({ players, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const state: GameState = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
     return proposeTrade(state, "b", offer, nothing);
   }
 
   it("lets the player who must act propose, and only the two parties answer", () => {
-    const start = { ...createGame({ players, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const start = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
     expect(allowedPlayerFor(start, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
     expect(allowedPlayerFor(start, { type: "acceptTrade" })).toBeNull();
     // Building is fine with the dice in the air; proposing a trade waits for the pawn.
@@ -72,7 +72,7 @@ describe("trades", () => {
 
 describe("applyActionRequest", () => {
   it("routes every request to the engine with the supplied dice", () => {
-    let state = createGame({ players, random: () => 0.5 });
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     state = applyActionRequest(state, { type: "rollDice" }, [2, 3]);
     expect(state.dice).toEqual([2, 3]);
     expect(state.phase).toEqual({ type: "awaitingMove" });
@@ -86,7 +86,7 @@ describe("applyActionRequest", () => {
 
 describe("timing", () => {
   it("gives every phase but game over a clock and a default", () => {
-    const state = createGame({ players, random: () => 0.5 });
+    const state = createGame({ players, openingRoll: false, random: () => 0.5 });
     expect(phaseSeconds(state)).toBe(DECISION_SECONDS);
     expect(defaultAction(state)).toEqual({ type: "rollDice" });
     const over = { ...state, phase: { type: "gameOver" as const, winnerId: "a" } };
@@ -95,14 +95,14 @@ describe("timing", () => {
   });
 
   it("sums replay time from the events, scaled", () => {
-    const state = roll(createGame({ players, random: () => 0.5 }), undefined, [1, 2]);
+    const state = roll(createGame({ players, openingRoll: false, random: () => 0.5 }), undefined, [1, 2]);
     const seconds = replaySeconds(state.events);
     expect(seconds).toBeGreaterThan(2);
     expect(replaySeconds(state.events, 2)).toBeCloseTo(seconds * 2, 6);
   });
 
   it("auto-resolves a debt by selling, mortgaging, then paying or busting", () => {
-    let state = createGame({ players, random: () => 0.5 });
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     state = {
       ...state,
       holdings: {
@@ -127,7 +127,7 @@ describe("timing", () => {
 describe("primaryAction (Space/Enter)", () => {
   it("names the highlighted button of each prompt, only for the screen that may press it", async () => {
     const { primaryAction } = await import("../ui/perspective");
-    let state = createGame({ players, random: () => 0.5 });
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     expect(primaryAction(state, null)).toBeNull(); // dice: hold Space instead
     state = applyActionRequest(state, { type: "rollDice" }, [1, 2]);
     expect(primaryAction(state, null)).toEqual({ type: "movePawn" });

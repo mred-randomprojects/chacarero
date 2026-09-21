@@ -319,11 +319,12 @@ function applyCard(state: GameState, card: Card): GameState {
  */
 export function rollDice(input: GameState, random: () => number = Math.random, forced?: Dice): GameState {
   const state = begin(input);
-  const phase = expectPhase(state, "awaitingRoll", "awaitingJailDecision");
+  const phase = expectPhase(state, "openingRoll", "awaitingRoll", "awaitingJailDecision");
   const dice: Dice = forced ?? [1 + Math.floor(random() * 6), 1 + Math.floor(random() * 6)];
   const doubles = dice[0] === dice[1];
   const current = currentPlayer(state);
   let next: GameState = { ...state, dice, lastCard: null, rollAgain: false };
+  if (phase.type === "openingRoll") return openingRoll(next, phase, dice);
   next = log(next, `${current.name} tira ${dice[0]} y ${dice[1]}${doubles ? " (¡doble!)" : ""}.`);
 
   if (phase.type === "awaitingJailDecision") {
@@ -358,6 +359,36 @@ export function rollDice(input: GameState, random: () => number = Math.random, f
     next = { ...next, rollAgain: true };
   }
   return setPhase(next, { type: "awaitingMove" });
+}
+
+/**
+ * One throw of the opening round. When every contender has thrown, the
+ * highest starts; a tie sends the tied players into another round.
+ */
+function openingRoll(state: GameState, phase: Extract<Phase, { type: "openingRoll" }>, dice: Dice): GameState {
+  const current = currentPlayer(state);
+  const total = dice[0] + dice[1];
+  const rolls = { ...phase.rolls, [current.id]: total };
+  let next = log(state, `${current.name} saca ${dice[0]} y ${dice[1]}: ${total}.`);
+  const pending = phase.contenders.filter((id) => rolls[id] === undefined);
+  const [nextId] = pending;
+  if (nextId !== undefined) {
+    next = { ...next, currentPlayerIndex: next.players.findIndex((p) => p.id === nextId) };
+    return setPhase(next, { type: "openingRoll", contenders: phase.contenders, rolls });
+  }
+  const best = Math.max(...phase.contenders.map((id) => rolls[id] ?? 0));
+  const winners = phase.contenders.filter((id) => rolls[id] === best);
+  const [winnerId] = winners;
+  if (winners.length > 1 || winnerId === undefined) {
+    const names = winners.map((id) => getPlayer(next, id).name);
+    next = log(next, `Empate en ${best} entre ${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}: tiran de nuevo.`);
+    next = { ...next, currentPlayerIndex: next.players.findIndex((p) => p.id === winners[0]) };
+    return setPhase(next, { type: "openingRoll", contenders: winners, rolls: {} });
+  }
+  const winner = getPlayer(next, winnerId);
+  next = { ...next, currentPlayerIndex: next.players.findIndex((p) => p.id === winnerId) };
+  next = emit(next, { type: "turn", playerId: winnerId, text: `¡Empieza ${winner.name} con ${best}!` }, winnerId);
+  return setPhase(next, { type: "awaitingRoll" });
 }
 
 /** Walks the pawn as many squares as the dice show and resolves where it lands. */

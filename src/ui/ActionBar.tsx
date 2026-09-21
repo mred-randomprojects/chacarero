@@ -62,7 +62,7 @@ function Dice({ dice }: { readonly dice: readonly [number, number] | null }) {
 export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
   const player = currentPlayer(state);
   const { phase } = state;
-  const rolling = phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
+  const rolling = phase.type === "openingRoll" || phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision";
   const mine = canAct(state, you, { type: "rollDice" });
 
   return (
@@ -88,7 +88,7 @@ export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, on
           ) : (
             <>
               <DiceButton
-                label={phase.type === "awaitingJailDecision" ? "Tirar (doble para salir)" : "Tirar los dados"}
+                label={phase.type === "awaitingJailDecision" ? "Tirar (doble para salir)" : phase.type === "openingRoll" ? "Tirar para ver quién empieza" : "Tirar los dados"}
                 shaking={shaking}
                 disabled={!canRoll && !shaking}
                 onShakeStart={onShakeStart}

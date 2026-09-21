@@ -39,7 +39,7 @@ const BETO: NewPlayer = { id: "beto", name: "Beto", token: "vaca" };
 const CARLA: NewPlayer = { id: "carla", name: "Carla", token: "caballo" };
 
 function game(players = [ANA, BETO]): GameState {
-  return createGame({ players, random: () => 0.5 });
+  return createGame({ players, openingRoll: false, random: () => 0.5 });
 }
 
 function withPlayer(state: GameState, id: string, patch: Partial<Player>): GameState {
@@ -76,7 +76,7 @@ describe("createGame", () => {
   });
 
   it("can deal a few deeds to each player before the first roll", () => {
-    const state = createGame({ players: [ANA, BETO, CARLA], dealDeeds: 3, random: () => 0.5 });
+    const state = createGame({ players: [ANA, BETO, CARLA], dealDeeds: 3, openingRoll: false, random: () => 0.5 });
     const holdings = Object.values(state.holdings);
     expect(holdings).toHaveLength(9);
     for (const p of [ANA, BETO, CARLA]) expect(holdings.filter((h) => h.ownerId === p.id)).toHaveLength(3);
@@ -94,6 +94,29 @@ describe("createGame", () => {
     const a = createGame({ players: [ANA, BETO], dealDeeds: 4, random });
     const b = createGame({ players: [ANA, BETO], dealDeeds: 4, random });
     expect(Object.keys(a.holdings).sort()).not.toEqual(Object.keys(b.holdings).sort());
+  });
+
+  it("opens with a throw for who starts: highest wins, ties throw again among themselves", () => {
+    let state = createGame({ players: [ANA, BETO, CARLA], random: () => 0.5 });
+    expect(state.phase).toEqual({ type: "openingRoll", contenders: ["ana", "beto", "carla"], rolls: {} });
+    expect(currentPlayer(state).id).toBe("ana");
+    expect(() => movePawn(state)).toThrow();
+    state = rollDice(state, undefined, [3, 3]);
+    expect(currentPlayer(state).id).toBe("beto");
+    state = rollDice(state, undefined, [4, 2]);
+    expect(currentPlayer(state).id).toBe("carla");
+    state = rollDice(state, undefined, [1, 2]);
+    // Ana and Beto tied on 6: only they throw again.
+    expect(state.phase).toEqual({ type: "openingRoll", contenders: ["ana", "beto"], rolls: {} });
+    expect(currentPlayer(state).id).toBe("ana");
+    state = rollDice(state, undefined, [1, 1]);
+    state = rollDice(state, undefined, [5, 1]);
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    expect(currentPlayer(state).id).toBe("beto");
+    expect(state.events.at(-1)).toMatchObject({ type: "turn", playerId: "beto" });
+    expect(state.turn).toBe(1);
+    // Nobody moved or was charged during the opening.
+    expect(state.players.every((p) => p.position === 0 && p.cash === STARTING_CASH)).toBe(true);
   });
 
   it("rejects fewer than 2 or more than 6 players", () => {

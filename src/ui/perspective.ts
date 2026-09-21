@@ -70,6 +70,7 @@ export function primaryAction(state: GameState, you: string | null): ActionReque
     case "turnEnd":
       action = { type: "endTurn" };
       break;
+    case "openingRoll":
     case "awaitingRoll":
     case "awaitingJailDecision":
     case "gameOver":

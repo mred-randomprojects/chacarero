@@ -179,7 +179,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     [throwing, enqueue],
   );
 
-  const canRoll = !busy && (game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision") && (you === null || currentPlayerId === you);
+  const canRoll = !busy && (game.phase.type === "openingRoll" || game.phase.type === "awaitingRoll" || game.phase.type === "awaitingJailDecision") && (you === null || currentPlayerId === you);
 
   // When the current prompt became answerable, so a key still hammering through the banners does not answer it.
   const promptReadyAt = useRef(0);

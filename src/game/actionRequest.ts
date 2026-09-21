@@ -73,6 +73,7 @@ export function allowedPlayerFor(state: GameState, request: ActionRequest): stri
   if (phase.type === "gameOver") return null;
   switch (request.type) {
     case "rollDice":
+      return phase.type === "openingRoll" || phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision" ? currentPlayer(state).id : null;
     case "payBail":
     case "spendJailCard":
       return phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision" ? currentPlayer(state).id : null;

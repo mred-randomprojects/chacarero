@@ -161,7 +161,7 @@ export function unmortgageCost(deedId: DeedId): number {
  */
 export function canManageHoldings(state: GameState): boolean {
   const { type } = state.phase;
-  return type !== "auction" && type !== "awaitingTradeResponse" && type !== "gameOver";
+  return type !== "openingRoll" && type !== "auction" && type !== "awaitingTradeResponse" && type !== "gameOver";
 }
 
 // ---------- trades ----------

@@ -65,6 +65,7 @@ export function phaseSeconds(state: GameState): number | null {
 /** What the table does for an absent or undecided player when the clock runs out. */
 export function defaultAction(state: GameState): ActionRequest | null {
   switch (state.phase.type) {
+    case "openingRoll":
     case "awaitingRoll":
     case "awaitingJailDecision":
       return { type: "rollDice" };

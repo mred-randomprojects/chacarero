@@ -74,6 +74,8 @@ export interface Trade {
  * `currentPlayerIndex`; there is never more than one pending decision.
  */
 export type Phase =
+  /** Before the first turn: everyone throws once, highest starts; ties throw again. */
+  | { readonly type: "openingRoll"; readonly contenders: readonly string[]; readonly rolls: Readonly<Record<string, number>> }
   | { readonly type: "awaitingRoll" }
   | { readonly type: "awaitingJailDecision" }
   /** Dice are on the table; the player still has to move the pawn. */
@@ -181,6 +183,8 @@ export interface CreateGameOptions {
   readonly players: readonly NewPlayer[];
   readonly startingCash?: number;
   readonly dealDeeds?: number;
+  /** Whether the table throws for who starts (default); off, the first player in the list rolls first. */
+  readonly openingRoll?: boolean;
   readonly random?: () => number;
 }
 
@@ -213,7 +217,7 @@ function dealHoldings(players: readonly NewPlayer[], perPlayer: number, random: 
  * decks shuffled, optionally a few deeds each, and the first player in the
  * list to roll.
  */
-export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, random = Math.random }: CreateGameOptions): GameState {
+export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, openingRoll = true, random = Math.random }: CreateGameOptions): GameState {
   if (players.length < 2 || players.length > 6) {
     throw new Error("Chacarero se juega de 2 a 6 jugadores");
   }
@@ -250,7 +254,7 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
       destino: shuffledDeck("destino", random).map((c) => c.id),
     },
     bank: { chacras: TOTAL_CHACRAS, estancias: TOTAL_ESTANCIAS },
-    phase: { type: "awaitingRoll" },
+    phase: openingRoll ? { type: "openingRoll", contenders: players.map((p) => p.id), rolls: {} } : { type: "awaitingRoll" },
     dice: null,
     lastCard: null,
     rollAgain: false,

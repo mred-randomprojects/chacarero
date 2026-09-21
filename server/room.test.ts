@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DECISION_SECONDS } from "../src/game";
+import type { Room } from "./room";
 import {
   RoomError,
   applyRequest,
@@ -27,8 +28,11 @@ function lobby() {
   return joinRoom(createRoom("ABCD", ana, NOW), beto, NOW);
 }
 
-function playing() {
-  return startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
+/** A started room, with the opening roll already decided so Ana rolls first. */
+function playing(): Room {
+  const room = startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
+  if (!room.game) throw new Error("no game");
+  return { ...room, game: { ...room.game, phase: { type: "awaitingRoll" } } };
 }
 
 describe("lobby", () => {
@@ -103,6 +107,29 @@ describe("dealt deeds", () => {
 });
 
 describe("playing", () => {
+  it("throws for who starts before the first turn, re-throwing ties", () => {
+    let room = startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
+    expect(room.game?.phase).toEqual({ type: "openingRoll", contenders: [ana.playerId, beto.playerId], rolls: {} });
+    expect(() => applyRequest(room, beto.playerId, room.seq, { type: "rollDice" }, NOW, [1, 2])).toThrow(/turno/);
+    room = applyRequest(room, ana.playerId, room.seq, { type: "rollDice" }, NOW, [2, 3]);
+    expect(room.game?.phase).toMatchObject({ type: "openingRoll", rolls: { [ana.playerId]: 5 } });
+    expect(room.game?.currentPlayerIndex).toBe(1);
+    // Beto ties: both throw again, Ana first.
+    room = applyRequest(room, beto.playerId, room.seq, { type: "rollDice" }, NOW, [1, 4]);
+    expect(room.game?.phase).toEqual({ type: "openingRoll", contenders: [ana.playerId, beto.playerId], rolls: {} });
+    expect(room.game?.currentPlayerIndex).toBe(0);
+    // The clock fires the default (a throw) for absent players during the opening too.
+    room = fireDeadline(room, room.deadline ?? 0, [1, 1]);
+    expect(room.game?.phase).toMatchObject({ type: "openingRoll", rolls: { [ana.playerId]: 2 } });
+    room = applyRequest(room, beto.playerId, room.seq, { type: "rollDice" }, NOW, [6, 6]);
+    expect(room.game?.phase).toEqual({ type: "awaitingRoll" });
+    expect(room.game?.currentPlayerIndex).toBe(1);
+    expect(room.game?.events.at(-1)).toMatchObject({ type: "turn", playerId: beto.playerId });
+    // A double in the opening is just a high throw: no extra turn.
+    expect(room.game?.rollAgain).toBe(false);
+    expect(room.game?.players[1]?.doublesThisTurn).toBe(0);
+  });
+
   it("applies requests from the right player with the right seq", () => {
     let room = playing();
     expect(() => applyRequest(room, beto.playerId, 1, { type: "rollDice" }, NOW, [1, 2])).toThrow(/turno/);
