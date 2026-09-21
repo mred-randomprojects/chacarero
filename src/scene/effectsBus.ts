@@ -5,11 +5,8 @@ export type SceneEffect =
   | { readonly kind: "money"; readonly from: Party; readonly to: Party; readonly amount: number }
   | { readonly kind: "deed"; readonly deedId: DeedId; readonly from: Party; readonly to: Party }
   | { readonly kind: "building"; readonly deedId: DeedId; readonly chacras: number; readonly estancia: boolean; readonly removed: boolean }
-  | { readonly kind: "revealCard"; readonly deck: "suerte" | "destino"; readonly cardId: string; readonly playerId: string }
-  | { readonly kind: "hideCard" }
-  /** Lifts a deed from the bank pile up in front of the camera (a free deed on offer); stays until `hideDeed`. */
-  | { readonly kind: "presentDeed"; readonly deedId: DeedId }
-  | { readonly kind: "hideDeed" };
+  /** The card drawn at this step rises from its deck; resolves once it faces the viewer. (What is on the table is a prop of Effects.) */
+  | { readonly kind: "revealCard"; readonly deck: "suerte" | "destino"; readonly cardId: string; readonly playerId: string };
 
 export interface ActiveEffect {
   readonly id: number;

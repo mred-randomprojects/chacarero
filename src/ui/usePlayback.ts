@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DeedId, GameEvent, GameState, Holding } from "../game";
+import type { GameEvent, GameState } from "../game";
 import { sfx } from "../audio/sfx";
 import { effectsBus } from "../scene/effectsBus";
 import { pawnPath } from "../scene/pawnPath";
+import type { ViewState } from "./playbackView";
+import { applyEvent, beginReplay, viewOf } from "./playbackView";
 
-/** What the table shows right now; lags behind the real state while events replay. */
-export interface ViewState {
-  readonly cash: Readonly<Record<string, number>>;
-  readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
-}
+export type { ViewState } from "./playbackView";
 
 export interface Walk {
   readonly id: number;
@@ -31,17 +29,13 @@ export interface Playback {
   /** The pawn walk in progress, for the scene. */
   readonly walk: Walk | null;
   /** Feed the events of a new state (call right after an action). */
-  readonly enqueue: (before: GameState, after: GameState) => void;
+  readonly enqueue: (after: GameState) => void;
   /** Resets the view to a state without replaying anything. */
   readonly reset: (state: GameState) => void;
   /** Finishes the current step at once. */
   readonly skip: () => void;
   /** The scene reports the walking pawn has arrived. */
   readonly onPawnArrive: () => void;
-}
-
-export function viewOf(state: GameState): ViewState {
-  return { cash: Object.fromEntries(state.players.map((p) => [p.id, p.cash])), holdings: state.holdings };
 }
 
 /** Minimum seconds a step stays on screen (before scaling by the banner setting). */
@@ -70,39 +64,6 @@ function baseSeconds(event: GameEvent): number {
   }
 }
 
-function applyEvent(view: ViewState, event: GameEvent, finalState: GameState): ViewState {
-  switch (event.type) {
-    case "transfer": {
-      const cash = { ...view.cash };
-      if (event.from.type === "player") cash[event.from.playerId] = (cash[event.from.playerId] ?? 0) - event.amount;
-      if (event.to.type === "player") cash[event.to.playerId] = (cash[event.to.playerId] ?? 0) + event.amount;
-      return { ...view, cash };
-    }
-    case "deed": {
-      const holdings = { ...view.holdings };
-      if (event.to.type === "player") {
-        const final = finalState.holdings[event.deedId];
-        holdings[event.deedId] = { ownerId: event.to.playerId, chacras: 0, estancia: false, mortgaged: final?.mortgaged ?? false };
-      } else {
-        delete holdings[event.deedId];
-      }
-      return { ...view, holdings };
-    }
-    case "building": {
-      const holding = view.holdings[event.deedId];
-      if (!holding) return view;
-      return { ...view, holdings: { ...view.holdings, [event.deedId]: { ...holding, chacras: event.chacras, estancia: event.estancia } } };
-    }
-    case "mortgage": {
-      const holding = view.holdings[event.deedId];
-      if (!holding) return view;
-      return { ...view, holdings: { ...view.holdings, [event.deedId]: { ...holding, mortgaged: event.mortgaged } } };
-    }
-    default:
-      return view;
-  }
-}
-
 /**
  * Replays the events of each action one at a time: shows the banner, runs
  * the matching animation (bills flying, a card sliding, the pawn walking),
@@ -110,7 +71,7 @@ function applyEvent(view: ViewState, event: GameEvent, finalState: GameState): V
  * the replay is over, so everyone at the table follows what happened.
  */
 export function usePlayback(initial: GameState | null, options: PlaybackOptions): Playback {
-  const [view, setView] = useState<ViewState>(() => (initial ? viewOf(initial) : { cash: {}, holdings: {} }));
+  const [view, setView] = useState<ViewState>(() => (initial ? viewOf(initial) : { cash: {}, holdings: {}, phase: { type: "gameOver", winnerId: "" }, cardOnTable: null, deedOnOffer: null }));
   const [current, setCurrent] = useState<GameEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const [walk, setWalk] = useState<Walk | null>(null);
@@ -200,14 +161,15 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
   }, [animate]);
 
   const enqueue = useCallback(
-    (before: GameState, after: GameState) => {
-      // The face-up card goes back once applied; a trade proposed meanwhile leaves it on the table.
-      if (before.phase.type === "awaitingCardAck" && after.phase.type !== "awaitingTradeResponse") void effectsBus.request({ kind: "hideCard" });
+    (after: GameState) => {
       if (after.events.length === 0) {
         viewRef.current = viewOf(after);
         setView(viewRef.current);
         return;
       }
+      // What the new state no longer holds up (the card just applied, the deed just bought) goes down at once.
+      viewRef.current = beginReplay(viewRef.current, after);
+      setView(viewRef.current);
       queue.current.push(...after.events.map((event) => ({ event, final: after })));
       void run();
     },

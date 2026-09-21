@@ -9,7 +9,6 @@ import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
 import type { FlightStyle } from "./scene/CameraRig";
 import type { DiceThrow } from "./scene/Dice";
-import { effectsBus } from "./scene/effectsBus";
 import { diceHurry } from "./scene/pawnKnocks";
 import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
@@ -97,7 +96,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const { view, walk, enqueue, reset, skip, onPawnArrive } = playback;
   const busy = playback.busy || throwing !== null;
   const previous = useRef<{ game: GameState; seq: number } | null>(null);
-  const pendingReplay = useRef<{ before: GameState; after: GameState } | null>(null);
+  const pendingReplay = useRef<GameState | null>(null);
 
   // Errors from the session (server refusals) and from here (toasts) share one banner.
   useEffect(() => {
@@ -193,24 +192,16 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     const landing = game.moves.at(-1)?.to;
     if (landing !== undefined) setSelected(landing);
     if (session.lastAction === "rollDice" && game.dice) {
-      pendingReplay.current = { before: before.game, after: game };
+      pendingReplay.current = game;
       setShaking(false);
       setThrowing({ id: seq, values: game.dice, seed: seq });
       return;
     }
-    enqueue(before.game, game);
+    enqueue(game);
   }, [game, seq, session.lastAction, enqueue, reset]);
 
-  // A free deed on offer (or under the hammer): lift it from the bank pile in front of everyone until it is decided.
-  // Bids replay as banners; the card stays up through them rather than dropping and rising on every bid.
-  const offeredDeed = game.phase.type === "auction" ? game.phase.auction.deedId : !busy && game.phase.type === "awaitingBuyDecision" ? game.phase.deedId : null;
-  useEffect(() => {
-    if (!offeredDeed) return;
-    void effectsBus.request({ kind: "presentDeed", deedId: offeredDeed });
-    return () => {
-      void effectsBus.request({ kind: "hideDeed" });
-    };
-  }, [offeredDeed]);
+  // A free deed on offer (or under the hammer) is lifted in front of everyone; the table's own view says when.
+  const offeredDeed = view.deedOnOffer;
 
   const onDiceSettled = useCallback(
     (id: number) => {
@@ -218,7 +209,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       setThrowing(null);
       const pending = pendingReplay.current;
       pendingReplay.current = null;
-      if (pending) enqueue(pending.before, pending.after);
+      if (pending) enqueue(pending);
     },
     [throwing, enqueue],
   );
@@ -270,13 +261,14 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     tradeCounter.current += 1;
     setTrade({ id: tradeCounter.current, mode: { kind: "review", trade: game.phase.trade } });
   }, [game.phase]);
-  // A state change invalidates any draft; once the proposal has been announced, the player who must answer sees it big.
+  // A state change invalidates any draft.
+  useEffect(() => setTrade(null), [seq]);
+  // Once the table has announced the proposal, the player who must answer sees it big.
+  const proposalShown = view.phase.type === "awaitingTradeResponse" ? view.phase.trade : null;
   useEffect(() => {
-    if (busy) return;
-    if (game.phase.type === "awaitingTradeResponse" && (you === null || you === game.phase.trade.toId)) reviewTrade();
-    else setTrade(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the state settles
-  }, [seq, busy]);
+    if (proposalShown && (you === null || you === proposalShown.toId)) reviewTrade();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the table shows a proposal
+  }, [proposalShown]);
 
   const startShake = useCallback(() => {
     if (!canRoll) return;
@@ -399,6 +391,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         goTo={goTo}
         followPawn={settings.followPawn && walk !== null && !(director && freeLook)}
         onUserControl={() => setFreeLook(true)}
+        deedOnOffer={offeredDeed}
+        cardOnTable={view.cardOnTable}
         diceSide={shakingSeat}
         throwerId={session.shakingPlayerId ?? currentPlayerId}
         shaking={diceShaking}

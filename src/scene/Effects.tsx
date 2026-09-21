@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import { DoubleSide, Quaternion, Vector3 } from "three";
 import type { Card, DeedId } from "../game";
-import { ALL_CARDS, getDeed } from "../game";
+import { getDeed } from "../game";
 import type { Anchors } from "./anchors";
 import { deedAnchor, moneyAnchor, partyYaw } from "./anchors";
 import { billTexture } from "./billTextures";
@@ -15,9 +15,36 @@ import { sfx } from "../audio/sfx";
 
 export interface EffectsProps {
   readonly anchors: Anchors;
+  /** Deed lifted in front of everyone (a free deed on offer, or under the hammer), from the table's view. */
+  readonly deedOnOffer: DeedId | null;
+  /** Suerte/Destino card face up on the table, from the table's view. */
+  readonly cardOnTable: Card | null;
 }
 
-const CARDS_BY_ID = new Map(ALL_CARDS.map((c) => [c.id, c]));
+/**
+ * Something shown on the table that plays an exit animation before it goes:
+ * the prop that drives it may already be null while `hiding` runs.
+ */
+interface Shown<T> {
+  readonly item: T;
+  readonly hiding: boolean;
+}
+
+/** Keeps `item` mounted after the prop drops it, flagged `hiding`, until the component reports it is gone. */
+function useShown<T>(item: T | null, same: (a: T, b: T) => boolean): [Shown<T> | null, () => void] {
+  const [shown, setShown] = useState<Shown<T> | null>(item ? { item, hiding: false } : null);
+  useEffect(() => {
+    setShown((current) => {
+      if (item) return current && same(current.item, item) && !current.hiding ? current : { item, hiding: false };
+      return current && !current.hiding ? { ...current, hiding: true } : current;
+    });
+  }, [item, same]);
+  const gone = useCallback(() => setShown((current) => (current?.hiding ? null : current)), []);
+  return [shown, gone];
+}
+
+const sameCard = (a: Card, b: Card) => a.id === b.id;
+const sameDeed = (a: DeedId, b: DeedId) => a === b;
 
 function easeOutCubic(x: number): number {
   return 1 - Math.pow(1 - x, 3);
@@ -36,34 +63,18 @@ function arc(from: Vector3, to: Vector3, k: number, height: number): Vector3 {
  * deed cards flying between the bank and the seats, buildings dropping onto
  * tiles, and the face-up Suerte/Destino card hovering over the board.
  */
-export function Effects({ anchors }: EffectsProps) {
+export function Effects({ anchors, deedOnOffer, cardOnTable }: EffectsProps) {
   const [active, setActive] = useState<readonly ActiveEffect[]>([]);
   useEffect(() => effectsBus.subscribe(setActive), []);
 
-  const [shownCard, setShownCard] = useState<{ card: Card; hiding: ActiveEffect | null } | null>(null);
-  const [shownDeed, setShownDeed] = useState<{ deedId: DeedId; hiding: ActiveEffect | null } | null>(null);
+  const [shownCard, cardGone] = useShown(cardOnTable, sameCard);
+  const [shownDeed, deedGone] = useShown(deedOnOffer, sameDeed);
+  // A reveal requested for a card that is not (or no longer) on the table has nothing to animate.
   useEffect(() => {
     for (const entry of active) {
-      if (entry.effect.kind === "revealCard") {
-        const card = CARDS_BY_ID.get(entry.effect.cardId);
-        if (card) setShownCard((current) => current?.card.id === card.id ? current : { card, hiding: null });
-      }
-      if (entry.effect.kind === "hideCard") setShownCard((current) => (current ? { ...current, hiding: entry } : null));
-      if (entry.effect.kind === "presentDeed") {
-        const { deedId } = entry.effect;
-        // Presenting again while the last card is still dropping: that drop is over, the card comes straight back up.
-        if (shownDeed?.hiding) shownDeed.hiding.resolve();
-        setShownDeed((current) => (current?.deedId === deedId && !current.hiding ? current : { deedId, hiding: null }));
-      }
-      if (entry.effect.kind === "hideDeed") setShownDeed((current) => (current ? { ...current, hiding: entry } : null));
+      if (entry.effect.kind === "revealCard" && (!shownCard || shownCard.hiding || shownCard.item.id !== entry.effect.cardId)) entry.resolve();
     }
-    // A hide with nothing shown resolves immediately.
-    for (const entry of active) {
-      if (entry.effect.kind === "hideCard" && !shownCard) entry.resolve();
-      if (entry.effect.kind === "hideDeed" && !shownDeed) entry.resolve();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- shownCard/shownDeed read for the no-op case only
-  }, [active]);
+  }, [active, shownCard]);
 
   return (
     <group>
@@ -83,22 +94,14 @@ export function Effects({ anchors }: EffectsProps) {
       })}
       {shownCard && (
         <ChanceCard
-          card={shownCard.card}
-          revealing={active.find((e) => e.effect.kind === "revealCard" && e.effect.cardId === shownCard.card.id) ?? null}
+          key={shownCard.item.id}
+          card={shownCard.item}
+          revealing={active.find((e) => e.effect.kind === "revealCard" && e.effect.cardId === shownCard.item.id) ?? null}
           hiding={shownCard.hiding}
-          onHidden={() => setShownCard(null)}
+          onHidden={cardGone}
         />
       )}
-      {shownDeed && (
-        <PresentedDeed
-          key={shownDeed.deedId}
-          anchors={anchors}
-          deedId={shownDeed.deedId}
-          presenting={active.find((e) => e.effect.kind === "presentDeed" && e.effect.deedId === shownDeed.deedId) ?? null}
-          hiding={shownDeed.hiding}
-          onHidden={() => setShownDeed(null)}
-        />
-      )}
+      {shownDeed && <PresentedDeed key={shownDeed.item} anchors={anchors} deedId={shownDeed.item} hiding={shownDeed.hiding} onHidden={deedGone} />}
     </group>
   );
 }
@@ -108,8 +111,7 @@ export function Effects({ anchors }: EffectsProps) {
 interface PresentedDeedProps {
   readonly anchors: Anchors;
   readonly deedId: DeedId;
-  readonly presenting: ActiveEffect | null;
-  readonly hiding: ActiveEffect | null;
+  readonly hiding: boolean;
   readonly onHidden: () => void;
 }
 
@@ -125,7 +127,7 @@ const DEED_SCALE = 2.0;
  * the camera so the whole table sees what is on offer. It tracks the camera
  * while up, and drops back onto the pile when the decision is made.
  */
-function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: PresentedDeedProps) {
+function PresentedDeed({ anchors, deedId, hiding, onHidden }: PresentedDeedProps) {
   const camera = useThree((s) => s.camera);
   const mesh = useRef<Mesh>(null);
   const texture = useMemo(() => deedCardTexture(getDeed(deedId), { ownerId: "", chacras: 0, estancia: false, mortgaged: false }, 3), [deedId]);
@@ -171,10 +173,7 @@ function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: Presen
       node.position.copy(arc(hover.current, pile, e, 1));
       node.quaternion.copy(hoverQuat.current).slerp(flat, e);
       node.scale.setScalar(DEED_SCALE + (1 - DEED_SCALE) * e);
-      if (k >= 1) {
-        hiding.resolve();
-        onHidden();
-      }
+      if (k >= 1) onHidden();
       return;
     }
     const k = Math.min(1, t.current / PRESENT_SECONDS);
@@ -183,10 +182,7 @@ function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: Presen
     node.position.copy(arc(start.position, hover.current, e, 2.5 * (1 - (start.scale - 1) / (DEED_SCALE - 1))));
     node.quaternion.copy(start.quaternion).slerp(hoverQuat.current, e);
     node.scale.setScalar(start.scale + (DEED_SCALE - start.scale) * e);
-    if (k >= 1 && !presented.current) {
-      presented.current = true;
-      presenting?.resolve();
-    }
+    if (k >= 1) presented.current = true;
   });
 
   return (
@@ -377,8 +373,9 @@ function BuildingDrop({ anchors, deedId, chacras, estancia, removed, onDone }: B
 
 interface ChanceCardProps {
   readonly card: Card;
+  /** The replay step waiting for the card to come up, if any. */
   readonly revealing: ActiveEffect | null;
-  readonly hiding: ActiveEffect | null;
+  readonly hiding: boolean;
   readonly onHidden: () => void;
 }
 
@@ -434,10 +431,7 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
     if (hiding) {
       node.position.copy(arc(hover.current, slot, e, 1.2));
       node.quaternion.copy(facing).slerp(flat, e);
-      if (k >= 1) {
-        hiding.resolve();
-        onHidden();
-      }
+      if (k >= 1) onHidden();
       return;
     }
     node.position.copy(arc(drawn, hover.current, e, 1.5));

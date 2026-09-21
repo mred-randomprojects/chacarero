@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import type { Anchors } from "./anchors";
 import type { BoardProps } from "./Board";
 import { BOARD_LAYOUT, Board, SLAB_MARGIN, TABLE_Y } from "./Board";
+import type { EffectsProps } from "./Effects";
 import { Effects } from "./Effects";
 import type { CameraRigProps } from "./CameraRig";
 import { CameraRig } from "./CameraRig";
@@ -13,7 +14,7 @@ import { pawnWorld, throwTarget } from "./pawnSpots";
 import { seatFrame } from "./seats";
 import { useFontsReady } from "./useFontsReady";
 
-export interface SceneProps extends BoardProps, CameraRigProps {
+export interface SceneProps extends BoardProps, CameraRigProps, Omit<EffectsProps, "anchors"> {
   /** Side of the player who holds the dice. */
   readonly diceSide: number;
   /** Whose pawn the dice are thrown at (the player rolling). */
@@ -27,7 +28,7 @@ export interface SceneProps extends BoardProps, CameraRigProps {
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene({ goTo, followPawn, onUserControl, diceSide, throwerId, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
+export function Scene({ goTo, followPawn, onUserControl, diceSide, throwerId, shaking, throwing, onDiceSettled, deedOnOffer, cardOnTable, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
   const obstacles = useMemo<readonly PawnObstacle[]>(() => board.pawns.map((pawn, slot) => ({ id: pawn.id, position: pawnWorld(BOARD_LAYOUT, pawn.position, slot) })), [board.pawns]);
   const thrower = board.pawns.find((p) => p.id === throwerId);
@@ -63,7 +64,7 @@ export function Scene({ goTo, followPawn, onUserControl, diceSide, throwerId, sh
       {fontsReady && (
         <>
           <Board {...board} />
-          <Effects anchors={anchors} />
+          <Effects anchors={anchors} deedOnOffer={deedOnOffer} cardOnTable={cardOnTable} />
           <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} target={target} obstacles={obstacles} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
         </>
       )}
