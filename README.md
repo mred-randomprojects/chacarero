@@ -38,10 +38,13 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   tarjetas de los jugadores, abajo de la pantalla), las escrituras van del
   Banco a tu lado, las chacras caen sobre el campo. `Enter` o un clic en el
   aviso apura el paso (o saltea la caminata del peón).
-- **Espacio / Enter** hacen la acción destacada del momento: mover el peón,
-  levantar o aplicar la tarjeta, comprar, pagar, ofertar el mínimo, aceptar
-  un canje, terminar el turno. (Con los dados en la mano, Espacio los mezcla;
-  durante un aviso, lo apura.)
+- **Teclas**: cada botón muestra la suya (`Comprar [C]`, `Mandar a remate
+  [R]`, `Pagar [P]`, `Ofertar [B]`, `Pasar [X]`, `Aceptar [A]`, `Rechazar
+  [X]`, `Contraofertar [O]`, `Negociar [N]`, `Mapa [L]`…). **Espacio / Enter**
+  solo hacen el paso inofensivo del momento: mover el peón, levantar o
+  aplicar la tarjeta, terminar el turno; nunca compran, ofertan ni aceptan un
+  canje. (Con los dados en la mano, Espacio los mezcla; durante un aviso, lo
+  apura.)
 - **Cámara**: por defecto todas las pantallas ven lo mismo: al empezar cada
   turno la cámara vuela (sube, y baja) hasta el peón del jugador de turno,
   sigue al peón cuando camina y las tarjetas y los dados se le ponen
@@ -84,7 +87,7 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   construir, vender o hipotecar. `L` abre la lista completa de propiedades.
 - **Canjes**: en cualquier momento de tu turno (con los dados en la mesa,
   con una tarjeta levantada, y sobre todo antes de pagar una deuda) podés
-  proponerle un canje a otro jugador con `C`, el botón **Canjear** o desde
+  proponerle un canje a otro jugador con `N`, el botón **Negociar** o desde
   la escritura que querés. La pantalla de canje ocupa todo: primero elegís
   con quién (una ficha grande por jugador), después dos mitades, *Ofrecés* y
   *Pedís*, con las escrituras de cada uno en una grilla fija (las que tiene,

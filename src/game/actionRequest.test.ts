@@ -130,7 +130,7 @@ describe("timing", () => {
 });
 
 describe("primaryAction (Space/Enter)", () => {
-  it("names the highlighted button of each prompt, only for the screen that may press it", async () => {
+  it("advances the harmless steps, only for the screen that may act, and never spends money", async () => {
     const { primaryAction } = await import("../ui/perspective");
     let state = createGame({ players, openingRoll: false, random: () => 0.5 });
     expect(primaryAction(state, null)).toBeNull(); // dice: hold Space instead
@@ -139,18 +139,42 @@ describe("primaryAction (Space/Enter)", () => {
     expect(primaryAction(state, "a")).toEqual({ type: "movePawn" });
     expect(primaryAction(state, "b")).toBeNull();
     state = applyActionRequest(state, { type: "movePawn" });
-    expect(primaryAction(state, "a")).toEqual({ type: "buy" });
-    // Cannot afford it: the button is disabled, so no action.
-    const broke = { ...state, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 100 } : p)) };
-    expect(primaryAction(broke, "a")).toBeNull();
-    state = applyActionRequest(state, { type: "decline" });
-    expect(primaryAction(state, "b")).toEqual({ type: "bid", amount: 100 });
+    // A free deed on offer: Space must not buy it.
+    expect(state.phase.type).toBe("awaitingBuyDecision");
     expect(primaryAction(state, "a")).toBeNull();
+    state = applyActionRequest(state, { type: "decline" });
+    // Nor bid.
+    expect(primaryAction(state, "b")).toBeNull();
     state = applyActionRequest(applyActionRequest(applyActionRequest(state, { type: "passBid" }), { type: "passBid" }), { type: "passBid" });
     expect(state.phase).toEqual({ type: "turnEnd" });
     expect(primaryAction(state, "a")).toEqual({ type: "endTurn" });
     const proposed = proposeTrade({ ...state, holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 500 });
-    expect(primaryAction(proposed, "b")).toEqual({ type: "acceptTrade" });
+    // Nor accept a deal.
+    expect(primaryAction(proposed, "b")).toBeNull();
     expect(primaryAction(proposed, "a")).toBeNull();
+  });
+});
+
+describe("action hotkeys", () => {
+  it("gives every decision its own letter, only when the button would be enabled, and never collides with the camera keys", async () => {
+    const { actionForKey, actionHotkeys, UI_KEYS } = await import("../ui/hotkeys");
+    const reserved = new Set([...Object.values(UI_KEYS), "1", "2", "3", "4", "5", "6", " "]);
+    let state = createGame({ players, openingRoll: false, random: () => 0.5 });
+    state = applyActionRequest(applyActionRequest(state, { type: "rollDice" }, [1, 2]), { type: "movePawn" });
+    expect(actionForKey(state, "a", "c")).toEqual({ type: "buy" });
+    expect(actionForKey(state, "a", "C")).toEqual({ type: "buy" });
+    expect(actionForKey(state, "a", "r")).toEqual({ type: "decline" });
+    expect(actionForKey(state, "b", "c")).toBeNull();
+    const broke = { ...state, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 100 } : p)) };
+    expect(actionForKey(broke, "a", "c")).toBeNull();
+    expect(actionForKey(broke, "a", "r")).toEqual({ type: "decline" });
+    const auction = applyActionRequest(state, { type: "decline" });
+    expect(actionForKey(auction, "b", "b")).toEqual({ type: "bid", amount: 100 });
+    expect(actionForKey(auction, "b", "x")).toEqual({ type: "passBid" });
+    const proposed = proposeTrade({ ...auction, phase: { type: "turnEnd" }, holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 500 });
+    expect(actionForKey(proposed, "b", "a")).toEqual({ type: "acceptTrade" });
+    expect(actionForKey(proposed, "b", "x")).toEqual({ type: "rejectTrade" });
+    expect(actionForKey(proposed, "a", "x")).toEqual({ type: "cancelTrade" });
+    for (const s of [state, auction, proposed]) for (const you of ["a", "b", null]) for (const hotkey of actionHotkeys(s, you)) expect(reserved.has(hotkey.key)).toBe(false);
   });
 });

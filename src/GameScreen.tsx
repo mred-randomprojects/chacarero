@@ -24,7 +24,8 @@ import { LogPanel } from "./ui/LogPanel";
 import { MoneyFlights } from "./ui/MoneyFlights";
 import { PlayerCards } from "./ui/PlayerCards";
 import { Prompt } from "./ui/Prompt";
-import { primaryAction, tradeProposer } from "./ui/perspective";
+import { UI_KEYS, actionForKey } from "./ui/hotkeys";
+import { canAct, primaryAction, tradeProposer } from "./ui/perspective";
 import { BoardMap } from "./ui/BoardMap";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
@@ -382,12 +383,20 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       if (key >= "1" && key <= "6") {
         const seat = seats[Number(key) - 1];
         if (seat) flyToSeat(seat.side);
-      } else if (key === "0") lookAt(OVERVIEW);
-      else if (key === "t") lookAt(TOP_DOWN);
-      else if (key === "m") flyToSeat(mySide);
-      else if (key === "l") setShowList((v) => !v);
-      else if (key === "c") proposeTrade();
-      else if (key === ",") setShowSettings((v) => !v);
+      } else if (key === UI_KEYS.overview) lookAt(OVERVIEW);
+      else if (key === UI_KEYS.topDown) lookAt(TOP_DOWN);
+      else if (key === UI_KEYS.mySeat) flyToSeat(mySide);
+      else if (key === UI_KEYS.map) setShowList((v) => !v);
+      else if (key === UI_KEYS.trade) proposeTrade();
+      else if (key === UI_KEYS.settings) setShowSettings((v) => !v);
+      else if (busy || showList || showSettings || trade !== null || Date.now() - promptReadyAt.current < PROMPT_GRACE_MS) return;
+      else if (key === "o" && game.phase.type === "awaitingTradeResponse" && canAct(game, you, { type: "counterTrade", gives: NO_OFFER, receives: NO_OFFER })) counterTrade();
+      else if (key === "v" && game.phase.type === "awaitingTradeResponse") reviewTrade();
+      else {
+        // The letter printed on the button: buy, auction, pay, bid, pass, accept, reject…
+        const action = actionForKey(game, you, key);
+        if (action) dispatch(action);
+      }
     };
     const onUp = (event: KeyboardEvent) => {
       if (event.key === " ") releaseDice();
@@ -401,7 +410,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
+  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>

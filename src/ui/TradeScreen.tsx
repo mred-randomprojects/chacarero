@@ -5,6 +5,7 @@ import { DEEDS, PROVINCE_NAMES, ZONE_NAMES, canTradeDeed, checkTrade, deedName, 
 import { bandColor } from "../scene/cardTextures";
 import type { Dispatch } from "./ActionBar";
 import { DeedDetails } from "./DeedDetails";
+import { Key } from "./Key";
 import { TokenIcon } from "./TokenIcon";
 
 /** A trade being put together on this screen, before it is sent. */
@@ -333,20 +334,20 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
               responder ? (
                 <>
                   <button type="button" className="primary big" disabled={busy || !check.ok} title={check.ok ? "" : check.reason} onClick={() => dispatch({ type: "acceptTrade" })}>
-                    🤝 Aceptar el canje
+                    🤝 Aceptar el canje <Key k="a" />
                   </button>
                   <button type="button" className="big" disabled={busy} onClick={onCounter}>
-                    Contraofertar
+                    Contraofertar <Key k="o" />
                   </button>
                   <button type="button" className="danger big" disabled={busy} onClick={() => dispatch({ type: "rejectTrade" })}>
-                    Rechazar
+                    Rechazar <Key k="x" />
                   </button>
                 </>
               ) : proposer ? (
                 <>
                   <p className="waiting-for">Esperando a que {partner.name} conteste…</p>
                   <button type="button" disabled={busy} onClick={() => dispatch({ type: "cancelTrade" })}>
-                    Retirar la propuesta
+                    Retirar la propuesta <Key k="x" />
                   </button>
                   <button type="button" onClick={onClose}>
                     Mirar la mesa

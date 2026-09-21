@@ -1,3 +1,5 @@
+import { Key } from "./Key";
+
 export type CameraMode = "following" | "free" | "off";
 
 export interface CameraBarProps {
@@ -16,13 +18,13 @@ export function CameraBar({ mode, onFollow, onToggleDirector, onMySeat, onOvervi
   return (
     <div className="camera-bar">
       <button type="button" onClick={onMySeat} title="Sentarse en el lugar del jugador de turno (M)">
-        Mi lugar
+        Mi lugar <Key k="m" />
       </button>
       <button type="button" onClick={onOverview} title="Vista general (0)">
-        General
+        General <Key k="0" />
       </button>
       <button type="button" onClick={onTopDown} title="Desde arriba (T)">
-        Arriba
+        Arriba <Key k="t" />
       </button>
       {mode === "free" ? (
         <button type="button" className="rejoin" onClick={onFollow} title="Volver a ver lo mismo que la mesa">

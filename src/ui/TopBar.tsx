@@ -1,4 +1,5 @@
 import type { GameState } from "../game";
+import { Key } from "./Key";
 
 export interface TopBarProps {
   readonly state: GameState;
@@ -28,15 +29,15 @@ export function TopBar({ state, roomCode, connection, onShowList, onTrade, onSet
       </span>
       <div className="top-buttons">
         <button type="button" onClick={onShowList} title="Mapa del tablero y lista de propiedades (L)">
-          Mapa
+          Mapa <Key k="l" />
         </button>
         {onTrade && (
-          <button type="button" onClick={onTrade} title="Proponer un canje (C)">
-            Canjear
+          <button type="button" onClick={onTrade} title="Proponer un canje (N)">
+            Negociar <Key k="n" />
           </button>
         )}
         <button type="button" onClick={onSettings} title="Ajustes (,)" aria-label="Ajustes">
-          ⚙
+          ⚙ <Key k="," />
         </button>
         <button type="button" onClick={onLeave} title="Dejar la mesa">
           Salir

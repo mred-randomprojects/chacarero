@@ -7,6 +7,7 @@ import { bandColor } from "../scene/cardTextures";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./OfferItems";
 import { useNow } from "./useNow";
+import { Key } from "./Key";
 import { TokenIcon } from "./TokenIcon";
 
 export interface PromptProps {
@@ -107,11 +108,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
-                Mover {total} casilleros
+                Mover {total} casilleros <Key k=" " />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>
-                  Canjear
+                  Negociar <Key k="n" />
                 </button>
               )}
             </div>
@@ -134,11 +135,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
-                Levantar la tarjeta
+                Levantar la tarjeta <Key k=" " />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>
-                  Canjear
+                  Negociar <Key k="n" />
                 </button>
               )}
             </div>
@@ -161,11 +162,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
-                Aplicar
+                Aplicar <Key k=" " />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>
-                  Canjear
+                  Negociar <Key k="n" />
                 </button>
               )}
             </div>
@@ -200,17 +201,17 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
             {mine(action) ? (
               <div className="buttons">
                 <button type="button" className="primary" disabled={player.cash < deed.price} onClick={() => dispatch(action)}>
-                  Comprar por {pesos(deed.price)}
+                  Comprar por {pesos(deed.price)} <Key k="c" />
                 </button>
                 <button type="button" className="danger" onClick={() => dispatch({ type: "decline" })}>
-                  Mandar a remate
+                  Mandar a remate <Key k="r" />
                 </button>
                 <button type="button" onClick={onManage}>
-                  Mis propiedades
+                  Mapa <Key k="l" />
                 </button>
                 {canTrade && (
                   <button type="button" onClick={onTrade}>
-                    Canjear
+                    Negociar <Key k="n" />
                   </button>
                 )}
               </div>
@@ -236,14 +237,14 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
-                Pagar {pesos(phase.amount)}
+                Pagar {pesos(phase.amount)} <Key k="p" />
               </button>
               <button type="button" onClick={() => dispatch({ type: "chooseDraw" })}>
-                Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"}
+                Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"} <Key k="e" />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>
-                  Canjear
+                  Negociar <Key k="n" />
                 </button>
               )}
             </div>
@@ -271,14 +272,14 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" disabled={missing > 0} onClick={() => dispatch(action)}>
-                Pagar
+                Pagar <Key k="p" />
               </button>
               <button type="button" onClick={onManage}>
-                Vender / hipotecar
+                Vender / hipotecar <Key k="l" />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>
-                  Canjear
+                  Negociar <Key k="n" />
                 </button>
               )}
               <button type="button" className="danger" disabled={!stuck || missing <= 0} onClick={() => dispatch({ type: "declareBankruptcy" })}>
@@ -317,11 +318,11 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
             <div className="buttons">
               {steps.map((amount) => (
                 <button key={amount} type="button" className={amount === min ? "primary" : ""} disabled={amount > bidder.cash} onClick={() => dispatch({ type: "bid", amount })}>
-                  {pesos(amount)}
+                  {pesos(amount)} {amount === min && <Key k="b" />}
                 </button>
               ))}
               <button type="button" className="danger" onClick={() => dispatch(action)}>
-                Pasar
+                Pasar <Key k="x" />
               </button>
             </div>
           ) : (
@@ -358,16 +359,16 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           {mine(accept) ? (
             <div className="buttons">
               <button type="button" className="primary" disabled={!check.ok} title={check.ok ? "" : check.reason} onClick={() => dispatch(accept)}>
-                Aceptar
+                Aceptar <Key k="a" />
               </button>
               <button type="button" onClick={onCounter}>
-                Contraofertar
+                Contraofertar <Key k="o" />
               </button>
               <button type="button" className="danger" onClick={() => dispatch({ type: "rejectTrade" })}>
-                Rechazar
+                Rechazar <Key k="x" />
               </button>
               <button type="button" onClick={onReview}>
-                Ver en grande
+                Ver en grande <Key k="v" />
               </button>
             </div>
           ) : mine(cancel) ? (
@@ -375,10 +376,10 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               {waiting(accept)}
               <div className="buttons">
                 <button type="button" onClick={() => dispatch(cancel)}>
-                  Retirar la propuesta
+                  Retirar la propuesta <Key k="x" />
                 </button>
                 <button type="button" onClick={onReview}>
-                  Ver en grande
+                  Ver en grande <Key k="v" />
                 </button>
               </div>
             </>
@@ -387,7 +388,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               {waiting(accept)}
               <div className="buttons">
                 <button type="button" onClick={onReview}>
-                  Ver en grande
+                  Ver en grande <Key k="v" />
                 </button>
               </div>
             </>
@@ -408,14 +409,14 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <p>Todavía podés construir, vender, hipotecar o proponer un canje.</p>
               <div className="buttons">
                 <button type="button" className="primary" onClick={() => dispatch(action)}>
-                  Terminar turno
+                  Terminar turno <Key k=" " />
                 </button>
                 <button type="button" onClick={onManage}>
-                  Mis propiedades
+                  Mapa <Key k="l" />
                 </button>
                 {canTrade && (
                   <button type="button" onClick={onTrade}>
-                    Canjear
+                    Negociar <Key k="n" />
                   </button>
                 )}
               </div>

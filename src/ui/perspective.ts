@@ -1,5 +1,5 @@
 import type { ActionRequest, GameState } from "../game";
-import { MIN_BID_INCREMENT, allowedPlayerFor, checkTrade, currentPlayer, getDeed, getPlayer } from "../game";
+import { allowedPlayerFor, getPlayer } from "../game";
 
 /**
  * Whether this screen may send `action` now. At a shared table (`you` null)
@@ -33,12 +33,13 @@ export function tradeProposer(state: GameState, you: string | null): string | nu
 }
 
 /**
- * The highlighted button of the current prompt, as an action, when this
- * screen may press it right now: move the pawn, apply the card, buy, pay,
- * the minimum bid, accept the trade, end the turn. Null when there is no
- * prompt (the dice are handled by holding Space), when it is not this
- * screen's call, or when the button would be disabled. Mirrors the
- * `disabled` conditions of the primary buttons in Prompt.
+ * What Space/Enter do right now, when this screen may act: only the
+ * harmless steps — move the pawn, lift or apply the card, end the turn.
+ * Never a decision with consequences (buying, bidding, paying, accepting a
+ * deal): those have their own letters (see hotkeys.ts), so a key held down
+ * to hurry the banners can never spend money. Null when there is no such
+ * step (the dice are handled by holding Space) or it is not this screen's
+ * call.
  */
 export function primaryAction(state: GameState, you: string | null): ActionRequest | null {
   const { phase } = state;
@@ -53,26 +54,14 @@ export function primaryAction(state: GameState, you: string | null): ActionReque
     case "awaitingCardAck":
       action = { type: "acknowledgeCard" };
       break;
-    case "awaitingBuyDecision":
-      action = currentPlayer(state).cash >= getDeed(phase.deedId).price ? { type: "buy" } : null;
-      break;
-    case "awaitingPayOrDraw":
-      action = { type: "choosePay" };
-      break;
-    case "awaitingPayment":
-      action = getPlayer(state, phase.debtorId).cash >= phase.amount ? { type: "settlePayment" } : null;
-      break;
-    case "auction": {
-      const amount = phase.auction.highestBid + MIN_BID_INCREMENT;
-      action = getPlayer(state, phase.auction.turnBidderId).cash >= amount ? { type: "bid", amount } : null;
-      break;
-    }
-    case "awaitingTradeResponse":
-      action = checkTrade(state, phase.trade).ok ? { type: "acceptTrade" } : null;
-      break;
     case "turnEnd":
       action = { type: "endTurn" };
       break;
+    case "awaitingBuyDecision":
+    case "awaitingPayOrDraw":
+    case "awaitingPayment":
+    case "auction":
+    case "awaitingTradeResponse":
     case "openingRoll":
     case "awaitingRoll":
     case "awaitingJailDecision":

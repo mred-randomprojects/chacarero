@@ -1,5 +1,6 @@
 import type { ActionRequest, GameState, Player } from "../game";
 import { JAIL_BAIL, currentPlayer, pesos } from "../game";
+import { Key } from "./Key";
 import { canAct } from "./perspective";
 import { TokenIcon } from "./TokenIcon";
 
@@ -44,7 +45,7 @@ function DiceButton({ label, shaking, disabled, onShakeStart, onShakeEnd }: Dice
       onPointerCancel={onShakeEnd}
       onContextMenu={(event) => event.preventDefault()}
     >
-      {shaking ? "🎲 ¡Soltá para tirar!" : `🎲 ${label}`}
+      {shaking ? "🎲 ¡Soltá para tirar!" : <>🎲 {label} <Key k=" " /></>}
     </button>
   );
 }
@@ -101,18 +102,18 @@ export function ActionBar({ state, shownPlayer, you, busy, shaking, canRoll, onS
               {phase.type === "awaitingJailDecision" && (
                 <>
                   <button type="button" disabled={busy || player.cash < JAIL_BAIL} onClick={() => dispatch({ type: "payBail" })}>
-                    Pagar fianza {pesos(JAIL_BAIL)}
+                    Pagar fianza {pesos(JAIL_BAIL)} <Key k="p" />
                   </button>
                   {player.getOutOfJailCards > 0 && (
                     <button type="button" disabled={busy} onClick={() => dispatch({ type: "spendJailCard" })}>
-                      Usar tarjeta
+                      Usar tarjeta <Key k="u" />
                     </button>
                   )}
                 </>
               )}
               {onTrade && (
-                <button type="button" disabled={busy} onClick={onTrade} title="Proponer un canje (C)">
-                  ⇄ Canjear
+                <button type="button" disabled={busy} onClick={onTrade} title="Proponer un canje (N)">
+                  ⇄ Negociar <Key k="n" />
                 </button>
               )}
               <span className="hint">Mantené apretado para mezclar (o la barra espaciadora)</span>
