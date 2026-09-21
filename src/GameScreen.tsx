@@ -163,9 +163,12 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     setFreeLook(false);
     flyTo(opening ? seatView(BOARD_LAYOUT, SLAB_MARGIN, currentSide) : pawnView(BOARD_LAYOUT, currentPosition), TURN_FLIGHT_SECONDS, "arc");
   }, [flyTo, opening, currentSide, currentPosition]);
+  const mounted = useRef(false);
   useEffect(() => {
     if (director) directorCue();
-    else if (you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide));
+    // Director off: sit at your own seat once, when the table appears, and otherwise leave the camera alone.
+    else if (!mounted.current && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide));
+    mounted.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the turn changing or the director being switched
   }, [currentPlayerId, director]);
 
@@ -199,7 +202,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   }, [game, seq, session.lastAction, enqueue, reset]);
 
   // A free deed on offer (or under the hammer): lift it from the bank pile in front of everyone until it is decided.
-  const offeredDeed = !busy && game.phase.type === "awaitingBuyDecision" ? game.phase.deedId : !busy && game.phase.type === "auction" ? game.phase.auction.deedId : null;
+  // Bids replay as banners; the card stays up through them rather than dropping and rising on every bid.
+  const offeredDeed = game.phase.type === "auction" ? game.phase.auction.deedId : !busy && game.phase.type === "awaitingBuyDecision" ? game.phase.deedId : null;
   useEffect(() => {
     if (!offeredDeed) return;
     void effectsBus.request({ kind: "presentDeed", deedId: offeredDeed });

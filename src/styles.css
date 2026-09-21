@@ -1442,7 +1442,8 @@ button.link {
 
 /* ---------- deed on offer ---------- */
 
-.stage:has(.deed-offer) {
+.stage:has(.deed-offer),
+.stage:has(.prompt.auction) {
   left: auto;
   right: 16px;
   transform: none;

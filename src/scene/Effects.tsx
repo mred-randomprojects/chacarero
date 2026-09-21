@@ -51,6 +51,8 @@ export function Effects({ anchors }: EffectsProps) {
       if (entry.effect.kind === "hideCard") setShownCard((current) => (current ? { ...current, hiding: entry } : null));
       if (entry.effect.kind === "presentDeed") {
         const { deedId } = entry.effect;
+        // Presenting again while the last card is still dropping: that drop is over, the card comes straight back up.
+        if (shownDeed?.hiding) shownDeed.hiding.resolve();
         setShownDeed((current) => (current?.deedId === deedId && !current.hiding ? current : { deedId, hiding: null }));
       }
       if (entry.effect.kind === "hideDeed") setShownDeed((current) => (current ? { ...current, hiding: entry } : null));
@@ -133,6 +135,9 @@ function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: Presen
   const startedHide = useRef(false);
   const hover = useRef(new Vector3());
   const hoverQuat = useRef(new Quaternion());
+  const flat = useMemo(() => new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2), []);
+  /** Where the rise starts: the pile, or wherever the card was if it was called back mid-drop. */
+  const from = useRef({ position: pile.clone(), quaternion: flat.clone(), scale: 1 });
 
   useEffect(() => {
     sfx.play("cardDraw", { volume: 0.8 });
@@ -145,8 +150,14 @@ function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: Presen
       startedHide.current = true;
       t.current = 0;
     }
+    if (!hiding && startedHide.current) {
+      // Called back up before it reached the pile.
+      startedHide.current = false;
+      presented.current = false;
+      t.current = 0;
+      from.current = { position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.x };
+    }
     t.current += delta;
-    const flat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
     if (!hiding) {
       const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
       const right = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -168,9 +179,10 @@ function PresentedDeed({ anchors, deedId, presenting, hiding, onHidden }: Presen
     }
     const k = Math.min(1, t.current / PRESENT_SECONDS);
     const e = easeInOut(k);
-    node.position.copy(arc(pile, hover.current, e, 2.5));
-    node.quaternion.copy(flat).slerp(hoverQuat.current, e);
-    node.scale.setScalar(1 + (DEED_SCALE - 1) * e);
+    const start = from.current;
+    node.position.copy(arc(start.position, hover.current, e, 2.5 * (1 - (start.scale - 1) / (DEED_SCALE - 1))));
+    node.quaternion.copy(start.quaternion).slerp(hoverQuat.current, e);
+    node.scale.setScalar(start.scale + (DEED_SCALE - start.scale) * e);
     if (k >= 1 && !presented.current) {
       presented.current = true;
       presenting?.resolve();
