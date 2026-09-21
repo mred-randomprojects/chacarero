@@ -4,6 +4,7 @@ import type { GameSetup, GameState, NewPlayer } from "./game";
 import { GameScreen } from "./GameScreen";
 import { defaultServerUrl } from "./net/client";
 import { getLastRoom, getPlayerId, getSavedName, saveLastRoom, saveName } from "./net/identity";
+import { cameraTracker, pawnTracker } from "./scene/pawnTracker";
 import { useLocalSession } from "./session/useLocalSession";
 import { useOnlineSession, useRoomClient } from "./session/useOnlineSession";
 import { Lobby } from "./ui/Lobby";
@@ -14,8 +15,12 @@ import { Setup } from "./ui/Setup";
 
 declare global {
   interface Window {
-    /** Dev-only hook (local mode) to inspect or replace the game state from the console. */
-    __chacarero?: { getGame: () => GameState | null; setGame: (state: GameState) => void };
+    /** Dev-only hook (local mode) to inspect or replace the game state from the console, and to sample what moves. */
+    __chacarero?: {
+      getGame: () => GameState | null;
+      setGame: (state: GameState) => void;
+      trackers: { readonly camera: typeof cameraTracker; readonly pawn: typeof pawnTracker };
+    };
   }
 }
 
@@ -171,7 +176,7 @@ function LocalGame({ players, setup, settings, onSettings, onLeave }: LocalGameP
   const session = useLocalSession({ players, setup, countdownScale: settings.countdownScale, bannerSeconds: settings.bannerSeconds, onLeave });
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    window.__chacarero = { getGame: () => session.game, setGame: session.setGame };
+    window.__chacarero = { getGame: () => session.game, setGame: session.setGame, trackers: { camera: cameraTracker, pawn: pawnTracker } };
     return () => {
       delete window.__chacarero;
     };

@@ -10,6 +10,8 @@ import type { Card, DeedId, GameEvent, GameState, Holding, Phase } from "../game
 export interface ViewState {
   readonly cash: Readonly<Record<string, number>>;
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
+  /** Where each pawn stands; a pawn only moves when its move event is applied. */
+  readonly positions: Readonly<Record<string, number>>;
   /** The phase the table is at; the real one only once the replay has caught up. */
   readonly phase: Phase;
   /** Whose turn the table shows it is (lags like the phase). */
@@ -40,6 +42,7 @@ export function viewOf(state: GameState): ViewState {
   return {
     cash: Object.fromEntries(state.players.map((p) => [p.id, p.cash])),
     holdings: state.holdings,
+    positions: Object.fromEntries(state.players.map((p) => [p.id, p.position])),
     phase: state.phase,
     currentPlayerId: state.players[state.currentPlayerIndex]?.id ?? "",
     cardOnTable: cardIn(state.phase),
@@ -91,6 +94,8 @@ export function applyEvent(view: ViewState, event: GameEvent, final: GameState):
       if (!holding) return view;
       return { ...view, holdings: { ...view.holdings, [event.deedId]: { ...holding, mortgaged: event.mortgaged } } };
     }
+    case "move":
+      return { ...view, positions: { ...view.positions, [event.playerId]: event.to } };
     case "card": {
       // The card comes up the moment it is drawn, not before.
       const card = cardIn(final.phase);

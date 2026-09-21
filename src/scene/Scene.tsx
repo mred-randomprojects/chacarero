@@ -4,6 +4,7 @@ import type { Vector3 } from "three";
 import type { Anchors } from "./anchors";
 import type { BoardProps } from "./Board";
 import { BOARD_LAYOUT, Board, SLAB_MARGIN, TABLE_Y } from "./Board";
+import { DevFrames } from "./DevFrames";
 import type { EffectsProps } from "./Effects";
 import { Effects } from "./Effects";
 import type { CameraRigProps } from "./CameraRig";
@@ -28,7 +29,7 @@ export interface SceneProps extends BoardProps, CameraRigProps, Omit<EffectsProp
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene({ goTo, followPawn, onUserControl, throwerId, shaking, throwing, onDiceLanded, onDicePresenting, onDiceSettled, deedOnOffer, cardOnTable, ...board }: SceneProps) {
+export function Scene({ goTo, followPawn, onUserControl, throwerId, shaking, throwing, onDiceLanded, onDicePresenting, onDiceSettled, cardOnTable, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
   const obstacles = useMemo<readonly PawnObstacle[]>(() => board.pawns.map((pawn, slot) => ({ id: pawn.id, position: pawnWorld(BOARD_LAYOUT, pawn.position, slot) })), [board.pawns]);
   const thrower = board.pawns.find((p) => p.id === throwerId);
@@ -64,11 +65,12 @@ export function Scene({ goTo, followPawn, onUserControl, throwerId, shaking, thr
       {fontsReady && (
         <>
           <Board {...board} />
-          <Effects anchors={anchors} deedOnOffer={deedOnOffer} cardOnTable={cardOnTable} />
+          <Effects anchors={anchors} cardOnTable={cardOnTable} />
           <Dice target={target} obstacles={obstacles} shaking={shaking} throwing={throwing} tableY={0} onLanded={onDiceLanded} onPresenting={onDicePresenting} onSettled={onDiceSettled} />
         </>
       )}
       <CameraRig goTo={goTo} followPawn={followPawn} onUserControl={onUserControl} />
+      {import.meta.env.DEV && <DevFrames />}
     </Canvas>
   );
 }

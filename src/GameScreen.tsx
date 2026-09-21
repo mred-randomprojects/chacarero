@@ -6,7 +6,9 @@ import { BOARD_SIZE, JAIL_INDEX, currentPlayer, getSquare } from "./game";
 import { layoutIndexFor } from "./scene/buildingSpots";
 import { boardToWorld } from "./scene/tileGeometry";
 import type { PawnView, SeatView } from "./scene/Board";
-import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
+import type { Anchors } from "./scene/anchors";
+import { deedAnchor, moneyAnchor } from "./scene/anchors";
+import { BOARD_LAYOUT, SLAB_MARGIN, TABLE_Y } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, pawnView, seatView, squareView } from "./scene/cameraViews";
 import type { FlightStyle, FlightView } from "./scene/CameraRig";
@@ -30,6 +32,7 @@ import { BoardMap } from "./ui/BoardMap";
 import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
+import { LiftedDeed } from "./ui/LiftedDeed";
 import { TopBar } from "./ui/TopBar";
 import type { TradeOutcomeView } from "./ui/TradeOutcome";
 import { TradeOutcome } from "./ui/TradeOutcome";
@@ -98,7 +101,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   /** The user took the camera (drag, wheel, a camera key); the director lets go until the next turn. */
   const [freeLook, setFreeLook] = useState(false);
   const playback = usePlayback(game, { bannerSeconds: settings.bannerSeconds });
-  const { view, walk, enqueue, reset, skip, onPawnArrive } = playback;
+  const { view, walk, enqueue, reset, skip } = playback;
   const busy = playback.busy || throwing !== null;
   const previous = useRef<{ game: GameState; seq: number } | null>(null);
   const pendingReplay = useRef<GameState | null>(null);
@@ -136,6 +139,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   }, [game, view.cash, view.currentPlayerId]);
 
   const sideOf = useCallback((playerId: string) => seats.find((s) => s.playerId === playerId)?.side ?? 0, [seats]);
+  const anchors = useMemo<Anchors>(() => ({ layout: BOARD_LAYOUT, slabMargin: SLAB_MARGIN, sides: new Map(seats.map((seat) => [seat.playerId, seat.side])), tableY: TABLE_Y }), [seats]);
   /** The player the table shows on turn: the real one only once the replay has caught up. */
   const shownPlayer = game.players.find((p) => p.id === view.currentPlayerId) ?? currentPlayer(game);
   const currentSide = sideOf(shownPlayer.id);
@@ -171,31 +175,59 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     },
     [flyTo],
   );
-  const flyToSeat = useCallback((side: number) => lookAt(seatView(BOARD_LAYOUT, SLAB_MARGIN, side)), [lookAt]);
   const focusSquare = useCallback((index: number) => lookAt(squareView(BOARD_LAYOUT, index), 0.45), [lookAt]);
 
   /**
+   * A peek at a player's side of the table (their deeds and money): an
+   * instant snap there, and the same key snaps back to where the camera was.
+   * Not a flight, and not a hand-over: the play goes on from wherever it is.
+   */
+  const [peek, setPeek] = useState<{ readonly side: number; readonly back: CameraView } | null>(null);
+  const peekSeat = useCallback(
+    (side: number) => {
+      if (peek && peek.side === side) {
+        setPeek(null);
+        flyTo(peek.back, 0);
+        return;
+      }
+      const back = peek ? peek.back : { position: cameraTracker.position.toArray(), target: cameraTracker.target.toArray() };
+      setPeek({ side, back });
+      flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, side), 0);
+    },
+    [flyTo, peek],
+  );
+  const flyToSeat = peekSeat;
+
+  /**
    * The director: at the start of every turn, everyone's camera swoops to a
-   * close-up of the pawn whose turn it is (during the opening throws, to the
-   * thrower's seat). A screen that took the camera re-joins here.
+   * close-up of the pawn whose turn it is (the opening throws all happen at
+   * Salida, so the camera settles there once). A screen that took the camera
+   * re-joins here.
    */
   const currentPlayerId = currentPlayer(game).id;
   const shownPlayerId = shownPlayer.id;
-  const shownPosition = shownPlayer.position;
+  const shownPosition = view.positions[shownPlayer.id] ?? shownPlayer.position;
   const opening = view.phase.type === "openingRoll";
   const director = settings.followTurn;
+  const lastCue = useRef<CameraView | null>(null);
   const directorCue = useCallback(() => {
     setFreeLook(false);
-    flyTo(opening ? seatView(BOARD_LAYOUT, SLAB_MARGIN, currentSide) : pawnView(BOARD_LAYOUT, shownPosition), TURN_FLIGHT_SECONDS, "arc");
-  }, [flyTo, opening, currentSide, shownPosition]);
+    setPeek(null);
+    const target = pawnView(BOARD_LAYOUT, shownPosition);
+    // The same view as the last cue (every opening throw is at Salida): no flight, the camera is already there.
+    const last = lastCue.current;
+    if (last && last.position.every((v, i) => v === target.position[i]) && last.target.every((v, i) => v === target.target[i])) return;
+    lastCue.current = target;
+    flyTo(target, TURN_FLIGHT_SECONDS, "arc");
+  }, [flyTo, shownPosition]);
   const mounted = useRef(false);
   useEffect(() => {
     if (director) directorCue();
     // Director off: sit at your own seat once, when the table appears, and otherwise leave the camera alone.
-    else if (!mounted.current && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide));
+    else if (!mounted.current && you !== null) flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, mySide), 0);
     mounted.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the turn the table shows changing, or the director being switched
-  }, [shownPlayerId, director]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the turn the table shows changing, the opening ending, or the director being switched
+  }, [shownPlayerId, opening, director]);
 
   /**
    * A new seq means something happened. Consecutive steps are replayed; a
@@ -227,6 +259,15 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   // A free deed on offer (or under the hammer) is lifted in front of everyone; the table's own view says when.
   const offeredDeed = view.deedOnOffer;
 
+  // The pawn stopped: settle the camera on that square before the landing is announced.
+  const onPawnArrive = useCallback(
+    (pawnId: string, square: number) => {
+      playback.onPawnArrive();
+      if (director && !freeLook && pawnId === shownPlayerId) flyTo(pawnView(BOARD_LAYOUT, square), 0.6);
+    },
+    [playback, director, freeLook, shownPlayerId, flyTo],
+  );
+
   // Once the table has caught up with a move, the square the pawn stopped on is the one to look at.
   useEffect(() => {
     if (busy) return;
@@ -241,10 +282,30 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
    * building dropping, someone marched to jail, a bankruptcy).
    */
   const current = playback.current;
-  const following = settings.followPawn && !(director && freeLook) && (walk !== null || current?.type === "transfer" || current?.type === "deed");
+  const following = settings.followPawn && !(director && freeLook) && walk !== null;
+  /** A shot that keeps both ends of a flight in view (the piles, the pawn, the seat), from the side the camera is on. */
+  const frameBoth = useCallback((a: Vector3, b: Vector3, seconds: number) => {
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const span = a.distanceTo(b);
+    const distance = Math.min(22, Math.max(7, span * 0.85 + 5));
+    const dir = cameraTracker.position.clone().sub(mid);
+    dir.y = 0;
+    if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1);
+    dir.setLength(distance * 0.7);
+    const eye = mid.clone().add(dir);
+    eye.y = mid.y + distance * 0.72;
+    goToCounter.current += 1;
+    setGoTo({ id: goToCounter.current, view: { position: [eye.x, eye.y, eye.z], target: [mid.x, mid.y, mid.z] }, seconds });
+  }, []);
   useEffect(() => {
     if (!current || !director || freeLook) return;
     switch (current.type) {
+      case "transfer":
+        frameBoth(moneyAnchor(anchors, current.from), moneyAnchor(anchors, current.to), 0.5);
+        break;
+      case "deed":
+        frameBoth(deedAnchor(anchors, current.from), deedAnchor(anchors, current.to), 0.5);
+        break;
       case "building": {
         const tile = BOARD_LAYOUT.tiles[layoutIndexFor(current.deedId)];
         if (tile) pushIn(boardToWorld(tile.center, 0.2), 5.5, 0.55);
@@ -255,9 +316,11 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         if (tile) pushIn(boardToWorld(tile.center, 0.2), 7, 0.6);
         break;
       }
-      case "bankrupt":
-        flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, sideOf(current.playerId)), 0.9);
+      case "bankrupt": {
+        const at = deedAnchor(anchors, { type: "player", playerId: current.playerId });
+        pushIn([at.x, at.y, at.z], 9, 0.8);
         break;
+      }
       default:
         break;
     }
@@ -377,6 +440,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         setShowSettings(false);
         setTrade(null);
         closePanel();
+        if (peek) peekSeat(peek.side);
         return;
       }
       const key = event.key.toLowerCase();
@@ -410,7 +474,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
+  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing, peek, peekSeat]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -418,13 +482,14 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         id: p.id,
         token: p.token,
         color: p.color,
-        position: p.position,
+        // Where the table shows the pawn: it moves when its move event plays, not when the state arrives.
+        position: view.positions[p.id] ?? p.position,
         route: walk?.playerId === p.id ? walk.route : null,
         routeId: walk?.playerId === p.id ? walk.id : 0,
         jump: walk?.playerId === p.id ? walk.jump : false,
         dimmed: p.bankrupt,
       })),
-    [game, walk],
+    [game, walk, view.positions],
   );
 
   const colorOf = useCallback((playerId: string) => game.players.find((p) => p.id === playerId)?.color ?? "#000000", [game]);
@@ -478,7 +543,6 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         goTo={goTo}
         followPawn={following}
         onUserControl={() => setFreeLook(true)}
-        deedOnOffer={offeredDeed}
         cardOnTable={view.cardOnTable}
         throwerId={session.shakingPlayerId ?? shownPlayerId}
         shaking={diceShaking}
@@ -496,7 +560,19 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       {offeredDeed === null && (
         <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
       )}
-      <ActionBar state={game} shownPlayer={shownPlayer} you={you} busy={busy} shaking={shaking} canRoll={canRoll} onShakeStart={startShake} onShakeEnd={releaseDice} onTrade={proposer ? proposeTrade : null} dispatch={dispatch} />
+      <ActionBar
+        state={game}
+        shownPlayer={shownPlayer}
+        cardOnTable={view.cardOnTable}
+        you={you}
+        busy={busy}
+        shaking={shaking}
+        canRoll={canRoll}
+        onShakeStart={startShake}
+        onShakeEnd={releaseDice}
+        onTrade={proposer ? proposeTrade : null}
+        dispatch={dispatch}
+      />
       <div className="stage">
         <Banner state={game} event={playback.current} onSkip={skip} />
         <Prompt
@@ -550,6 +626,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
           onClose={() => setTrade(null)}
         />
       )}
+      <LiftedDeed state={game} deedId={offeredDeed} />
       {outcome && <TradeOutcome key={outcome.id} outcome={outcome} state={game} onDone={() => setOutcome(null)} />}
       {doublesFlash !== null && (
         <div key={doublesFlash} className="doubles-flash" aria-live="polite">

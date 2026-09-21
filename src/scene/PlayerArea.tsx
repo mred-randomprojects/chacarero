@@ -102,6 +102,7 @@ function DeedCard({ deedId, holding, position, rotation, onHover, onLeave, onSel
   const texture = useMemo(() => deedCardTexture(getDeed(deedId), holding), [deedId, holding]);
   return (
     <mesh
+      name="deed-card"
       rotation={rotation}
       position={position}
       onPointerOver={(event: ThreeEvent<PointerEvent>) => {

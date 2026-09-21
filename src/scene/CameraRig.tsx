@@ -74,8 +74,64 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
     lastId.current = goTo.id;
     chase.current = null;
     const from = here();
-    flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from, to: { position: goTo.view.position ?? from.position, target: goTo.view.target }, style: goTo.style ?? "direct" };
-  }, [goTo, here]);
+    const to: CameraView = { position: goTo.view.position ?? from.position, target: goTo.view.target };
+    const seconds = goTo.seconds ?? FLIGHT_SECONDS;
+    if (seconds <= 0) {
+      // A snap: no flight at all.
+      flight.current = null;
+      const orbit = controls.current;
+      camera.position.set(...to.position);
+      if (orbit) {
+        orbit.target.set(...to.target);
+        orbit.update();
+      }
+      return;
+    }
+    flight.current = { t: 0, seconds, from, to, style: goTo.style ?? "direct" };
+  }, [goTo, here, camera]);
+
+  // Taking the camera means dragging it or using the wheel. A plain click (selecting a square)
+  // is not that, so it neither cancels a flight nor hands the camera to the user. The drag is
+  // watched on the window (button held, moved a few pixels) so pointer capture cannot hide it.
+  useEffect(() => {
+    let down: { x: number; y: number } | null = null;
+    const takeOver = () => {
+      flight.current = null;
+      chase.current = null;
+      userControl.current();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.altKey || event.button !== 0) return;
+      down = { x: event.clientX, y: event.clientY };
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!down) return;
+      if ((event.buttons & 1) === 0) {
+        down = null;
+        return;
+      }
+      if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) {
+        down = null;
+        takeOver();
+      }
+    };
+    const onPointerUp = () => {
+      down = null;
+    };
+    const onWheel = () => takeOver();
+    domElement.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointerup", onPointerUp, true);
+    window.addEventListener("pointercancel", onPointerUp, true);
+    domElement.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      domElement.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("pointercancel", onPointerUp, true);
+      domElement.removeEventListener("wheel", onWheel);
+    };
+  }, [domElement]);
 
   // Start or stop chasing whatever moves. A pawn is chased from behind (outside
   // the ring, the offset following its square); a flight keeps the camera's
@@ -254,11 +310,6 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
       minDistance={3}
       maxDistance={70}
       maxPolarAngle={Math.PI * 0.47}
-      onStart={() => {
-        flight.current = null;
-        chase.current = null;
-        userControl.current();
-      }}
     />
   );
 }

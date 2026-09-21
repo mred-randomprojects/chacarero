@@ -127,7 +127,8 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
       }
       if (progress.current >= steps) {
         pawnTracker.moving = false;
-        onArrive?.(position);
+        // The square the route ends on: the table's position prop still says where the walk started.
+        onArrive?.(path.current[steps] ?? position);
       }
     }
   });

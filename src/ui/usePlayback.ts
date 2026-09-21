@@ -47,7 +47,7 @@ export interface Playback {
  */
 export function usePlayback(initial: GameState | null, options: PlaybackOptions): Playback {
   const [view, setView] = useState<ViewState>(() =>
-    initial ? viewOf(initial) : { cash: {}, holdings: {}, phase: { type: "gameOver", winnerId: "" }, currentPlayerId: "", cardOnTable: null, deedOnOffer: null },
+    initial ? viewOf(initial) : { cash: {}, holdings: {}, positions: {}, phase: { type: "gameOver", winnerId: "" }, currentPlayerId: "", cardOnTable: null, deedOnOffer: null },
   );
   const [current, setCurrent] = useState<GameEvent | null>(null);
   const [busy, setBusy] = useState(false);
@@ -118,16 +118,28 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
       const skipped = new Promise<void>((resolve) => {
         skipResolve.current = resolve;
       });
+      // The table changes the moment the animation lands (the card is in the hand as the flying one
+      // disappears, the pawn stands on the square as it stops), while the banner stays a while longer.
+      let applied = false;
+      const apply = () => {
+        if (applied) return;
+        applied = true;
+        const next = applyEvent(viewRef.current, event, final);
+        viewRef.current = next;
+        setView(next);
+      };
+      // A drawn card is on the table before it rises (the rise is what the step waits for); everything
+      // else lands first and then changes the table.
+      if (event.type === "card") apply();
       // Flights and drops start a beat after their banner, so the camera gets there first.
       const lead = event.type === "transfer" || event.type === "deed" || event.type === "building" ? wait(CUE_LEAD_SECONDS * scale.current) : Promise.resolve();
-      const step = Promise.all([lead.then(() => animate(event, viewRef.current)), wait(eventSeconds(event) * scale.current)]).then(() => undefined);
+      const animation = lead.then(() => animate(event, viewRef.current)).then(apply);
+      const step = Promise.all([animation, wait(eventSeconds(event) * scale.current)]).then(() => undefined);
       await Promise.race([step, skipped]);
       skipResolve.current = null;
       arriveResolve.current = null;
+      apply();
       setWalk(null);
-      const next = applyEvent(viewRef.current, event, final);
-      viewRef.current = next;
-      setView(next);
       if (queue.current.length === 0) {
         // Whatever was skipped or approximated, the table ends up matching the real state.
         viewRef.current = viewOf(final);

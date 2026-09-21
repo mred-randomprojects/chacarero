@@ -1,4 +1,4 @@
-import type { ActionRequest, GameState, Player } from "../game";
+import type { ActionRequest, Card, GameState, Player } from "../game";
 import { JAIL_BAIL, currentPlayer, pesos } from "../game";
 import { Key } from "./Key";
 import { canAct } from "./perspective";
@@ -10,6 +10,8 @@ export interface ActionBarProps {
   readonly state: GameState;
   /** The player the table shows on turn (lags the real one during a replay). */
   readonly shownPlayer: Player;
+  /** The Suerte/Destino card face up on the table, from the view, so it shows here the moment it shows there. */
+  readonly cardOnTable: Card | null;
   readonly you: string | null;
   readonly busy: boolean;
   readonly shaking: boolean;
@@ -63,7 +65,7 @@ function Dice({ dice, rollAgain }: { readonly dice: readonly [number, number] | 
 }
 
 /** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
-export function ActionBar({ state, shownPlayer, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
+export function ActionBar({ state, shownPlayer, cardOnTable, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
   // The buttons act on the real state; the name and the dice shown follow the table.
   const player = busy ? shownPlayer : currentPlayer(state);
   const { phase } = state;
@@ -78,10 +80,10 @@ export function ActionBar({ state, shownPlayer, you, busy, shaking, canRoll, onS
         {player.inJail && <span className="status">preso</span>}
         <Dice dice={state.dice} rollAgain={state.rollAgain} />
       </div>
-      {state.lastCard && (
-        <div className={`card ${state.lastCard.deck}`}>
-          <span className="card-title">{state.lastCard.deck === "suerte" ? "Suerte" : "Destino"}</span>
-          {state.lastCard.text}
+      {cardOnTable && (
+        <div className={`card ${cardOnTable.deck}`}>
+          <span className="card-title">{cardOnTable.deck === "suerte" ? "Suerte" : "Destino"}</span>
+          {cardOnTable.text}
         </div>
       )}
       {rolling && (

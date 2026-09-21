@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 import { DoubleSide, Quaternion, Vector3 } from "three";
-import type { Card, DeedId } from "../game";
+import type { Card } from "../game";
 import { getDeed } from "../game";
 import type { Anchors } from "./anchors";
 import { deedAnchor, moneyAnchor, partyYaw } from "./anchors";
@@ -16,8 +16,6 @@ import { pawnTracker } from "./pawnTracker";
 
 export interface EffectsProps {
   readonly anchors: Anchors;
-  /** Deed lifted in front of everyone (a free deed on offer, or under the hammer), from the table's view. */
-  readonly deedOnOffer: DeedId | null;
   /** Suerte/Destino card face up on the table, from the table's view. */
   readonly cardOnTable: Card | null;
 }
@@ -45,7 +43,6 @@ function useShown<T>(item: T | null, same: (a: T, b: T) => boolean): [Shown<T> |
 }
 
 const sameCard = (a: Card, b: Card) => a.id === b.id;
-const sameDeed = (a: DeedId, b: DeedId) => a === b;
 
 function easeOutCubic(x: number): number {
   return 1 - Math.pow(1 - x, 3);
@@ -64,18 +61,18 @@ function arc(from: Vector3, to: Vector3, k: number, height: number): Vector3 {
  * deed cards flying between the bank and the seats, buildings dropping onto
  * tiles, and the face-up Suerte/Destino card hovering over the board.
  */
-export function Effects({ anchors, deedOnOffer, cardOnTable }: EffectsProps) {
+export function Effects({ anchors, cardOnTable }: EffectsProps) {
   const [active, setActive] = useState<readonly ActiveEffect[]>([]);
   useEffect(() => effectsBus.subscribe(setActive), []);
 
   const [shownCard, cardGone] = useShown(cardOnTable, sameCard);
-  const [shownDeed, deedGone] = useShown(deedOnOffer, sameDeed);
-  // A reveal requested for a card that is not (or no longer) on the table has nothing to animate.
+  // A reveal requested for a card that is not on the table has nothing to animate. (Checked against the
+  // prop, not the mounted card, which lags a render: the card is put on the table right before the request.)
   useEffect(() => {
     for (const entry of active) {
-      if (entry.effect.kind === "revealCard" && (!shownCard || shownCard.hiding || shownCard.item.id !== entry.effect.cardId)) entry.resolve();
+      if (entry.effect.kind === "revealCard" && (!cardOnTable || cardOnTable.id !== entry.effect.cardId)) entry.resolve();
     }
-  }, [active, shownCard]);
+  }, [active, cardOnTable]);
 
   return (
     <group>
@@ -102,96 +99,8 @@ export function Effects({ anchors, deedOnOffer, cardOnTable }: EffectsProps) {
           onHidden={cardGone}
         />
       )}
-      {shownDeed && <PresentedDeed key={shownDeed.item} anchors={anchors} deedId={shownDeed.item} hiding={shownDeed.hiding} onHidden={deedGone} />}
+
     </group>
-  );
-}
-
-// ---------- a deed on offer ----------
-
-interface PresentedDeedProps {
-  readonly anchors: Anchors;
-  readonly deedId: DeedId;
-  readonly hiding: boolean;
-  readonly onHidden: () => void;
-}
-
-const PRESENT_SECONDS = 0.9;
-const DEED_HIDE_SECONDS = 0.5;
-/** The offered deed floats this far in front of the camera, left of centre, this many times its table size. */
-const DEED_DISTANCE = 6;
-const DEED_LEFT = 1.35;
-const DEED_SCALE = 2.0;
-
-/**
- * The deed a player just landed on, lifted from the bank pile up in front of
- * the camera so the whole table sees what is on offer. It tracks the camera
- * while up, and drops back onto the pile when the decision is made.
- */
-function PresentedDeed({ anchors, deedId, hiding, onHidden }: PresentedDeedProps) {
-  const camera = useThree((s) => s.camera);
-  const mesh = useRef<Mesh>(null);
-  const texture = useMemo(() => deedCardTexture(getDeed(deedId), { ownerId: "", chacras: 0, estancia: false, mortgaged: false }, 3), [deedId]);
-  const pile = useMemo(() => deedAnchor(anchors, { type: "bank" }), [anchors]);
-  const t = useRef(0);
-  const presented = useRef(false);
-  const startedHide = useRef(false);
-  const hover = useRef(new Vector3());
-  const hoverQuat = useRef(new Quaternion());
-  const flat = useMemo(() => new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2), []);
-  /** Where the rise starts: the pile, or wherever the card was if it was called back mid-drop. */
-  const from = useRef({ position: pile.clone(), quaternion: flat.clone(), scale: 1 });
-
-  useEffect(() => {
-    sfx.play("cardDraw", { volume: 0.8 });
-  }, []);
-
-  useFrame((_, delta) => {
-    const node = mesh.current;
-    if (!node) return;
-    if (hiding && !startedHide.current) {
-      startedHide.current = true;
-      t.current = 0;
-    }
-    if (!hiding && startedHide.current) {
-      // Called back up before it reached the pile.
-      startedHide.current = false;
-      presented.current = false;
-      t.current = 0;
-      from.current = { position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.x };
-    }
-    t.current += delta;
-    if (!hiding) {
-      const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-      const right = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-      hover.current.copy(camera.position).addScaledVector(forward, DEED_DISTANCE).addScaledVector(right, -DEED_LEFT);
-      hover.current.y = Math.max(1.2, hover.current.y);
-      hoverQuat.current.copy(camera.quaternion);
-    }
-    if (hiding) {
-      const k = Math.min(1, t.current / DEED_HIDE_SECONDS);
-      const e = easeInOut(k);
-      node.position.copy(arc(hover.current, pile, e, 1));
-      node.quaternion.copy(hoverQuat.current).slerp(flat, e);
-      node.scale.setScalar(DEED_SCALE + (1 - DEED_SCALE) * e);
-      if (k >= 1) onHidden();
-      return;
-    }
-    const k = Math.min(1, t.current / PRESENT_SECONDS);
-    const e = easeInOut(k);
-    const start = from.current;
-    node.position.copy(arc(start.position, hover.current, e, 2.5 * (1 - (start.scale - 1) / (DEED_SCALE - 1))));
-    node.quaternion.copy(start.quaternion).slerp(hoverQuat.current, e);
-    node.scale.setScalar(start.scale + (DEED_SCALE - start.scale) * e);
-    if (k >= 1) presented.current = true;
-  });
-
-  return (
-    <mesh ref={mesh}>
-      <planeGeometry args={[1.15, 1.63]} />
-      {/* Unlit so the print reads the same from every angle. */}
-      <meshBasicMaterial map={texture} side={DoubleSide} />
-    </mesh>
   );
 }
 
@@ -325,7 +234,7 @@ function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
   });
 
   return (
-    <mesh ref={mesh} castShadow>
+    <mesh ref={mesh} castShadow name="deed-flight">
       <planeGeometry args={[1.15, 1.63]} />
       <meshStandardMaterial map={texture} roughness={1} side={DoubleSide} />
     </mesh>
@@ -439,7 +348,7 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
       // Float in front of wherever the camera is now, but never below the table.
       const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
       hover.current.copy(camera.position).addScaledVector(forward, HOVER_DISTANCE);
-      hover.current.y = Math.max(1.5, hover.current.y);
+      hover.current.y = Math.max(2.4, hover.current.y);
     }
     if (hiding) {
       node.position.copy(arc(hover.current, slot, e, 1.2));
@@ -456,7 +365,7 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
   });
 
   return (
-    <group ref={group}>
+    <group ref={group} name="chance-card">
       {/* Unlit so the text reads the same from every seat and camera angle. */}
       <mesh castShadow>
         <planeGeometry args={[4.8, 3]} />

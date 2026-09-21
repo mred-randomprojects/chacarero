@@ -36,6 +36,19 @@ describe("playback view: step by step", () => {
     state = thrown;
   });
 
+  it("moves a pawn only when its move event is applied, never when the state arrives", () => {
+    const rolled = rollDice(game(), undefined, [1, 2]);
+    const landed = movePawn(rolled);
+    expect(landed.players[0]?.position).toBe(3);
+    const { steps, end } = replay(viewOf(rolled), landed);
+    // Before the move event: still on Salida. After it: on the square. The banner after does not move it again.
+    expect(steps[0]?.positions["ana"]).toBe(0);
+    expect(steps[1]?.positions["ana"]).toBe(3);
+    expect(steps[2]?.positions["ana"]).toBe(3);
+    expect(end.positions["ana"]).toBe(3);
+    expect(end.positions["beto"]).toBe(0);
+  });
+
   it("lifts a free deed only once the pawn has arrived and the replay is over", () => {
     const rolled = rollDice(game(), undefined, [1, 2]);
     const landed = movePawn(rolled); // 3: Formosa Norte, free
