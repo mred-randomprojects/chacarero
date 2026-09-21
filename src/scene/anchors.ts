@@ -12,7 +12,7 @@ export const BANK_DEEDS: Vec2 = { x: -2.6, y: -5.6 };
 
 /** Seat-local spots of a player's things. */
 const SEAT_MONEY = { right: 2.7, up: -1.05 };
-const SEAT_DEEDS = { right: 0, up: -3.3 };
+const SEAT_DEEDS = { right: 0, up: -4.0 };
 
 export interface Anchors {
   readonly layout: HexLayout;

@@ -491,7 +491,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openList} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
-      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} />
+      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} />
       <MoneyFlights />
       {offeredDeed === null && (
         <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />

@@ -13,6 +13,8 @@ export interface PlayerCardsProps {
   readonly currentId: string;
   readonly you: string | null;
   readonly offline: ReadonlySet<string>;
+  /** Look at that player's side of the table (their deeds and money). */
+  readonly onFocus: (playerId: string) => void;
 }
 
 const COUNT_MS = 650;
@@ -50,14 +52,24 @@ interface CardProps {
   readonly isCurrent: boolean;
   readonly isYou: boolean;
   readonly away: boolean;
+  /** 1-based seat number: the key that also looks at this player. */
+  readonly seat: number;
+  readonly onFocus: () => void;
 }
 
-function PlayerCard({ player, cash, isCurrent, isYou, away }: CardProps) {
+function PlayerCard({ player, cash, isCurrent, isYou, away, seat, onFocus }: CardProps) {
   const shown = useCountingNumber(player.bankrupt ? 0 : cash);
   const classes = ["player-card", isCurrent ? "current" : "", player.bankrupt ? "bankrupt" : "", away ? "away" : "", isYou ? "you" : ""].filter(Boolean).join(" ");
   const status = player.bankrupt ? "quebró" : [player.inJail ? "preso" : "", away ? "ausente" : "", player.getOutOfJailCards > 0 ? `🎫${player.getOutOfJailCards}` : ""].filter(Boolean).join(" · ");
   return (
-    <div className={classes} data-party={partyKey({ type: "player", playerId: player.id })} style={{ "--player-color": player.color } as CSSProperties}>
+    <button
+      type="button"
+      className={classes}
+      data-party={partyKey({ type: "player", playerId: player.id })}
+      style={{ "--player-color": player.color } as CSSProperties}
+      title={`Ver lo que tiene ${player.name} [${seat}]`}
+      onClick={onFocus}
+    >
       <TokenIcon token={player.token} size={40} className="pc-token" />
       <div className="pc-body">
         <div className="pc-name">
@@ -67,7 +79,8 @@ function PlayerCard({ player, cash, isCurrent, isYou, away }: CardProps) {
         <div className="pc-cash">{player.bankrupt ? "—" : pesos(shown)}</div>
         {status && <div className="pc-status">{status}</div>}
       </div>
-    </div>
+      <kbd className="key pc-key">{seat}</kbd>
+    </button>
   );
 }
 
@@ -76,11 +89,20 @@ function PlayerCard({ player, cash, isCurrent, isYou, away }: CardProps) {
  * name, cash and status per player, the one on turn lit up, plus the bank
  * at the end so money flights have somewhere to go.
  */
-export function PlayerCards({ state, cash, currentId, you, offline }: PlayerCardsProps) {
+export function PlayerCards({ state, cash, currentId, you, offline, onFocus }: PlayerCardsProps) {
   return (
     <div className="player-cards">
-      {state.players.map((player) => (
-        <PlayerCard key={player.id} player={player} cash={cash[player.id] ?? player.cash} isCurrent={player.id === currentId} isYou={player.id === you} away={offline.has(player.id)} />
+      {state.players.map((player, i) => (
+        <PlayerCard
+          key={player.id}
+          player={player}
+          cash={cash[player.id] ?? player.cash}
+          isCurrent={player.id === currentId}
+          isYou={player.id === you}
+          away={offline.has(player.id)}
+          seat={i + 1}
+          onFocus={() => onFocus(player.id)}
+        />
       ))}
       <div className="player-card bank" data-party={partyKey({ type: "bank" })}>
         <span className="pc-bank-icon">🏦</span>

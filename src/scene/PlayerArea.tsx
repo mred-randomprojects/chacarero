@@ -29,7 +29,8 @@ const CARD_W = 1.15;
 const CARD_H = 1.63;
 const CARD_GAP = 0.12;
 const CARDS_PER_ROW = 8;
-const FIRST_ROW_UP = -2.5;
+/** Well clear of the bill stacks (which stand up to 0.7 above the felt), even from a low camera. */
+const FIRST_ROW_UP = -3.4;
 /** Rows overlap like a hand of cards; the band and name of every card stay visible. */
 const ROW_STEP = CARD_H * 0.62;
 

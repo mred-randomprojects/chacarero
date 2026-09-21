@@ -47,7 +47,8 @@ export function TokenPicker({ value, taken, onChange, disabled = false }: TokenP
             style={{ "--token-color": token.color } as CSSProperties}
             onClick={() => onChange(token.id)}
           >
-            <TokenIcon token={token.id} size={30} title={blocked ? `${token.name}: la tiene ${holder}` : token.name} />
+            <TokenIcon token={token.id} size={46} title={blocked ? `${token.name}: la tiene ${holder}` : token.name} />
+            <span className="token-option-name">{token.name}</span>
           </button>
         );
       })}
