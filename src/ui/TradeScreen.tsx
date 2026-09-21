@@ -213,22 +213,28 @@ function DeedPreview({ state, deedId }: { readonly state: GameState; readonly de
   );
 }
 
-/** How the two sides compare, at face value. */
-function Fairness({ a, b, aName, bName }: { readonly a: number; readonly b: number; readonly aName: string; readonly bName: string }) {
+/** What each side puts on the table, at face value, side by side; the reader does the comparing. */
+function Fairness({ a, b, aPlayer, bPlayer }: { readonly a: number; readonly b: number; readonly aPlayer: Player; readonly bPlayer: Player }) {
   const total = a + b;
   const share = total === 0 ? 0.5 : a / total;
-  const diff = a - b;
-  const verdict = total === 0 ? "Nada sobre la mesa todavía." : Math.abs(diff) < Math.max(200, total * 0.05) ? "Parejo." : diff > 0 ? `${aName} da ${pesos(diff)} más.` : `${bName} da ${pesos(-diff)} más.`;
   return (
     <div className="fairness">
       <div className="fairness-bar" aria-hidden>
         <div className="fairness-a" style={{ width: `${share * 100}%` }} />
       </div>
       <div className="fairness-values">
-        <span>{pesos(a)}</span>
-        <span>{pesos(b)}</span>
+        {[
+          { player: aPlayer, value: a },
+          { player: bPlayer, value: b },
+        ].map(({ player, value }) => (
+          <span key={player.id}>
+            <small>
+              <TokenIcon token={player.token} size={16} /> {player.name} da
+            </small>
+            <strong>{pesos(value)}</strong>
+          </span>
+        ))}
       </div>
-      <p>{verdict}</p>
     </div>
   );
 }
@@ -299,7 +305,7 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
             <Side state={state} owner={me} title={review ? `${me.name} da` : "Ofrecés"} offer={gives} onChange={editable ? setGives : null} onHover={setHovered} />
             <div className="trade-middle">
               <div className="trade-preview-slot">{previewId ? <DeedPreview state={state} deedId={previewId} /> : <p className="trade-preview-hint">Pasá el mouse por una escritura para verla grande; clic para ponerla en la mesa.</p>}</div>
-              <Fairness a={offerValue(gives)} b={offerValue(receives)} aName={me.name} bName={partner.name} />
+              <Fairness a={offerValue(gives)} b={offerValue(receives)} aPlayer={me} bPlayer={partner} />
               {balance && (
                 <p className="trade-balance">
                   Después: <strong>{me.name}</strong> {pesos(me.cash + balance.from)} · <strong>{partner.name}</strong> {pesos(partner.cash + balance.to)}

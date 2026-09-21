@@ -2006,16 +2006,35 @@ button.link {
 .fairness-values {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 0.85rem;
-  font-weight: 800;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
 
-.fairness p {
-  margin: 4px 0 0;
+.fairness-values span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.fairness-values span:last-child {
+  align-items: flex-end;
+}
+
+.fairness-values small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
   font-weight: 700;
-  text-align: center;
+  color: var(--muted);
+}
+
+.fairness-values strong {
+  font-weight: 900;
+  font-size: 1.15rem;
 }
 
 .trade-middle .trade-balance {
