@@ -5,7 +5,7 @@ import type { Dispatch } from "./ActionBar";
 import { DeedDetails } from "./DeedDetails";
 import { bandColor } from "../scene/cardTextures";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
-import { OfferItems } from "./TradeDialog";
+import { OfferItems } from "./OfferItems";
 import { useNow } from "./useNow";
 import { TokenIcon } from "./TokenIcon";
 
@@ -23,6 +23,8 @@ export interface PromptProps {
   readonly onTrade: () => void;
   /** Opens the trade dialog to answer the pending proposal with a different one. */
   readonly onCounter: () => void;
+  /** Opens the full trade screen showing the proposal on the table. */
+  readonly onReview: () => void;
   /** Whether this screen may start a new game (host online, anyone locally). */
   readonly canRestart: boolean;
 }
@@ -59,7 +61,7 @@ export function Prompt(props: PromptProps) {
   );
 }
 
-function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTrade, onCounter, canRestart, now }: PromptProps & { readonly now: number }) {
+function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTrade, onCounter, onReview, canRestart, now }: PromptProps & { readonly now: number }) {
   const { phase } = state;
   const player = currentPlayer(state);
 
@@ -344,6 +346,9 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               <button type="button" className="danger" onClick={() => dispatch({ type: "rejectTrade" })}>
                 Rechazar
               </button>
+              <button type="button" onClick={onReview}>
+                Ver en grande
+              </button>
             </div>
           ) : mine(cancel) ? (
             <>
@@ -352,10 +357,20 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
                 <button type="button" onClick={() => dispatch(cancel)}>
                   Retirar la propuesta
                 </button>
+                <button type="button" onClick={onReview}>
+                  Ver en grande
+                </button>
               </div>
             </>
           ) : (
-            waiting(accept)
+            <>
+              {waiting(accept)}
+              <div className="buttons">
+                <button type="button" onClick={onReview}>
+                  Ver en grande
+                </button>
+              </div>
+            </>
           )}
           <Countdown deadline={deadline} now={now} />
         </div>

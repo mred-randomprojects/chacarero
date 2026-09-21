@@ -1092,67 +1092,6 @@ button.link {
   font-weight: 700;
 }
 
-.modal.trade-dialog {
-  width: min(820px, calc(100% - 32px));
-}
-
-.partner-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0 10px;
-  font-weight: 700;
-}
-
-.partner-picker button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-}
-
-.partner-picker button.selected {
-  background: var(--green);
-  color: #fff;
-}
-
-.trade-sides.editing {
-  gap: 10px 14px;
-}
-
-.offer-editor {
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 10px;
-}
-
-.offer-editor h4 {
-  margin-bottom: 8px;
-}
-
-.offer-cash-field {
-  display: block;
-  margin-top: 10px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.offer-cash-field input {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  font: inherit;
-  font-size: 1.1rem;
-  font-weight: 800;
-  padding: 6px 10px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--ink);
-}
-
 .cash-steps {
   display: flex;
   flex-wrap: wrap;
@@ -1169,17 +1108,6 @@ button.link {
   margin: 12px 0 0;
   font-size: 0.95rem;
   color: var(--muted);
-}
-
-.trade-dialog .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.trade-dialog .buttons button.primary {
-  font-size: 1.05rem;
 }
 
 @media (max-width: 700px) {
@@ -1682,4 +1610,515 @@ button.link {
   .hex-map {
     max-height: 60vh;
   }
+}
+
+/* ---------- trade screen ---------- */
+
+.trade-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 20px 16px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(31, 94, 46, 0.97) 0%, rgba(12, 40, 20, 0.98) 70%);
+  color: var(--cream);
+  animation: trade-in 0.3s ease-out;
+}
+
+@keyframes trade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.trade-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.trade-header h2 {
+  margin: 0;
+  flex: 1;
+  font-family: "Lobster", Georgia, serif;
+  font-weight: 400;
+  font-size: 2rem;
+  color: var(--gold);
+}
+
+.trade-header .close {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  padding: 2px 12px;
+}
+
+.link-button {
+  background: transparent;
+  color: var(--cream);
+  text-decoration: underline;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.partner-choice {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 18px;
+}
+
+.partner-choice h3 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.partner-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.partner-button {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 180px;
+  padding: 18px 12px 14px;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 16px;
+  border-bottom: 6px solid var(--player-color);
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.partner-button:hover:not(:disabled) {
+  transform: translateY(-4px) scale(1.04);
+  filter: none;
+}
+
+.partner-button strong {
+  font-size: 1.3rem;
+}
+
+.partner-button span {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.trade-table {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.trade-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 14px;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 14px;
+  border-top: 6px solid var(--player-color);
+  overflow: auto;
+}
+
+.trade-side-panel header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.trade-side-panel h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.trade-side-panel header p {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.deed-grid {
+  display: grid;
+  gap: 4px;
+  flex: none;
+}
+
+.deed-grid-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deed-slot {
+  --band: #999;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-height: 52px;
+  padding: 0;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 0.65rem;
+  line-height: 1.1;
+}
+
+.deed-slot.ghost {
+  border: 1px dashed rgba(0, 0, 0, 0.18);
+  background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0, 0, 0, 0.03) 4px 8px);
+}
+
+.deed-slot.ghost::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22%;
+  background: var(--band);
+  opacity: 0.25;
+}
+
+.deed-slot.owned {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+.deed-slot.owned:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  filter: none;
+  z-index: 1;
+}
+
+.deed-slot.owned.picked {
+  outline: 3px solid var(--green);
+  outline-offset: -1px;
+  background: #eaf5ec;
+}
+
+.deed-slot.owned.blocked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.deed-slot.owned.mortgaged {
+  background: #e6e2da;
+}
+
+.deed-slot-band {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22%;
+  background: var(--band);
+}
+
+.deed-slot-name {
+  font-weight: 800;
+  padding: 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deed-slot-price {
+  font-weight: 600;
+  color: #1a5fb4;
+  padding: 0 3px 3px;
+}
+
+.deed-slot-flag {
+  position: absolute;
+  top: 26%;
+  right: 2px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: var(--red);
+}
+
+.deed-slot-check {
+  position: absolute;
+  top: 24%;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.trade-cash {
+  margin-top: 10px;
+}
+
+.trade-cash label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.trade-cash input {
+  flex: 1;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 5px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.trade-cash .cash-steps {
+  margin-top: 6px;
+}
+
+.trade-picked {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.trade-picked li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trade-picked .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.trade-picked .mortgaged {
+  font-size: 0.75rem;
+  color: var(--red);
+}
+
+.trade-value {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+  text-align: right;
+}
+
+.trade-value strong {
+  font-size: 1.3rem;
+  color: var(--green);
+}
+
+.trade-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.trade-preview-slot {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.trade-preview-hint {
+  margin: 0;
+  padding: 0 16px;
+  text-align: center;
+  color: rgba(247, 242, 228, 0.7);
+  font-weight: 600;
+}
+
+.deed-preview {
+  --band: #999;
+  width: 250px;
+  padding: 0 14px 12px;
+  background: var(--cream);
+  color: var(--ink);
+  border-radius: 10px;
+  border: 3px solid #2a2622;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  animation: banner-in 0.2s ease-out;
+}
+
+.deed-preview-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 -14px;
+  padding: 10px 8px;
+  background: var(--band);
+  color: #fff;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.deed-preview-band strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.deed-preview-band span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deed-preview-price {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #1a5fb4;
+}
+
+.deed-preview .rent {
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.deed-preview-flag {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.fairness {
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+.fairness-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.fairness-a {
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.3s ease-out;
+}
+
+.fairness-values {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.fairness p {
+  margin: 4px 0 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+.trade-middle .trade-balance {
+  margin: 0;
+  color: rgba(247, 242, 228, 0.85);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.trade-middle .trade-problem {
+  margin: 0;
+  text-align: center;
+  color: #ffb4a8 !important;
+}
+
+.trade-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.trade-footer .waiting-for {
+  margin: 0;
+  color: var(--cream);
+  flex-basis: 100%;
+  text-align: center;
+}
+
+.trade-footer button.big {
+  font-size: 1.15rem;
+  padding: 10px 18px;
+}
+
+@media (max-width: 1000px) {
+  .trade-table {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .trade-middle {
+    order: 3;
+  }
+
+  .deed-preview {
+    display: none;
+  }
+}
+
+.deed-slot.owned.static {
+  cursor: default;
+}
+
+.deed-slot.owned.static:hover {
+  transform: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+}
+
+.deed-slot.owned.static:not(.picked) {
+  opacity: 0.6;
 }

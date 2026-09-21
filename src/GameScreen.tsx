@@ -27,8 +27,8 @@ import type { Settings } from "./ui/settings";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SquarePanel } from "./ui/SquarePanel";
 import { TopBar } from "./ui/TopBar";
-import type { TradeDraft } from "./ui/TradeDialog";
-import { TradeDialog } from "./ui/TradeDialog";
+import type { TradeDraft, TradeScreenMode } from "./ui/TradeScreen";
+import { TradeScreen } from "./ui/TradeScreen";
 import { usePlayback } from "./ui/usePlayback";
 
 const ERROR_MS = 3_500;
@@ -53,10 +53,10 @@ interface Flight {
 /** The turn-to-turn flight: long enough to read as a swoop from one pawn to the next. */
 const TURN_FLIGHT_SECONDS = 1.5;
 
-/** The trade dialog's contents; `id` remounts it so a fresh draft starts clean. */
+/** The trade screen's contents; `id` remounts it so a fresh draft starts clean. */
 interface OpenTrade {
   readonly id: number;
-  readonly draft: TradeDraft;
+  readonly mode: TradeScreenMode;
 }
 
 const NO_OFFER: TradeOffer = { deeds: [], cash: 0 };
@@ -67,7 +67,7 @@ function isTyping(event: KeyboardEvent): boolean {
 
 /** Inside a modal, or on a focused prompt button, the browser's own Space/Enter handling is the right one. */
 function ownsSpace(event: KeyboardEvent): boolean {
-  return event.target instanceof HTMLElement && event.target.closest(".modal-backdrop, .prompt") !== null;
+  return event.target instanceof HTMLElement && event.target.closest(".modal-backdrop, .prompt, .trade-screen") !== null;
 }
 
 /**
@@ -226,7 +226,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     (draft: Omit<TradeDraft, "me" | "counter">) => {
       if (!proposer) return;
       tradeCounter.current += 1;
-      setTrade({ id: tradeCounter.current, draft: { ...draft, me: proposer, counter: false } });
+      setTrade({ id: tradeCounter.current, mode: { kind: "compose", draft: { ...draft, me: proposer, counter: false } } });
     },
     [proposer],
   );
@@ -244,9 +244,20 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     if (game.phase.type !== "awaitingTradeResponse") return;
     const { trade: pending } = game.phase;
     tradeCounter.current += 1;
-    setTrade({ id: tradeCounter.current, draft: { me: pending.toId, partnerId: pending.fromId, gives: pending.receives, receives: pending.gives, counter: true } });
+    setTrade({ id: tradeCounter.current, mode: { kind: "compose", draft: { me: pending.toId, partnerId: pending.fromId, gives: pending.receives, receives: pending.gives, counter: true } } });
   }, [game.phase]);
-  useEffect(() => setTrade(null), [seq]);
+  const reviewTrade = useCallback(() => {
+    if (game.phase.type !== "awaitingTradeResponse") return;
+    tradeCounter.current += 1;
+    setTrade({ id: tradeCounter.current, mode: { kind: "review", trade: game.phase.trade } });
+  }, [game.phase]);
+  // A state change invalidates any draft; once the proposal has been announced, the player who must answer sees it big.
+  useEffect(() => {
+    if (busy) return;
+    if (game.phase.type === "awaitingTradeResponse" && (you === null || you === game.phase.trade.toId)) reviewTrade();
+    else setTrade(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the state settles
+  }, [seq, busy]);
 
   const startShake = useCallback(() => {
     if (!canRoll) return;
@@ -397,6 +408,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
           onManage={openList}
           onTrade={proposeTrade}
           onCounter={counterTrade}
+          onReview={reviewTrade}
           canRestart={canRestart}
         />
       </div>
@@ -423,12 +435,17 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       )}
       {showSettings && <SettingsPanel settings={settings} onChange={onSettings} onClose={() => setShowSettings(false)} />}
       {trade && (
-        <TradeDialog
+        <TradeScreen
           key={trade.id}
           state={game}
-          draft={trade.draft}
+          mode={trade.mode}
+          you={you}
           busy={busy}
-          onSubmit={(toId, gives, receives) => dispatch(trade.draft.counter ? { type: "counterTrade", gives, receives } : { type: "proposeTrade", toId, gives, receives })}
+          dispatch={dispatch}
+          onSubmit={(toId, gives, receives) =>
+            dispatch(trade.mode.kind === "compose" && trade.mode.draft.counter ? { type: "counterTrade", gives, receives } : { type: "proposeTrade", toId, gives, receives })
+          }
+          onCounter={counterTrade}
           onClose={() => setTrade(null)}
         />
       )}
