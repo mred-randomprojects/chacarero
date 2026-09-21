@@ -266,7 +266,10 @@ interface ChanceCardProps {
   readonly onHidden: () => void;
 }
 
+/** The draw: slide out from under the deck, then rise and turn to face the viewer. */
+const SLIDE_SECONDS = 0.4;
 const REVEAL_SECONDS = 1.1;
+const SLIDE_DISTANCE = 2.4;
 /** How far in front of the camera the face-up card floats. */
 const HOVER_DISTANCE = 9;
 
@@ -276,6 +279,8 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
   const face = useMemo(() => chanceCardTexture(card), [card]);
   const back = useMemo(() => chanceBackTexture(card.deck), [card.deck]);
   const slot = useMemo(() => (card.deck === "suerte" ? new Vector3(-4.6, 0.05, -4.2) : new Vector3(4.6, 0.05, 4.2)), [card.deck]);
+  /** Where the card is once slid out from under the deck (towards the middle of the felt). */
+  const drawn = useMemo(() => slot.clone().add(new Vector3(0, 0.02, card.deck === "suerte" ? SLIDE_DISTANCE : -SLIDE_DISTANCE)), [slot, card.deck]);
   const t = useRef(0);
   const resolvedReveal = useRef(false);
   const startedHide = useRef(false);
@@ -293,11 +298,17 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
       t.current = 0;
     }
     t.current += delta;
-    const k = Math.min(1, t.current / REVEAL_SECONDS);
-    const e = easeInOut(k);
-    const flat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
-    // Face the camera while up in the air, lie flat in the slot.
+    // Face down in the slot (the back on top), facing the camera while up in the air.
+    const flat = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 2);
     const facing = camera.quaternion.clone();
+    if (!hiding && t.current < SLIDE_SECONDS) {
+      const slide = easeInOut(t.current / SLIDE_SECONDS);
+      node.position.lerpVectors(slot, drawn, slide);
+      node.quaternion.copy(flat);
+      return;
+    }
+    const k = Math.min(1, (hiding ? t.current : t.current - SLIDE_SECONDS) / REVEAL_SECONDS);
+    const e = easeInOut(k);
     if (!hiding) {
       // Float in front of wherever the camera is now, but never below the table.
       const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -313,7 +324,7 @@ function ChanceCard({ card, revealing, hiding, onHidden }: ChanceCardProps) {
       }
       return;
     }
-    node.position.copy(arc(slot, hover.current, e, 1.5));
+    node.position.copy(arc(drawn, hover.current, e, 1.5));
     node.quaternion.copy(flat).slerp(facing, e);
     if (k >= 1 && !resolvedReveal.current) {
       resolvedReveal.current = true;

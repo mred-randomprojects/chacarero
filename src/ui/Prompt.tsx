@@ -1,5 +1,5 @@
 import type { ActionRequest, GameState } from "../game";
-import { DECISION_SECONDS, MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
+import { MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
 import type { Dispatch } from "./ActionBar";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./TradeDialog";
@@ -24,20 +24,17 @@ export interface PromptProps {
   readonly canRestart: boolean;
 }
 
-/** "2:59" above a minute, "45s" below. */
-function clock(seconds: number): string {
-  const whole = Math.ceil(seconds);
-  if (whole < 60) return `${whole}s`;
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-}
+/** The clock only shows itself for the last minute; before that nobody should feel hurried. */
+const COUNTDOWN_SHOWN_SECONDS = 60;
 
 function Countdown({ deadline, now }: { readonly deadline: number | null; readonly now: number }) {
   if (deadline === null) return null;
   const remaining = Math.max(0, (deadline - now) / 1000);
+  if (remaining > COUNTDOWN_SHOWN_SECONDS) return null;
   return (
     <div className={`countdown${remaining <= 20 ? " urgent" : ""}`} aria-hidden>
-      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / DECISION_SECONDS) * 100)}%` }} />
-      <span>{clock(remaining)}</span>
+      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / COUNTDOWN_SHOWN_SECONDS) * 100)}%` }} />
+      <span>{Math.ceil(remaining)}s</span>
     </div>
   );
 }
@@ -106,6 +103,28 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
                 Mover {total} casilleros
+              </button>
+            </div>
+          ) : (
+            waiting(action)
+          )}
+          <Countdown deadline={deadline} now={now} />
+        </div>
+      );
+    }
+    case "awaitingDraw": {
+      const action: ActionRequest = { type: "drawCard" };
+      const suerte = phase.deck === "suerte";
+      return (
+        <div className={`prompt ${phase.deck}`}>
+          <h3>
+            <TokenIcon token={player.token} size={20} /> {player.name} cayó en {suerte ? "Suerte" : "Destino"}
+          </h3>
+          <p>{suerte ? "Hay que levantar la primera tarjeta del mazo de Suerte." : "Hay que levantar la primera tarjeta del mazo de Destino."}</p>
+          {mine(action) ? (
+            <div className="buttons">
+              <button type="button" className="primary" onClick={() => dispatch(action)}>
+                Levantar la tarjeta
               </button>
             </div>
           ) : (

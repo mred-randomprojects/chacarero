@@ -220,7 +220,7 @@ function resolveLanding(state: GameState): GameState {
       return continueTurn(bankPays(state, current.id, square.amount, `${current.name} cae en ${square.name} y cobra ${pesos(square.amount)}.`));
     case "suerte":
     case "destino":
-      return revealCard(log(state, `${current.name} cae en ${square.name}.`), square.kind);
+      return setPhase(log(state, `${current.name} cae en ${square.name}.`), { type: "awaitingDraw", deck: square.kind });
     case "campo":
     case "ferrocarril":
     case "compania":
@@ -398,6 +398,13 @@ export function movePawn(input: GameState): GameState {
   return resolveLanding(moveBy(state, diceTotal(state)));
 }
 
+/** Lifts the top card of the deck the pawn landed on. */
+export function drawCard(input: GameState): GameState {
+  const state = begin(input);
+  const { deck } = expectPhase(state, "awaitingDraw");
+  return revealCard(state, deck);
+}
+
 /** The player has read the face-up card; apply it. */
 export function acknowledgeCard(input: GameState): GameState {
   const state = begin(input);
@@ -412,7 +419,9 @@ export function acknowledgeCard(input: GameState): GameState {
 export function roll(state: GameState, random: () => number = Math.random, forced?: Dice): GameState {
   let next = rollDice(state, random, forced);
   if (next.phase.type === "awaitingMove") next = movePawn(next);
-  while (next.phase.type === "awaitingCardAck") next = acknowledgeCard(next);
+  while (next.phase.type === "awaitingDraw" || next.phase.type === "awaitingCardAck") {
+    next = next.phase.type === "awaitingDraw" ? drawCard(next) : acknowledgeCard(next);
+  }
   return next;
 }
 

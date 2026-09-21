@@ -47,6 +47,9 @@ export function primaryAction(state: GameState, you: string | null): ActionReque
     case "awaitingMove":
       action = { type: "movePawn" };
       break;
+    case "awaitingDraw":
+      action = { type: "drawCard" };
+      break;
     case "awaitingCardAck":
       action = { type: "acknowledgeCard" };
       break;

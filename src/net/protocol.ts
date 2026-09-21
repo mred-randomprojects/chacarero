@@ -20,6 +20,7 @@ const TradeOfferSchema = z.object({ deeds: z.array(DeedIdSchema).max(deedIds.len
 export const ActionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("rollDice") }),
   z.object({ type: z.literal("movePawn") }),
+  z.object({ type: z.literal("drawCard") }),
   z.object({ type: z.literal("acknowledgeCard") }),
   z.object({ type: z.literal("buy") }),
   z.object({ type: z.literal("decline") }),

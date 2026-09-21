@@ -80,6 +80,8 @@ export type Phase =
   | { readonly type: "awaitingJailDecision" }
   /** Dice are on the table; the player still has to move the pawn. */
   | { readonly type: "awaitingMove" }
+  /** The pawn stands on Suerte/Destino; the player still has to lift the top card. */
+  | { readonly type: "awaitingDraw"; readonly deck: Deck }
   /** A Suerte/Destino card is face up; its effect applies once acknowledged. */
   | { readonly type: "awaitingCardAck"; readonly card: Card }
   | { readonly type: "awaitingBuyDecision"; readonly deedId: DeedId }

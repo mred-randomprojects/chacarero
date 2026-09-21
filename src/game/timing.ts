@@ -71,6 +71,8 @@ export function defaultAction(state: GameState): ActionRequest | null {
       return { type: "rollDice" };
     case "awaitingMove":
       return { type: "movePawn" };
+    case "awaitingDraw":
+      return { type: "drawCard" };
     case "awaitingCardAck":
       return { type: "acknowledgeCard" };
     case "awaitingBuyDecision":

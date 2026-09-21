@@ -20,6 +20,7 @@ import {
   counterTrade,
   declareBankruptcy,
   decline,
+  drawCard,
   endTurn,
   mortgage,
   movePawn,
@@ -38,6 +39,7 @@ import type { Dice } from "./engine/actions";
 export type ActionRequest =
   | { readonly type: "rollDice" }
   | { readonly type: "movePawn" }
+  | { readonly type: "drawCard" }
   | { readonly type: "acknowledgeCard" }
   | { readonly type: "buy" }
   | { readonly type: "decline" }
@@ -79,6 +81,8 @@ export function allowedPlayerFor(state: GameState, request: ActionRequest): stri
       return phase.type === "awaitingRoll" || phase.type === "awaitingJailDecision" ? currentPlayer(state).id : null;
     case "movePawn":
       return phase.type === "awaitingMove" ? currentPlayer(state).id : null;
+    case "drawCard":
+      return phase.type === "awaitingDraw" ? currentPlayer(state).id : null;
     case "acknowledgeCard":
       return phase.type === "awaitingCardAck" ? currentPlayer(state).id : null;
     case "buy":
@@ -122,6 +126,8 @@ export function applyActionRequest(state: GameState, request: ActionRequest, dic
       return rollDice(state, Math.random, dice);
     case "movePawn":
       return movePawn(state);
+    case "drawCard":
+      return drawCard(state);
     case "acknowledgeCard":
       return acknowledgeCard(state);
     case "buy":

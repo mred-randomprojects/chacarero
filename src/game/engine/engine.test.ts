@@ -18,6 +18,7 @@ import {
   counterTrade,
   declareBankruptcy,
   decline,
+  drawCard,
   endTurn,
   mortgage,
   movePawn,
@@ -820,8 +821,13 @@ describe("moves per action", () => {
     expect(state.events.map((e) => e.type)).toEqual(["log"]);
     state = movePawn(state); // 15 Suerte
     expect(state.moves).toEqual([{ playerId: "ana", from: 12, to: 15, kind: "forward" }]);
+    expect(state.phase).toEqual({ type: "awaitingDraw", deck: "suerte" });
+    expect(state.events.map((e) => e.type)).toEqual(["move", "log"]);
+    expect(() => acknowledgeCard(state)).toThrow();
+    state = drawCard(state);
+    expect(state.moves).toEqual([]);
     expect(state.phase).toMatchObject({ type: "awaitingCardAck", card: { id: "suerte-04" } });
-    expect(state.events.map((e) => e.type)).toEqual(["move", "log", "card"]);
+    expect(state.events.map((e) => e.type)).toEqual(["card"]);
     state = acknowledgeCard(state); // back 3 = 12, FC Belgrano free
     expect(state.moves).toEqual([{ playerId: "ana", from: 15, to: 12, kind: "backward" }]);
     expect(currentPlayer(state).position).toBe(12);
@@ -1000,6 +1006,9 @@ describe("trades", () => {
     // A card face up: not now either.
     let card = withDecks(withHolding(game(), "salta-sur", { ownerId: "ana" }), ["suerte-13"], ["destino-04"]);
     card = movePawn(rollDice(card, undefined, [4, 6])); // 10: Destino
+    expect(card.phase.type).toBe("awaitingDraw");
+    expect(() => proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
+    card = drawCard(card);
     expect(card.phase.type).toBe("awaitingCardAck");
     expect(() => proposeTrade(card, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/Terminá la jugada/);
   });
