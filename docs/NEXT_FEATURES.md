@@ -130,9 +130,9 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 12. Faster moves, and the path lights up
 
-- [ ] 12.1 Rolling N lights up the next N squares in order, signalling where the pawn
+- [x] 12.1 Rolling N lights up the next N squares in order, signalling where the pawn
       is going, before/while it walks.
-- [ ] 12.2 A key skips the walking animation (jump to the destination) for players who
+- [x] 12.2 A key skips the walking animation (jump to the destination) for players who
       want to go fast.
 
 ## 13. Trade whenever
@@ -189,6 +189,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — path lights + skip (12) (`9b67c9b`).** `GameScreen` computes
+  `path` (next N squares in `awaitingMove`, or the rest of the walking route) →
+  `Board` → `Tile` (`pathStep`/`pathLength`); the tile material's emissive is now
+  driven per frame in `Tile.tsx` (hover/selected included). Skipping the walk was
+  already Enter/Space (`skip()` in `usePlayback`); the move banner now says so.
 - **2026-09-21 — big property card (6) (`b798222`).** Effects `presentDeed` /
   `hideDeed` on the bus; `PresentedDeed` in `Effects.tsx` (lifts from the bank
   pile, 2x scale, 3x texture via `deedCardTexture(deed, holding, scale)`).
