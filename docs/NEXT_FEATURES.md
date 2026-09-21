@@ -160,7 +160,7 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B1. Bigger icons at setup
 
-- [ ] B1.1 The token icons in the setup / lobby pickers are too small to tell
+- [x] B1.1 The token icons in the setup / lobby pickers are too small to tell
       apart; make them big (with the name), pick-by-sight.
 
 ## B2. No building limit
@@ -222,7 +222,7 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B13. Focus on a player
 
-- [ ] B13.1 Clicking a player's card at the bottom flies to their side of the
+- [x] B13.1 Clicking a player's card at the bottom flies to their side of the
       table (their deeds and money); the number keys stay as a shortcut.
 
 ## B16, B20. Keys that are safe, and visible
@@ -243,17 +243,17 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B21. Square corners
 
-- [ ] B21.1 Card-like UI (deed slots, previews, hands, player cards) has square
+- [x] B21.1 Card-like UI (deed slots, previews, hands, player cards) has square
       corners like the physical cards; panels lose most of their rounding.
 
 ## B22. Table layout
 
-- [ ] B22.1 A player's deed cards on the table never collide visually with their
+- [x] B22.1 A player's deed cards on the table never collide visually with their
       bill stacks (screenshot 3).
 
 ## Guidelines
 
-- [ ] G.1 `docs/GUIDELINES.md` with the project rules (one 3D scene, theatre
+- [x] G.1 `docs/GUIDELINES.md` with the project rules (one 3D scene, theatre
       camera, step by step, no unrequested scope), linked from the README.
 
 ---
@@ -296,6 +296,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — B1, B13, B21, B22, G.1 (`97f9994`, `66dec6a`).** `--radius`
+  token (3px) for panels, 0 for card-like elements; token picker 46px + names
+  (setup card 560px wide); `PlayerCards` are buttons calling `onFocus` →
+  `flyToSeat`; `PlayerArea.FIRST_ROW_UP` -3.4 and `SEAT_DEEDS.up` -4.0;
+  `docs/GUIDELINES.md` written and linked from the README.
 - **2026-09-21 — B19 real cards.** `deedCardDataUrl()` in `cardTextures.ts`;
   `src/ui/DeedCard.tsx` (`DeedCard`, `Hand`) used by `TradeScreen` (preview +
   hands) and `OfferItems` (compact prompt). Grid slots stay schematic (too small
