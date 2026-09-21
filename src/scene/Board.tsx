@@ -196,6 +196,7 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
           color={pawn.color}
           slot={slot}
           y={PAWN_Y}
+          knockId={pawn.id}
           dimmed={pawn.dimmed}
           onArrive={(square) => onPawnArrive(pawn.id, square)}
         />

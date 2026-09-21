@@ -8,6 +8,7 @@ import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
 import { OVERVIEW, TOP_DOWN, seatView, squareView } from "./scene/cameraViews";
 import type { DiceThrow } from "./scene/Dice";
+import { diceHurry } from "./scene/pawnKnocks";
 import { Scene } from "./scene/Scene";
 import { seatSides } from "./scene/seats";
 import type { Session } from "./session/types";
@@ -237,6 +238,10 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       if (isTyping(event) || ownsSpace(event)) return;
       if (event.key === " " || event.key === "Enter") {
         event.preventDefault();
+        if (throwing) {
+          diceHurry.requested += 1;
+          return;
+        }
         if (playback.busy) {
           skip();
           return;
@@ -281,7 +286,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade]);
+  }, [seats, startShake, releaseDice, flyTo, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, skip, proposeTrade, game, you, dispatch, showList, showSettings, trade, throwing]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -321,6 +326,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         goTo={goTo}
         followPawn={settings.followPawn && walk !== null}
         diceSide={shakingSeat}
+        throwerId={session.shakingPlayerId ?? currentPlayerId}
         shaking={diceShaking}
         throwing={throwing}
         onDiceSettled={onDiceSettled}

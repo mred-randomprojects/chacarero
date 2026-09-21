@@ -7,14 +7,17 @@ import { Effects } from "./Effects";
 import type { CameraRigProps } from "./CameraRig";
 import { CameraRig } from "./CameraRig";
 import { OVERVIEW } from "./cameraViews";
-import type { DiceThrow } from "./Dice";
+import type { DiceThrow, PawnObstacle } from "./Dice";
 import { Dice } from "./Dice";
+import { pawnWorld, throwTarget } from "./pawnSpots";
 import { seatFrame } from "./seats";
 import { useFontsReady } from "./useFontsReady";
 
 export interface SceneProps extends BoardProps, CameraRigProps {
   /** Side of the player who holds the dice. */
   readonly diceSide: number;
+  /** Whose pawn the dice are thrown at (the player rolling). */
+  readonly throwerId: string;
   readonly shaking: boolean;
   readonly throwing: DiceThrow | null;
   readonly onDiceSettled: (id: number) => void;
@@ -24,8 +27,11 @@ export interface SceneProps extends BoardProps, CameraRigProps {
  * Full-viewport Three.js canvas with lights, camera and orbit controls. The
  * board itself is only mounted once the tile fonts are available.
  */
-export function Scene({ goTo, followPawn, diceSide, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
+export function Scene({ goTo, followPawn, diceSide, throwerId, shaking, throwing, onDiceSettled, ...board }: SceneProps) {
   const fontsReady = useFontsReady();
+  const obstacles = useMemo<readonly PawnObstacle[]>(() => board.pawns.map((pawn, slot) => ({ id: pawn.id, position: pawnWorld(BOARD_LAYOUT, pawn.position, slot) })), [board.pawns]);
+  const thrower = board.pawns.find((p) => p.id === throwerId);
+  const target = useMemo(() => throwTarget(BOARD_LAYOUT, thrower?.position ?? 0), [thrower?.position]);
   const anchors = useMemo<Anchors>(
     () => ({ layout: BOARD_LAYOUT, slabMargin: SLAB_MARGIN, sides: new Map(board.seats.map((seat) => [seat.playerId, seat.side])), tableY: TABLE_Y }),
     [board.seats],
@@ -58,7 +64,7 @@ export function Scene({ goTo, followPawn, diceSide, shaking, throwing, onDiceSet
         <>
           <Board {...board} />
           <Effects anchors={anchors} />
-          <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
+          <Dice frame={seatFrame(BOARD_LAYOUT, SLAB_MARGIN, diceSide)} target={target} obstacles={obstacles} shaking={shaking} throwing={throwing} tableY={0} onSettled={onDiceSettled} />
         </>
       )}
       <CameraRig goTo={goTo} followPawn={followPawn} />
