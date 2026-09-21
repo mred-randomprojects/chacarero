@@ -165,7 +165,7 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B2. No building limit
 
-- [ ] B2.1 The bank never runs out of chacras or estancias: remove the limit from
+- [x] B2.1 The bank never runs out of chacras or estancias: remove the limit from
       the engine and the "32 chacras · 12 estancias" counters from the HUD/map.
       (Maxi: limiting buildings is not a good idea. It was in the engine before
       batch 1; surfacing it on the Banco card was what he noticed.)
@@ -187,13 +187,13 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B7, B15, B18. Step by step, and nothing gets stuck
 
-- [ ] B7.1 The deed on offer must not flash-appear, vanish and reappear: it
+- [x] B7.1 The deed on offer must not flash-appear, vanish and reappear: it
       appears once, after the pawn has arrived and the landing has been
       announced.
-- [ ] B15.1 Nothing that belongs to a later step shows up early (the card on
+- [x] B15.1 Nothing that belongs to a later step shows up early (the card on
       offer while the pawn is still walking, etc.): what the table shows is
       driven by the replayed view state, not by the final game state.
-- [ ] B18.1 A lifted deed can never get stuck on screen (it did after a buy):
+- [x] B18.1 A lifted deed can never get stuck on screen (it did after a buy):
       showing/hiding is derived from state, not from fire-and-forget bus
       messages that a skip could swallow. Tests for the view-state rules.
 
@@ -296,6 +296,15 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — B7/B15/B18 view-state stepping (`5902545`).** `ViewState` now
+  has `phase`, `cardOnTable`, `deedOnOffer` (`src/ui/playbackView.ts`, pure,
+  tested); `usePlayback.enqueue(after)` calls `beginReplay` then applies events
+  and adopts `viewOf(final)` at the end. `Effects` takes `cardOnTable` /
+  `deedOnOffer` as props (`useShown` keeps exit animations); the bus only carries
+  flights + `revealCard` (which gates the replay step). Rule for the future:
+  anything the scene shows because of the game phase reads the *view*, not `game`.
+- **2026-09-21 — B2 no building limit (`3b7efd5`).** `bank` gone from GameState,
+  no stock checks, counters removed from HUD/map; REGLAS.md notes it.
 - **2026-09-21 — batch 2 captured.** 22 review points from Maxi, grouped above
   as B1–B22 + G.1. Order of work: B2 (engine, quick) → B7/B15/B18 (view-state
   stepping: the correctness core) → dice (B3–B6, B14) → camera theatre (B9,
