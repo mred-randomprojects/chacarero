@@ -46,8 +46,8 @@ export function Banner({ state, event, onSkip }: BannerProps) {
       <span className="dot" style={{ background: color }} />
       <span className="icon">{ICONS[event.type]}</span>
       <span className="text">{event.text}</span>
-      <button type="button" className="skip" onClick={onSkip} title="Continuar (Enter)">
-        ▸
+      <button type="button" className="skip" onClick={onSkip} title={event.type === "move" ? "Saltear la caminata (Enter / espacio)" : "Continuar (Enter / espacio)"}>
+        {event.type === "move" ? "▸▸" : "▸"}
       </button>
     </div>
   );

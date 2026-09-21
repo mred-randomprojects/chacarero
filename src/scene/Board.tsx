@@ -49,6 +49,8 @@ export interface SeatView {
 export interface BoardProps {
   readonly hovered: number | null;
   readonly selected: number | null;
+  /** Squares the pawn on turn is about to visit, in order (the last is the destination). */
+  readonly path: readonly number[];
   readonly onHover: (index: number | null) => void;
   readonly onSelect: (index: number) => void;
   /** Double-click on a square or a card: fly the camera there. */
@@ -69,8 +71,9 @@ function toShape(points: readonly Vec2[]): Shape {
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
  * towards -z (world), so Salida ends up at the bottom-right from the default camera.
  */
-export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
+export function Board({ hovered, selected, path, onHover, onSelect, onFocus, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
   const layout = BOARD_LAYOUT;
+  const pathSteps = useMemo(() => new Map(path.map((square, i) => [square, i + 1])), [path]);
 
   const slabGeometry = useMemo(() => {
     const shape = toShape(hexagonVertices(layout.outerRadius + SLAB_MARGIN));
@@ -175,6 +178,8 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
             y={TILE_Y}
             hovered={hovered === tile.index}
             selected={selected === tile.index}
+            pathStep={pathSteps.get(tile.index) ?? null}
+            pathLength={path.length}
             onHover={onHover}
             onSelect={onSelect}
             onFocus={onFocus}

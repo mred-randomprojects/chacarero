@@ -60,6 +60,7 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     if (!route || route.length < 2) {
       path.current = [position];
       progress.current = 0;
+      pawnTracker.moving = false;
       return;
     }
     const displayed = path.current[Math.floor(progress.current)] ?? position;

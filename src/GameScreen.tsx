@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { soundsForTransition } from "./audio/gameSounds";
 import { sfx } from "./audio/sfx";
 import type { DeedId, GameState, TradeOffer } from "./game";
-import { currentPlayer, getSquare } from "./game";
+import { BOARD_SIZE, currentPlayer, getSquare } from "./game";
 import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
@@ -338,6 +338,15 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
 
   const colorOf = useCallback((playerId: string) => game.players.find((p) => p.id === playerId)?.color ?? "#000000", [game]);
 
+  // The squares the pawn is about to cross: with the dice on the table, the next N; while it walks, what is left of its route.
+  const path = useMemo<readonly number[]>(() => {
+    if (walk) return walk.route.slice(1);
+    if (game.phase.type !== "awaitingMove" || !game.dice) return [];
+    const from = currentPlayer(game).position;
+    const steps = game.dice[0] + game.dice[1];
+    return Array.from({ length: steps }, (_, i) => (from + i + 1) % BOARD_SIZE);
+  }, [walk, game]);
+
   const shown = selected ?? hovered;
   const openList = () => setShowList(true);
   const shakingSeat = session.shakingPlayerId ? sideOf(session.shakingPlayerId) : currentSide;
@@ -348,6 +357,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       <Scene
         hovered={hovered}
         selected={selected}
+        path={path}
         onHover={setHovered}
         onSelect={onSelect}
         onFocus={focusSquare}
