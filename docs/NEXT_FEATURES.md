@@ -33,13 +33,13 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 3. Player cards at the bottom of the screen
 
-- [ ] 3.1 A row of cards floating at the bottom centre, one per player: token icon +
+- [x] 3.1 A row of cards floating at the bottom centre, one per player: token icon +
       colour, name, cash. Starting cash (e.g. $35.000) is visible from the first
       second.
-- [ ] 3.2 The card of the player on turn is highlighted; jail / bankrupt / offline
+- [x] 3.2 The card of the player on turn is highlighted; jail / bankrupt / offline
       states are visible on the card.
-- [ ] 3.3 The cash figure animates (counts) when it changes, in sync with the replay.
-- [ ] 3.4 Replaces the top-left player list (title, room code and buttons move to a
+- [x] 3.3 The cash figure animates (counts) when it changes, in sync with the replay.
+- [x] 3.4 Replaces the top-left player list (title, room code and buttons move to a
       slim top bar so nothing is lost).
 
 ## 4. Pick your token (piece)
@@ -63,7 +63,7 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
       the map / properties switches that screen to free camera until the next turn
       starts (then it re-joins the director); a button/setting turns the director
       off entirely.
-- [ ] 5.4 When money is paid, it visibly leaves the payer's card at the bottom and
+- [x] 5.4 When money is paid, it visibly leaves the payer's card at the bottom and
       flies into the receiver's card (or the bank), on top of the bills flying on the
       table.
 
@@ -189,6 +189,13 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — bottom player cards (3, 5.4) (`43b0801`).** `src/ui/PlayerCards.tsx`
+  (row at the bottom centre, counting cash, turn highlight, states, Banco card),
+  `src/ui/TopBar.tsx` (title, code, turn, buttons) replacing `PlayersPanel`, and
+  `src/ui/MoneyFlights.tsx`: subscribes to the effects bus and mirrors every
+  `money` effect as HTML bills flying from the payer's card to the receiver's
+  (`data-party` attributes locate the cards). Gotcha: Web Animations with a
+  delay need `fill: "both"`, or the element sits at (0,0) until it starts.
 - **2026-09-21 — tokens (4) (`a628dc0`).** Eight tokens in `src/game/tokens.ts`
   (colour + emoji icon + name), 3D shapes from primitives in `src/scene/Token.tsx`,
   pickers in the hot-seat setup and the online lobby (`chooseToken` message, taken
