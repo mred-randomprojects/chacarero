@@ -12,12 +12,12 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 1. Dice close-up after every throw
 
-- [ ] 1.1 After the two dice settle on the table, they rise and float straight into
+- [x] 1.1 After the two dice settle on the table, they rise and float straight into
       the camera, big, with the rolled faces pointing at the viewer, so the result is
       unmistakable (a 5 and a 5 read as two fives).
-- [ ] 1.2 They hold there long enough to read, then return to where they landed on the
+- [x] 1.2 They hold there long enough to read, then return to where they landed on the
       table; only then does the rest of the turn replay (banners, pawn move).
-- [ ] 1.3 Everyone at the table sees the same presentation (it is driven by the same
+- [x] 1.3 Everyone at the table sees the same presentation (it is driven by the same
       throw id/seed as the tumble).
 
 ## 2. Opening roll: who starts
@@ -104,9 +104,9 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 10. Dice thrown next to the pawn
 
-- [ ] 10.1 The dice land near the current player's pawn instead of the middle of the
+- [x] 10.1 The dice land near the current player's pawn instead of the middle of the
       felt.
-- [ ] 10.2 A die that lands on a pawn knocks it: the pawn wobbles and the die deflects.
+- [x] 10.2 A die that lands on a pawn knocks it: the pawn wobbles and the die deflects.
       (Deterministic, seeded — no physics engine, so every screen sees the same
       throw.)
 
@@ -189,6 +189,14 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — dice close-up + landing near the pawn (1, 10) (`b552be4`).**
+  `Dice.tsx` gained a `present` mode (rise into the camera, hold, return; the
+  `onSettled` callback fires after it). Throws aim at `throwTarget()` in
+  `src/scene/pawnSpots.ts` (felt just inside the ring in front of the roller's
+  square); pawn obstacles come from `Scene.tsx`; a hit writes to `pawnKnocks`
+  (`src/scene/pawnKnocks.ts`) and the `Pawn` rocks. `diceHurry` in the same file
+  lets Space/Enter cut the hold short. Note: a quick keyboard tap of Space does
+  not throw (keydown/keyup closure staleness); holding works, and the button works.
 - **2026-09-21 — bottom player cards (3, 5.4) (`43b0801`).** `src/ui/PlayerCards.tsx`
   (row at the bottom centre, counting cash, turn highlight, states, Banco card),
   `src/ui/TopBar.tsx` (title, code, turn, buttons) replacing `PlayersPanel`, and
