@@ -2,10 +2,15 @@ import type { Card, Deck, DeedId } from "../types";
 import { DEAL_DEEDS_MAX, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
 import { shuffledDeck } from "../cards";
 import { DEEDS } from "../deeds";
+import type { TokenId } from "../tokens";
+import { getToken } from "../tokens";
 
 export interface Player {
   readonly id: string;
   readonly name: string;
+  /** The piece they move; also fixes their colour and icon. */
+  readonly token: TokenId;
+  /** The token's colour, copied here so the UI never has to look it up. */
   readonly color: string;
   readonly cash: number;
   /** Ring index 0-41. */
@@ -156,7 +161,7 @@ export interface GameState {
 export interface NewPlayer {
   readonly id: string;
   readonly name: string;
-  readonly color: string;
+  readonly token: TokenId;
 }
 
 /** What the table agrees on before the first roll. */
@@ -215,6 +220,9 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
   if (new Set(players.map((p) => p.id)).size !== players.length) {
     throw new Error("Player ids must be unique");
   }
+  if (new Set(players.map((p) => p.token)).size !== players.length) {
+    throw new Error("Cada jugador necesita una ficha distinta");
+  }
   if (!Number.isInteger(dealDeeds) || dealDeeds < 0 || dealDeeds > DEAL_DEEDS_MAX) {
     throw new Error(`Se reparten de 0 a ${DEAL_DEEDS_MAX} escrituras por jugador`);
   }
@@ -222,7 +230,8 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
-      color: p.color,
+      token: p.token,
+      color: getToken(p.token).color,
       cash: startingCash,
       position: 0,
       inJail: false,

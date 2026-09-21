@@ -124,6 +124,7 @@ export default function App() {
           saveName(name);
           online.client?.updateName(name);
         }}
+        onChooseToken={(token) => online.client?.chooseToken(token)}
         onLeave={leaveOnline}
       />
     );

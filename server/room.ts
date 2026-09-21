@@ -3,13 +3,12 @@
  * makes decisions for absent players. No sockets in here, so it is easy to
  * test; index.ts wires it to the network.
  */
-import type { ActionRequest, GameSetup, GameState } from "../src/game";
-import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, phaseSeconds, replaySeconds } from "../src/game";
+import type { ActionRequest, GameSetup, GameState, TokenId } from "../src/game";
+import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, firstFreeToken, getToken, phaseSeconds, replaySeconds } from "../src/game";
 import type { Dice } from "../src/game";
 import type { RoomPlayer, RoomStatus, RoomView } from "../src/net/protocol";
 
 export const MAX_PLAYERS = 6;
-export const PLAYER_COLORS = ["#1d4ed8", "#dc2626", "#16a34a", "#f59e0b", "#7c3aed", "#0891b2"] as const;
 
 export interface RoomPlayerRecord extends RoomPlayer {
   readonly lastSeen: number;
@@ -46,7 +45,7 @@ export function createRoom(code: string, host: { playerId: string; name: string 
     code,
     hostId: host.playerId,
     status: "lobby",
-    players: [{ playerId: host.playerId, name: host.name, color: PLAYER_COLORS[0], connected: true, lastSeen: now }],
+    players: [{ playerId: host.playerId, name: host.name, token: "tractor", color: getToken("tractor").color, connected: true, lastSeen: now }],
     game: null,
     seq: 0,
     lastAction: null,
@@ -72,9 +71,18 @@ export function joinRoom(room: Room, player: { playerId: string; name: string },
   if (existing) return touch(updatePlayerRecord(room, player.playerId, { connected: true, lastSeen: now, name: player.name }), now);
   if (room.status !== "lobby") throw new RoomError("La partida ya empezó");
   if (room.players.length >= MAX_PLAYERS) throw new RoomError("La mesa está llena");
-  const used = new Set(room.players.map((p) => p.color));
-  const color = PLAYER_COLORS.find((c) => !used.has(c)) ?? PLAYER_COLORS[0];
-  return touch({ ...room, players: [...room.players, { playerId: player.playerId, name: player.name, color, connected: true, lastSeen: now }] }, now);
+  const token = firstFreeToken(room.players.map((p) => p.token));
+  if (!token) throw new RoomError("No quedan fichas libres");
+  return touch({ ...room, players: [...room.players, { playerId: player.playerId, name: player.name, token, color: getToken(token).color, connected: true, lastSeen: now }] }, now);
+}
+
+/** A player picks their piece in the lobby; a piece someone else holds is refused. */
+export function chooseToken(room: Room, playerId: string, token: TokenId, now: number): Room {
+  if (room.status !== "lobby") throw new RoomError("La partida ya empezó");
+  if (!room.players.some((p) => p.playerId === playerId)) return room;
+  const holder = room.players.find((p) => p.token === token);
+  if (holder && holder.playerId !== playerId) throw new RoomError(`${holder.name} ya tiene ${getToken(token).name.toLowerCase()}`);
+  return touch(updatePlayerRecord(room, playerId, { token, color: getToken(token).color }), now);
 }
 
 export function renamePlayer(room: Room, playerId: string, name: string, now: number): Room {
@@ -129,7 +137,7 @@ export function startGame(room: Room, playerId: string, setup: GameSetup, now: n
   if (room.hostId !== playerId) throw new RoomError("Solo el anfitrión puede empezar");
   if (room.status !== "lobby") throw new RoomError("La partida ya empezó");
   if (room.players.length < 2) throw new RoomError("Hacen falta al menos 2 jugadores");
-  const game = createGame({ players: room.players.map((p) => ({ id: p.playerId, name: p.name, color: p.color })), ...setup, random });
+  const game = createGame({ players: room.players.map((p) => ({ id: p.playerId, name: p.name, token: p.token })), ...setup, random });
   return touch(withClock({ ...room, status: "playing", game, seq: 1, lastAction: null, lastActorId: null, shakingPlayerId: null }, now), now);
 }
 
@@ -179,7 +187,7 @@ export function toView(room: Room, now: number): RoomView {
     code: room.code,
     hostId: room.hostId,
     status: room.status,
-    players: room.players.map(({ playerId, name, color, connected }) => ({ playerId, name, color, connected })),
+    players: room.players.map(({ playerId, name, token, color, connected }) => ({ playerId, name, token, color, connected })),
     game: room.game,
     seq: room.seq,
     lastAction: room.lastAction,

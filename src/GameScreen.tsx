@@ -285,6 +285,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     () =>
       game.players.map((p) => ({
         id: p.id,
+        token: p.token,
         color: p.color,
         position: p.position,
         route: walk?.playerId === p.id ? walk.route : null,

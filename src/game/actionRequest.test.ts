@@ -5,9 +5,9 @@ import type { GameState } from "./engine";
 import { DECISION_SECONDS, autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
 
 const players = [
-  { id: "a", name: "A", color: "#f00" },
-  { id: "b", name: "B", color: "#00f" },
-  { id: "c", name: "C", color: "#0f0" },
+  { id: "a", name: "A", token: "tractor" as const },
+  { id: "b", name: "B", token: "vaca" as const },
+  { id: "c", name: "C", token: "caballo" as const },
 ];
 
 describe("allowedPlayerFor", () => {

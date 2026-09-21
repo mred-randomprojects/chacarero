@@ -13,6 +13,7 @@ import type { Room } from "./room";
 import {
   RoomError,
   applyRequest,
+  chooseToken,
   createRoom,
   fireDeadline,
   generateCode,
@@ -151,6 +152,9 @@ function handle(ws: Socket, message: ClientMessage): void {
     }
     case "updateName":
       if (ws.data.code) update(ws, ws.data.code, (room) => renamePlayer(room, message.playerId, message.name, now));
+      return;
+    case "chooseToken":
+      if (ws.data.code) update(ws, ws.data.code, (room) => chooseToken(room, message.playerId, message.token, now));
       return;
     case "startGame":
       if (ws.data.code) update(ws, ws.data.code, (room) => startGame(room, message.playerId, { startingCash: message.startingCash, dealDeeds: message.dealDeeds }, now));

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
-import type { DeedId, Holding } from "../game";
+import type { DeedId, Holding, TokenId } from "../game";
 import { SQUARES, getDeed } from "../game";
 import { BANK_DEEDS, BANK_MONEY, BANK_PLATE } from "./anchors";
 import { billTexture } from "./billTextures";
@@ -31,6 +31,7 @@ const FLAT: [number, number, number] = [-Math.PI / 2, 0, 0];
 
 export interface PawnView {
   readonly id: string;
+  readonly token: TokenId;
   readonly color: string;
   readonly position: number;
   readonly route: readonly number[] | null;
@@ -191,6 +192,7 @@ export function Board({ hovered, selected, onHover, onSelect, onFocus, pawns, se
           route={pawn.route}
           routeId={pawn.routeId}
           jump={pawn.jump}
+          token={pawn.token}
           color={pawn.color}
           slot={slot}
           y={PAWN_Y}

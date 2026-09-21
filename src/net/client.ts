@@ -1,4 +1,4 @@
-import type { ActionRequest, GameSetup } from "../game";
+import type { ActionRequest, GameSetup, TokenId } from "../game";
 import type { ClientMessage, RoomView, ServerMessage } from "./protocol";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
@@ -72,6 +72,10 @@ export class RoomClient {
   updateName(name: string): void {
     if (this.rejoin) this.rejoin = { ...this.rejoin, name };
     this.send({ type: "updateName", playerId: this.playerId, name });
+  }
+
+  chooseToken(token: TokenId): void {
+    this.send({ type: "chooseToken", playerId: this.playerId, token });
   }
 
   startGame(setup: GameSetup): void {

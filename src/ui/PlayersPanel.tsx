@@ -1,5 +1,6 @@
 import type { GameState } from "../game";
 import { currentPlayer, pesos } from "../game";
+import { TokenIcon } from "./TokenIcon";
 
 export interface PlayersPanelProps {
   readonly state: GameState;
@@ -29,7 +30,7 @@ export function PlayersPanel({ state, cash, you, offline, roomCode, connection, 
       <ul>
         {state.players.map((player) => (
           <li key={player.id} className={`${player.id === current.id ? "current" : ""} ${player.bankrupt ? "bankrupt" : ""} ${offline.has(player.id) ? "away" : ""}`}>
-            <span className="dot" style={{ background: player.color }} />
+            <TokenIcon token={player.token} size={20} />
             <span className="name">
               {player.name}
               {player.id === you ? " (vos)" : ""}

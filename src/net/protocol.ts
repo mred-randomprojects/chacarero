@@ -4,11 +4,12 @@
  * carries the engine's own types, which the server produced itself.
  */
 import { z } from "zod";
-import type { ActionRequest, DeedId, GameState } from "../game";
-import { DEAL_DEEDS_MAX, DEEDS } from "../game";
+import type { ActionRequest, DeedId, GameState, TokenId } from "../game";
+import { DEAL_DEEDS_MAX, DEEDS, TOKEN_IDS } from "../game";
 
 const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
 const DeedIdSchema = z.enum(deedIds);
+const TokenIdSchema = z.enum(TOKEN_IDS as [TokenId, ...TokenId[]]);
 const PlayerId = z.string().min(8).max(64);
 const Name = z.string().trim().min(1).max(16);
 const Code = z.string().trim().toUpperCase().length(4);
@@ -48,6 +49,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("join"), playerId: PlayerId, name: Name, code: Code }),
   z.object({ type: z.literal("leave"), playerId: PlayerId }),
   z.object({ type: z.literal("updateName"), playerId: PlayerId, name: Name }),
+  z.object({ type: z.literal("chooseToken"), playerId: PlayerId, token: TokenIdSchema }),
   z.object({ type: z.literal("startGame"), playerId: PlayerId, startingCash: z.number().int().min(1_000).max(1_000_000), dealDeeds: z.number().int().min(0).max(DEAL_DEEDS_MAX).default(0) }),
   z.object({ type: z.literal("newGame"), playerId: PlayerId }),
   z.object({ type: z.literal("shake"), playerId: PlayerId, shaking: z.boolean() }),
@@ -60,6 +62,8 @@ export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export interface RoomPlayer {
   readonly playerId: string;
   readonly name: string;
+  readonly token: TokenId;
+  /** The token's colour. */
   readonly color: string;
   readonly connected: boolean;
 }

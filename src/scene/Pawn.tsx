@@ -2,10 +2,12 @@ import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { sfx } from "../audio/sfx";
+import type { TokenId } from "../game";
 import type { HexLayout } from "./hexLayout";
 import { pawnPosition } from "./hexLayout";
 import { pawnTracker } from "./pawnTracker";
 import { boardToWorld } from "./tileGeometry";
+import { TokenShape } from "./Token";
 
 export interface PawnProps {
   readonly layout: HexLayout;
@@ -16,6 +18,7 @@ export interface PawnProps {
   readonly routeId: number;
   /** True for a leap straight to the last square (jail). */
   readonly jump: boolean;
+  readonly token: TokenId;
   readonly color: string;
   /** 0-5, which of the six spots on a tile this pawn occupies. */
   readonly slot: number;
@@ -31,11 +34,12 @@ const HOP_HEIGHT = 0.55;
 const JUMP_HEIGHT = 2.2;
 
 /**
- * A simple pawn (base + body + head) that hops along `route`. Movement runs
- * in the frame loop; React only hands over the route. While walking it
- * reports its position to the camera tracker and clicks on every square.
+ * A player's piece (see Token.tsx for the shapes) that hops along `route`.
+ * Movement runs in the frame loop; React only hands over the route. While
+ * walking it reports its position to the camera tracker and clicks on every
+ * square.
  */
-export function Pawn({ layout, position, route, routeId, jump, color, slot, y, dimmed = false, onArrive }: PawnProps) {
+export function Pawn({ layout, position, route, routeId, jump, token, color, slot, y, dimmed = false, onArrive }: PawnProps) {
   const group = useRef<Group>(null);
   const path = useRef<number[]>([position]);
   const isJump = useRef(false);
@@ -92,21 +96,9 @@ export function Pawn({ layout, position, route, routeId, jump, color, slot, y, d
     }
   });
 
-  const opacity = dimmed ? 0.35 : 1;
   return (
     <group ref={group}>
-      <mesh castShadow position={[0, 0.06, 0]}>
-        <cylinderGeometry args={[0.26, 0.3, 0.12, 24]} />
-        <meshStandardMaterial color={color} roughness={0.4} transparent={dimmed} opacity={opacity} />
-      </mesh>
-      <mesh castShadow position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[0.1, 0.2, 0.56, 24]} />
-        <meshStandardMaterial color={color} roughness={0.4} transparent={dimmed} opacity={opacity} />
-      </mesh>
-      <mesh castShadow position={[0, 0.82, 0]}>
-        <sphereGeometry args={[0.17, 24, 16]} />
-        <meshStandardMaterial color={color} roughness={0.4} transparent={dimmed} opacity={opacity} />
-      </mesh>
+      <TokenShape token={token} color={color} dimmed={dimmed} />
     </group>
   );
 }

@@ -20,6 +20,7 @@ import {
   unmortgageCost,
 } from "../game";
 import type { Dispatch } from "./ActionBar";
+import { TokenIcon } from "./TokenIcon";
 
 export interface PropertiesListProps {
   readonly state: GameState;
@@ -87,7 +88,7 @@ export function PropertiesList({ state, onClose, onSelect, dispatch, you = null,
                         <td className="owner">
                           {owner ? (
                             <>
-                              <span className="dot" style={{ background: owner.color }} /> {owner.name}
+                              <TokenIcon token={owner.token} size={18} /> {owner.name}
                             </>
                           ) : (
                             <span className="free">libre</span>

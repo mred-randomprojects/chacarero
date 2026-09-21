@@ -4,6 +4,7 @@ import type { Dispatch } from "./ActionBar";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./TradeDialog";
 import { useNow } from "./useNow";
+import { TokenIcon } from "./TokenIcon";
 
 export interface PromptProps {
   readonly state: GameState;
@@ -74,7 +75,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt">
           <h3>
-            <span className="dot" style={{ background: player.color }} /> {player.name} sacó {dice[0]} + {dice[1]} = {total}
+            <TokenIcon token={player.token} size={20} /> {player.name} sacó {dice[0]} + {dice[1]} = {total}
           </h3>
           <p>{dice[0] === dice[1] ? "¡Doble! Después de mover, tira otra vez." : "A mover el peón para ver dónde cae."}</p>
           {mine(action) ? (
@@ -96,7 +97,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className={`prompt ${card.deck}`}>
           <h3>
-            <span className="dot" style={{ background: player.color }} /> {card.deck === "suerte" ? "Suerte" : "Destino"}
+            <TokenIcon token={player.token} size={20} /> {card.deck === "suerte" ? "Suerte" : "Destino"}
           </h3>
           <p className="card-text">{card.text}</p>
           {mine(action) ? (
@@ -118,7 +119,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt">
           <h3>
-            <span className="dot" style={{ background: player.color }} /> {player.name} cayó en {deedName(deed)}
+            <TokenIcon token={player.token} size={20} /> {player.name} cayó en {deedName(deed)}
           </h3>
           <p>
             Está libre: ¿la compra por {pesos(deed.price)}? Si no, sale a remate.
@@ -153,7 +154,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt">
           <h3>
-            <span className="dot" style={{ background: player.color }} /> {player.name}: pagar {pesos(phase.amount)} o levantar una tarjeta
+            <TokenIcon token={player.token} size={20} /> {player.name}: pagar {pesos(phase.amount)} o levantar una tarjeta
           </h3>
           {mine(action) ? (
             <div className="buttons">
@@ -180,7 +181,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt urgent">
           <h3>
-            <span className="dot" style={{ background: debtor.color }} /> {debtor.name} debe {pesos(phase.amount)} {to}
+            <TokenIcon token={debtor.token} size={20} /> {debtor.name} debe {pesos(phase.amount)} {to}
           </h3>
           <p>
             {phase.reason}. {missing > 0 ? `Le faltan ${pesos(missing)}: tiene que vender construcciones o hipotecar.` : "Ya tiene la plata."}
@@ -228,7 +229,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
             ) : (
               "Todavía sin ofertas."
             )}{" "}
-            Le toca a <span className="dot" style={{ background: bidder.color }} /> <strong>{bidder.name}</strong> (tiene {pesos(bidder.cash)}).
+            Le toca a <TokenIcon token={bidder.token} size={20} /> <strong>{bidder.name}</strong> (tiene {pesos(bidder.cash)}).
           </p>
           {mine(action) ? (
             <div className="buttons">
@@ -258,7 +259,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt trade">
           <h3>
-            <span className="dot" style={{ background: from.color }} /> {from.name} le propone un canje a <span className="dot" style={{ background: to.color }} /> {to.name}
+            <TokenIcon token={from.token} size={20} /> {from.name} le propone un canje a <TokenIcon token={to.token} size={20} /> {to.name}
           </h3>
           <div className="trade-sides">
             <div className="trade-side">
@@ -305,7 +306,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt quiet">
           <h3>
-            <span className="dot" style={{ background: player.color }} /> Termina el turno de {player.name}
+            <TokenIcon token={player.token} size={20} /> Termina el turno de {player.name}
           </h3>
           {mine(action) ? (
             <>

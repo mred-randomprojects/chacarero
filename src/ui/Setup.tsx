@@ -1,9 +1,8 @@
 import { useState } from "react";
-import type { GameSetup, NewPlayer } from "../game";
-import { DEFAULT_SETUP, MAX_PLAYERS, MIN_PLAYERS } from "../game";
+import type { GameSetup, NewPlayer, TokenId } from "../game";
+import { DEFAULT_SETUP, MAX_PLAYERS, MIN_PLAYERS, TOKEN_IDS } from "../game";
 import { GameSetupFields } from "./GameSetupFields";
-
-export const PLAYER_COLORS = ["#1d4ed8", "#dc2626", "#16a34a", "#f59e0b", "#7c3aed", "#0891b2"] as const;
+import { TokenIcon, TokenPicker } from "./TokenIcon";
 
 export interface SetupProps {
   readonly onStart: (players: readonly NewPlayer[], setup: GameSetup) => void;
@@ -16,16 +15,27 @@ export interface SetupProps {
 /** Pre-game screen for the shared table: how many play, what they are called, and how the game starts. */
 export function Setup({ onStart, onBack, noClock, onNoClock }: SetupProps) {
   const [names, setNames] = useState<string[]>(["", ""]);
+  // Seat i starts with token i; picking one another seat holds swaps the two.
+  const [tokens, setTokens] = useState<TokenId[]>(() => TOKEN_IDS.slice(0, 2));
   const [setup, setSetup] = useState<GameSetup>(DEFAULT_SETUP);
 
   const setCount = (count: number) => {
     setNames((current) => Array.from({ length: count }, (_, i) => current[i] ?? ""));
+    setTokens((current) => {
+      const next: TokenId[] = current.slice(0, count);
+      while (next.length < count) next.push(TOKEN_IDS.find((t) => !next.includes(t)) ?? "tractor");
+      return next;
+    });
+  };
+
+  const pickToken = (seat: number, token: TokenId) => {
+    setTokens((current) => current.map((t, i) => (i === seat ? token : t)));
   };
 
   const players: NewPlayer[] = names.map((name, i) => ({
     id: `p${i + 1}`,
     name: name.trim() || `Jugador ${i + 1}`,
-    color: PLAYER_COLORS[i] ?? "#000000",
+    token: tokens[i] ?? "tractor",
   }));
 
   return (
@@ -45,14 +55,21 @@ export function Setup({ onStart, onBack, noClock, onNoClock }: SetupProps) {
         </label>
         <ol className="names">
           {players.map((player, i) => (
-            <li key={player.id}>
-              <span className="dot" style={{ background: player.color }} />
-              <input
-                type="text"
-                value={names[i] ?? ""}
-                placeholder={`Jugador ${i + 1}`}
-                maxLength={16}
-                onChange={(event) => setNames((current) => current.map((n, j) => (j === i ? event.target.value : n)))}
+            <li key={player.id} className="seat">
+              <div className="seat-name">
+                <TokenIcon token={player.token} size={28} />
+                <input
+                  type="text"
+                  value={names[i] ?? ""}
+                  placeholder={`Jugador ${i + 1}`}
+                  maxLength={16}
+                  onChange={(event) => setNames((current) => current.map((n, j) => (j === i ? event.target.value : n)))}
+                />
+              </div>
+              <TokenPicker
+                value={player.token}
+                taken={new Map(players.filter((p) => p.id !== player.id).map((p) => [p.token, p.name]))}
+                onChange={(token) => pickToken(i, token)}
               />
             </li>
           ))}

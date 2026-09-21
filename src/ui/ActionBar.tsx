@@ -1,6 +1,7 @@
 import type { ActionRequest, GameState } from "../game";
 import { JAIL_BAIL, currentPlayer, pesos } from "../game";
 import { canAct } from "./perspective";
+import { TokenIcon } from "./TokenIcon";
 
 export type Dispatch = (action: ActionRequest) => void;
 
@@ -67,7 +68,7 @@ export function ActionBar({ state, you, busy, shaking, canRoll, onShakeStart, on
   return (
     <div className="actions">
       <div className="who">
-        <span className="dot" style={{ background: player.color }} />
+        <TokenIcon token={player.token} size={20} />
         <strong>{player.name}</strong>
         {player.inJail && <span className="status">preso</span>}
         <Dice dice={state.dice} />

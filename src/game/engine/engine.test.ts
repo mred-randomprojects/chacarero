@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DeedId } from "../types";
 import { JAIL_BAIL, SALIDA_BONUS, STARTING_CASH, TOTAL_CHACRAS, TOTAL_ESTANCIAS } from "../constants";
-import type { GameState, Holding, Player } from "./state";
+import { TOKEN_IDS } from "../tokens";
+import type { GameState, Holding, NewPlayer, Player } from "./state";
 import { activePlayer, createGame, currentPlayer, getPlayer } from "./state";
 import {
   MIN_BID_INCREMENT,
@@ -33,9 +34,9 @@ import {
 } from "./actions";
 import { canBuildChacra, canTradeDeed, checkTrade, mortgageProceeds, mortgageTransferFee, rentFor, tradeBalance, unmortgageCost } from "./rules";
 
-const ANA = { id: "ana", name: "Ana", color: "#f00" };
-const BETO = { id: "beto", name: "Beto", color: "#00f" };
-const CARLA = { id: "carla", name: "Carla", color: "#0f0" };
+const ANA: NewPlayer = { id: "ana", name: "Ana", token: "tractor" };
+const BETO: NewPlayer = { id: "beto", name: "Beto", token: "vaca" };
+const CARLA: NewPlayer = { id: "carla", name: "Carla", token: "caballo" };
 
 function game(players = [ANA, BETO]): GameState {
   return createGame({ players, random: () => 0.5 });
@@ -97,7 +98,7 @@ describe("createGame", () => {
 
   it("rejects fewer than 2 or more than 6 players", () => {
     expect(() => createGame({ players: [ANA] })).toThrow();
-    expect(() => createGame({ players: Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: "x", color: "#000" })) })).toThrow();
+    expect(() => createGame({ players: Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: "x", token: TOKEN_IDS[i % TOKEN_IDS.length] ?? "tractor" })) })).toThrow();
     expect(() => createGame({ players: [ANA, ANA] })).toThrow();
   });
 });

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Deed, DeedId, GameState, Player, TradeOffer } from "../game";
 import { PROVINCE_COLORS, canTradeDeed, checkTrade, deedName, deedsOwnedBy, getDeed, getPlayer, mortgageTransferFee, pesos, tradeBalance } from "../game";
+import { TokenIcon } from "./TokenIcon";
 
 /** A trade being put together on this screen, before it is sent. */
 export interface TradeDraft {
@@ -75,7 +76,7 @@ function OfferEditor({ state, owner, offer, onChange }: OfferEditorProps) {
   return (
     <div className="offer-editor">
       <h4>
-        <span className="dot" style={{ background: owner.color }} /> {owner.name} da
+        <TokenIcon token={owner.token} size={20} /> {owner.name} da
       </h4>
       {deeds.length === 0 ? (
         <p className="offer-nothing">No tiene escrituras.</p>
@@ -155,7 +156,7 @@ export function TradeDialog({ state, draft, busy, onSubmit, onClose }: TradeDial
               <span>Con</span>
               {partners.map((p) => (
                 <button key={p.id} type="button" className={p.id === partnerId ? "selected" : ""} onClick={() => choosePartner(p.id)}>
-                  <span className="dot" style={{ background: p.color }} /> {p.name}
+                  <TokenIcon token={p.token} size={20} /> {p.name}
                 </button>
               ))}
             </div>

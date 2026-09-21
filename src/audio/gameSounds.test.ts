@@ -4,8 +4,8 @@ import { acceptTrade, bid, counterTrade, createGame, decline, passBid, proposeTr
 import { soundsForTransition } from "./gameSounds";
 
 const players = [
-  { id: "a", name: "A", color: "#f00" },
-  { id: "b", name: "B", color: "#00f" },
+  { id: "a", name: "A", token: "tractor" as const },
+  { id: "b", name: "B", token: "vaca" as const },
 ];
 
 describe("soundsForTransition", () => {

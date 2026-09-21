@@ -19,6 +19,7 @@ import {
 } from "../game";
 import type { Dispatch } from "./ActionBar";
 import { tradeProposer } from "./perspective";
+import { TokenIcon } from "./TokenIcon";
 
 export interface SquarePanelProps {
   readonly state: GameState;
@@ -227,7 +228,7 @@ export function SquarePanel({ state, you, square, pinned, busy, dispatch, onTrad
           {owner && (
             <span className="owner">
               {" · "}
-              <span className="dot" style={{ background: owner.color }} /> {owner.name}
+              <TokenIcon token={owner.token} size={18} /> {owner.name}
               {holding?.mortgaged ? " (hipotecada)" : ""}
               {holding?.estancia ? " · estancia" : holding && holding.chacras > 0 ? ` · ${holding.chacras} chacra${holding.chacras > 1 ? "s" : ""}` : ""}
             </span>

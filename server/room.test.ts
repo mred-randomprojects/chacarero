@@ -3,6 +3,7 @@ import { DECISION_SECONDS } from "../src/game";
 import {
   RoomError,
   applyRequest,
+  chooseToken,
   createRoom,
   fireDeadline,
   generateCode,
@@ -40,6 +41,7 @@ describe("lobby", () => {
   it("joins, reconnects and caps at six", () => {
     let room = lobby();
     expect(room.players).toHaveLength(2);
+    expect(room.players[1]?.token).not.toBe(room.players[0]?.token);
     expect(room.players[1]?.color).not.toBe(room.players[0]?.color);
     room = markDisconnected(room, beto.playerId, NOW + 1);
     expect(room.players[1]?.connected).toBe(false);
@@ -48,6 +50,18 @@ describe("lobby", () => {
     expect(room.players[1]).toMatchObject({ connected: true, name: "Beto II" });
     for (let i = 0; i < 4; i++) room = joinRoom(room, { playerId: `p${i}-00000`, name: `P${i}` }, NOW);
     expect(() => joinRoom(room, { playerId: "late-0001", name: "Late" }, NOW)).toThrow(RoomError);
+  });
+
+  it("lets a player pick a free token and refuses a taken one", () => {
+    let room = lobby();
+    room = chooseToken(room, beto.playerId, "gallo", NOW);
+    expect(room.players[1]).toMatchObject({ token: "gallo", color: "#f59e0b" });
+    expect(() => chooseToken(room, ana.playerId, "gallo", NOW)).toThrow(RoomError);
+    // Re-picking your own token is a no-op, not an error.
+    expect(chooseToken(room, beto.playerId, "gallo", NOW).players[1]?.token).toBe("gallo");
+    expect(() => chooseToken(playing(), ana.playerId, "gallo", NOW)).toThrow(RoomError);
+    const game = startGame(room, ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5).game;
+    expect(game?.players.map((p) => p.token)).toEqual(["tractor", "gallo"]);
   });
 
   it("passes the host on when the host leaves the lobby", () => {
