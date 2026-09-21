@@ -199,7 +199,7 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B8. The offer's buttons belong next to the card
 
-- [ ] B8.1 The buy / auction panel sits beside the lifted deed (right of it,
+- [x] B8.1 The buy / auction panel sits beside the lifted deed (right of it,
       vertically aligned), not in the top-right corner.
 
 ## B9, B11, B17. The camera is the audience
@@ -227,9 +227,9 @@ Numbers updating and pop-ups saying what happened are not enough.
 
 ## B16, B20. Keys that are safe, and visible
 
-- [ ] B16.1 Space/Enter never take a decision with consequences (buy, bid,
+- [x] B16.1 Space/Enter never take a decision with consequences (buy, bid,
       accept a trade, pay-or-draw choice); they only advance the harmless steps.
-- [ ] B20.1 Every action button shows its shortcut ("Negociar [N]"), and the key
+- [x] B20.1 Every action button shows its shortcut ("Negociar [N]"), and the key
       does what the button does. Keys must not collide with the camera keys.
 
 ## B19. Real cards in the trade screen (and beyond)
@@ -296,6 +296,11 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — B8, B16, B20 (`9e5ee60`).** `src/ui/hotkeys.ts` (`actionHotkeys`,
+  `actionForKey`, `UI_KEYS`; tested in actionRequest.test) + `Key.tsx` badge;
+  `primaryAction` limited to move/draw/ack/endTurn (test updated). Trade key is
+  `N` now (`C` = Comprar). The offer stage is positioned beside the card via
+  `.stage:has(.deed-offer)` (left 52%, vertically centred).
 - **2026-09-21 — camera theatre B9/B11/B17 (`208f83b`).** `SECONDS_PER_SQUARE`
   (0.42) and `CUE_LEAD_SECONDS` in `timing.ts` are the single source of pace
   (Pawn speed, replay holds, clock). `pawnTracker` now has `kind` + `outward`;
