@@ -189,6 +189,19 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — all 17 items shipped; second look done (`830e1ac`, `aaf2b14`).**
+  Verified end to end in the browser: hot-seat (opening throws → roll → move →
+  free deed offer → auction; trades propose/review/accept/reject; map) and
+  online across two tabs (token picking blocked when taken, opening roll with
+  server dice, trade screen sends `composing` without errors). README updated.
+  Known limits worth knowing before touching things: a quick *tap* of Space
+  does not throw the dice (hold it, or use the button — the keyup closure is
+  stale for a same-tick tap); `composing` has no cap on how long it holds the
+  clock; the HUD bottom row is tight below ~1100 px wide (cards stack above the
+  dice bar); dice/pawn collisions are seeded fake physics, not rigid bodies.
+  Not built (not asked): showing the review screen to third parties
+  automatically, a fairness cap or warning on lopsided trades, a "skip all
+  animations" setting.
 - **2026-09-21 — trade outcome (17) (`9f14f18`).** `src/ui/TradeOutcome.tsx`
   (card + canvas confetti; `key={seq}` remounts per outcome), set from the seq
   effect in `GameScreen` when the previous phase was a trade response and the
