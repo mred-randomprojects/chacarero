@@ -44,14 +44,14 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 4. Pick your token (piece)
 
-- [ ] 4.1 A set of tokens to choose from (more than six so a full table still has a
+- [x] 4.1 A set of tokens to choose from (more than six so a full table still has a
       choice); each token has its own colour and 3D shape on the board, and an icon
       used everywhere in the HUD (cards, prompts, map pins, trade partner buttons).
-- [ ] 4.2 A token taken by one player is blocked for the others (hot-seat setup and
+- [x] 4.2 A token taken by one player is blocked for the others (hot-seat setup and
       online lobby).
-- [ ] 4.3 Token + colour + pawn are one identity: everywhere the game shows a player it
+- [x] 4.3 Token + colour + pawn are one identity: everywhere the game shows a player it
       uses the same icon and colour.
-- [ ] 4.4 Pawns on the board use the token's shape instead of the generic chess pawn.
+- [x] 4.4 Pawns on the board use the token's shape instead of the generic chess pawn.
 
 ## 5. Shared, directed camera
 
@@ -189,4 +189,10 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — tokens (4) (`a628dc0`).** Eight tokens in `src/game/tokens.ts`
+  (colour + emoji icon + name), 3D shapes from primitives in `src/scene/Token.tsx`,
+  pickers in the hot-seat setup and the online lobby (`chooseToken` message, taken
+  pieces refused by the server), `Player.token` in the engine with `Player.color`
+  derived from it, `TokenIcon` replacing colour dots in the HUD. Banner and log
+  still use small colour dots (deliberate: they are compact).
 - **2026-09-21 — requirements captured.** This file. Nothing built yet.
