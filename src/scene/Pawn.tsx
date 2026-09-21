@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { sfx } from "../audio/sfx";
 import type { TokenId } from "../game";
+import { SECONDS_PER_SQUARE } from "../game";
 import type { HexLayout } from "./hexLayout";
 import { pawnPosition } from "./hexLayout";
 import { pawnKnocks } from "./pawnKnocks";
@@ -32,8 +33,8 @@ export interface PawnProps {
   readonly onArrive?: (square: number) => void;
 }
 
-/** Squares per second while hopping. */
-const SPEED = 6;
+/** Squares per second while hopping: the pace the clock allows for. */
+const SPEED = 1 / SECONDS_PER_SQUARE;
 const HOP_HEIGHT = 0.55;
 const JUMP_HEIGHT = 2.2;
 /** How long a pawn wobbles after a die bumps it. */
@@ -115,6 +116,11 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     }
     if (wasMoving) {
       pawnTracker.position.set(wx, y, wz);
+      pawnTracker.kind = "pawn";
+      // Outward through the square being crossed, blended between the two tiles so corners swing smoothly.
+      const ox = -(tileA.up.x + (tileB.up.x - tileA.up.x) * frac);
+      const oy = -(tileA.up.y + (tileB.up.y - tileA.up.y) * frac);
+      pawnTracker.outward.set(ox, 0, -oy).normalize();
       if (from > lastStep.current || progress.current >= steps) {
         lastStep.current = from;
         sfx.play("hop", { volume: 0.5, rate: 0.9 + Math.random() * 0.2 });

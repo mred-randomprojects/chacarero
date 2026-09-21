@@ -10,8 +10,10 @@ import { canMortgage, canRaiseCash, canSellBuilding } from "./engine/rules";
 import { declareBankruptcy, mortgage, sellBuilding, settlePayment } from "./engine/actions";
 import type { ActionRequest } from "./actionRequest";
 
-/** Seconds per pawn square, matching the scene's hop speed. */
-const SECONDS_PER_SQUARE = 1 / 6;
+/** Seconds per pawn square: the scene hops at this pace, and the clock allows for it. No rush. */
+export const SECONDS_PER_SQUARE = 0.42;
+/** Seconds the replay waits before a flight or a drop, so the camera can get there first. */
+export const CUE_LEAD_SECONDS = 0.4;
 
 /**
  * Seconds a player gets for any decision before the table decides for them.
@@ -31,11 +33,11 @@ export function eventSeconds(event: GameEvent): number {
       return 0.4 + steps * SECONDS_PER_SQUARE;
     }
     case "transfer":
-      return 1.8;
+      return 1.8 + CUE_LEAD_SECONDS;
     case "deed":
-      return 1.8;
+      return 1.8 + CUE_LEAD_SECONDS;
     case "building":
-      return 1.4;
+      return 1.4 + CUE_LEAD_SECONDS;
     case "mortgage":
       return 1.8;
     case "card":

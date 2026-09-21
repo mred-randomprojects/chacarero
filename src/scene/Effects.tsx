@@ -12,6 +12,7 @@ import { chanceBackTexture, chanceCardTexture, deedCardTexture } from "./cardTex
 import type { ActiveEffect } from "./effectsBus";
 import { effectsBus } from "./effectsBus";
 import { sfx } from "../audio/sfx";
+import { pawnTracker } from "./pawnTracker";
 
 export interface EffectsProps {
   readonly anchors: Anchors;
@@ -244,9 +245,16 @@ function MoneyFlight({ anchors, from, to, amount, onDone }: MoneyFlightProps) {
       mesh.position.copy(p);
       mesh.rotation.set(-Math.PI / 2 + Math.sin(k * Math.PI) * 0.6, 0, yawFrom + (yawTo - yawFrom) * k + bill.twist * Math.sin(k * Math.PI));
       mesh.visible = k > 0 && k < 1;
+      // The camera follows the middle of the flock.
+      if (i === Math.floor(count / 2)) {
+        pawnTracker.kind = "flight";
+        pawnTracker.position.copy(p);
+        pawnTracker.moving = t.current < total;
+      }
     });
     if (t.current >= total && !done.current) {
       done.current = true;
+      pawnTracker.moving = false;
       sfx.play("cashBig", { volume: 0.5 });
       onDone();
     }
@@ -304,8 +312,13 @@ function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
     if (!node) return;
     node.position.copy(arc(start, end, easeInOut(k), 2.8));
     node.rotation.set(-Math.PI / 2 + Math.sin(k * Math.PI) * 0.9, 0, yawFrom + (yawTo - yawFrom) * k);
+    // The camera follows the card across the table.
+    pawnTracker.kind = "flight";
+    pawnTracker.position.copy(node.position);
+    pawnTracker.moving = k < 1;
     if (k >= 1 && !done.current) {
       done.current = true;
+      pawnTracker.moving = false;
       sfx.play("deedBuy", { volume: 0.9 });
       onDone();
     }

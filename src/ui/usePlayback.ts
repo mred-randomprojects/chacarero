@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameEvent, GameState } from "../game";
+import { CUE_LEAD_SECONDS, eventSeconds } from "../game";
 import { sfx } from "../audio/sfx";
 import { effectsBus } from "../scene/effectsBus";
 import { pawnPath } from "../scene/pawnPath";
@@ -36,32 +37,6 @@ export interface Playback {
   readonly skip: () => void;
   /** The scene reports the walking pawn has arrived. */
   readonly onPawnArrive: () => void;
-}
-
-/** Minimum seconds a step stays on screen (before scaling by the banner setting). */
-function baseSeconds(event: GameEvent): number {
-  switch (event.type) {
-    case "log":
-      return 2.0;
-    case "move":
-      return 0.4;
-    case "transfer":
-      return 1.8;
-    case "deed":
-      return 1.8;
-    case "building":
-      return 1.4;
-    case "mortgage":
-      return 1.8;
-    case "card":
-      return 1.6;
-    case "jail":
-      return 1.8;
-    case "bankrupt":
-      return 2.6;
-    case "turn":
-      return 1.2;
-  }
 }
 
 /**
@@ -143,7 +118,9 @@ export function usePlayback(initial: GameState | null, options: PlaybackOptions)
       const skipped = new Promise<void>((resolve) => {
         skipResolve.current = resolve;
       });
-      const step = Promise.all([animate(event, viewRef.current), wait(baseSeconds(event) * scale.current)]).then(() => undefined);
+      // Flights and drops start a beat after their banner, so the camera gets there first.
+      const lead = event.type === "transfer" || event.type === "deed" || event.type === "building" ? wait(CUE_LEAD_SECONDS * scale.current) : Promise.resolve();
+      const step = Promise.all([lead.then(() => animate(event, viewRef.current)), wait(eventSeconds(event) * scale.current)]).then(() => undefined);
       await Promise.race([step, skipped]);
       skipResolve.current = null;
       arriveResolve.current = null;

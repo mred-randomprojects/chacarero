@@ -1,14 +1,19 @@
 import { Vector3 } from "three";
 
 /**
- * Where the moving pawn is right now, written every frame by the Pawn and
- * read by the camera rig when it is following. A plain shared object avoids
- * pushing 60 updates a second through React.
+ * Whatever is moving on the table right now — a walking pawn, a deed or a
+ * bill in flight — written every frame by the thing itself and read by the
+ * camera rig when it is following. A plain shared object avoids pushing 60
+ * updates a second through React.
  */
 export const pawnTracker = {
   position: new Vector3(),
-  /** True while some pawn is mid-route. */
+  /** True while something is mid-motion. */
   moving: false,
+  /** What is moving: the camera sits behind a pawn (outside the ring), and keeps its angle for a flight. */
+  kind: "pawn" as "pawn" | "flight",
+  /** For a pawn: unit vector from the board centre out through its square (world XZ), so the camera can stay outside the ring. */
+  outward: new Vector3(0, 0, 1),
 };
 
 /**

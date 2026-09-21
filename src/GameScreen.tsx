@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { soundsForTransition } from "./audio/gameSounds";
 import { sfx } from "./audio/sfx";
 import type { DeedId, GameState, TradeOffer } from "./game";
-import { BOARD_SIZE, currentPlayer, getSquare } from "./game";
+import { BOARD_SIZE, JAIL_INDEX, currentPlayer, getSquare } from "./game";
+import { layoutIndexFor } from "./scene/buildingSpots";
+import { boardToWorld } from "./scene/tileGeometry";
 import type { PawnView, SeatView } from "./scene/Board";
 import { BOARD_LAYOUT, SLAB_MARGIN } from "./scene/Board";
 import type { CameraView } from "./scene/cameraViews";
@@ -212,8 +214,6 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       const { trade: settled } = before.game.phase;
       setOutcome({ id: seq, kind: session.lastAction === "acceptTrade" ? "accepted" : "rejected", fromId: settled.fromId, toId: settled.toId });
     }
-    const landing = game.moves.at(-1)?.to;
-    if (landing !== undefined) setSelected(landing);
     if (session.lastAction === "rollDice" && game.dice) {
       pendingReplay.current = game;
       setShaking(false);
@@ -225,6 +225,43 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
 
   // A free deed on offer (or under the hammer) is lifted in front of everyone; the table's own view says when.
   const offeredDeed = view.deedOnOffer;
+
+  // Once the table has caught up with a move, the square the pawn stopped on is the one to look at.
+  useEffect(() => {
+    if (busy) return;
+    const landing = game.moves.at(-1)?.to;
+    if (landing !== undefined) setSelected(landing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the replay of the latest state ends
+  }, [busy, seq]);
+
+  /**
+   * The camera is the audience: it chases whatever moves (a walking pawn,
+   * bills or a deed in flight) and leans in on what happens in place (a
+   * building dropping, someone marched to jail, a bankruptcy).
+   */
+  const current = playback.current;
+  const following = settings.followPawn && !(director && freeLook) && (walk !== null || current?.type === "transfer" || current?.type === "deed");
+  useEffect(() => {
+    if (!current || !director || freeLook) return;
+    switch (current.type) {
+      case "building": {
+        const tile = BOARD_LAYOUT.tiles[layoutIndexFor(current.deedId)];
+        if (tile) pushIn(boardToWorld(tile.center, 0.2), 5.5, 0.55);
+        break;
+      }
+      case "jail": {
+        const tile = BOARD_LAYOUT.tiles[JAIL_INDEX];
+        if (tile) pushIn(boardToWorld(tile.center, 0.2), 7, 0.6);
+        break;
+      }
+      case "bankrupt":
+        flyTo(seatView(BOARD_LAYOUT, SLAB_MARGIN, sideOf(current.playerId)), 0.9);
+        break;
+      default:
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one cue per replayed event
+  }, [current]);
 
   const onDiceSettled = useCallback(
     (id: number) => {
@@ -430,7 +467,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         colorOf={colorOf}
         onPawnArrive={onPawnArrive}
         goTo={goTo}
-        followPawn={settings.followPawn && walk !== null && !(director && freeLook)}
+        followPawn={following}
         onUserControl={() => setFreeLook(true)}
         deedOnOffer={offeredDeed}
         cardOnTable={view.cardOnTable}

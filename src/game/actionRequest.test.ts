@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { allowedPlayerFor, applyActionRequest } from "./actionRequest";
 import { createGame, decline, proposeTrade, roll } from "./engine";
 import type { GameState } from "./engine";
-import { DECISION_SECONDS, autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
+import { DECISION_SECONDS, SECONDS_PER_SQUARE, autoResolveDebt, defaultAction, phaseSeconds, replaySeconds } from "./timing";
 
 const players = [
   { id: "a", name: "A", token: "tractor" as const },
@@ -98,10 +98,11 @@ describe("timing", () => {
     expect(defaultAction(over)).toBeNull();
   });
 
-  it("sums replay time from the events, scaled", () => {
+  it("sums replay time from the events, scaled, allowing for the scene's hop pace", () => {
     const state = roll(createGame({ players, openingRoll: false, random: () => 0.5 }), undefined, [1, 2]);
     const seconds = replaySeconds(state.events);
-    expect(seconds).toBeGreaterThan(2);
+    // A 3-square walk at the scene's pace plus its banner, plus the landing banner.
+    expect(seconds).toBeGreaterThanOrEqual(0.4 + 3 * SECONDS_PER_SQUARE + 2);
     expect(replaySeconds(state.events, 2)).toBeCloseTo(seconds * 2, 6);
   });
 

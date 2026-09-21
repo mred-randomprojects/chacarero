@@ -29,9 +29,12 @@ const FLIGHT_SECONDS = 0.7;
 const QUICK_SECONDS = 0.3;
 /** Height an arc flight climbs at its midpoint, as a share of the distance flown (clamped). */
 const ARC_RISE = 0.45;
-/** Camera offset while chasing a pawn: close and fairly steep, so the tile is readable. */
-const CHASE_DISTANCE = 11;
-const CHASE_HEIGHT = 9;
+/** Camera offset while chasing a pawn: close behind it, outside the ring, low enough to see the piece hop. */
+const CHASE_DISTANCE = 4.6;
+const CHASE_HEIGHT = 3.3;
+/** While following a flight (a deed, bills) the camera keeps its angle and hangs back a little more. */
+const FLIGHT_DISTANCE = 6.5;
+const FLIGHT_HEIGHT = 4.5;
 
 function easeInOut(x: number): number {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -74,8 +77,9 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
     flight.current = { t: 0, seconds: goTo.seconds ?? FLIGHT_SECONDS, from, to: { position: goTo.view.position ?? from.position, target: goTo.view.target }, style: goTo.style ?? "direct" };
   }, [goTo, here]);
 
-  // Start or stop chasing the pawn. The chase keeps the current azimuth but
-  // moves in close; when it ends the camera simply stays where the pawn stopped.
+  // Start or stop chasing whatever moves. A pawn is chased from behind (outside
+  // the ring, the offset following its square); a flight keeps the camera's
+  // current angle. When it ends the camera simply stays where the motion stopped.
   useEffect(() => {
     if (!followPawn) {
       chase.current = null;
@@ -87,8 +91,8 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
     const offset = new Vector3().subVectors(camera.position, orbit.target);
     offset.y = 0;
     if (offset.lengthSq() < 1e-6) offset.set(0, 0, 1);
-    offset.setLength(CHASE_DISTANCE);
-    offset.y = CHASE_HEIGHT;
+    offset.setLength(FLIGHT_DISTANCE);
+    offset.y = FLIGHT_HEIGHT;
     chase.current = offset;
     settle.current = 0.7;
   }, [followPawn, camera]);
@@ -212,9 +216,13 @@ export function CameraRig({ goTo, followPawn, onUserControl }: CameraRigProps) {
       if (pawnTracker.moving) settle.current = 0.7;
       else settle.current -= delta;
       if (pawnTracker.moving || settle.current > 0) {
-        const k = 1 - Math.exp(-delta * 7);
-        orbit.target.lerp(pawnTracker.position, k);
-        camera.position.lerp(new Vector3().addVectors(orbit.target, offset), k);
+        // Behind a pawn: outside the ring through its square, glancing inward across the board.
+        const behind = pawnTracker.kind === "pawn" ? pawnTracker.outward.clone().multiplyScalar(CHASE_DISTANCE).setY(CHASE_HEIGHT) : offset;
+        const k = 1 - Math.exp(-delta * 4.5);
+        const look = pawnTracker.position.clone();
+        look.y += 0.3;
+        orbit.target.lerp(look, k);
+        camera.position.lerp(new Vector3().addVectors(look, behind), k);
         orbit.update();
         return;
       }
