@@ -69,13 +69,13 @@ Conventions: every item has a status box. `[ ]` not started · `[~]` in progress
 
 ## 6. Big property card when landing on a free deed
 
-- [ ] 6.1 Landing on a free campo / ferrocarril / compañía presents the deed as a big
+- [x] 6.1 Landing on a free campo / ferrocarril / compañía presents the deed as a big
       card in front of the screen, with a floating-up animation.
-- [ ] 6.2 Two options: buy (price shown) or send to auction.
-- [ ] 6.3 On the right, everything the deed says: price, rent bare, rent with the whole
+- [x] 6.2 Two options: buy (price shown) or send to auction.
+- [x] 6.3 On the right, everything the deed says: price, rent bare, rent with the whole
       province, rent per chacra count and estancia, chacra and estancia cost,
       mortgage value (railways: rent by count; companies: dice multipliers).
-- [ ] 6.4 The same presentation stays up while the deed is being auctioned.
+- [x] 6.4 The same presentation stays up while the deed is being auctioned.
 
 ## 7. Gamified camera flight between turns
 
@@ -189,6 +189,13 @@ Order of work (each step is one or more commits, each pushed to `main`):
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
+- **2026-09-21 — big property card (6) (`b798222`).** Effects `presentDeed` /
+  `hideDeed` on the bus; `PresentedDeed` in `Effects.tsx` (lifts from the bank
+  pile, 2x scale, 3x texture via `deedCardTexture(deed, holding, scale)`).
+  `GameScreen` requests it while `awaitingBuyDecision` / `auction` and not busy,
+  and hides the hover `SquarePanel` meanwhile. `Prompt`'s buy case is the
+  `deed-offer` layout (band colour, buttons left, `DeedDetails` right); the stage
+  docks to the right for it via `.stage:has(.deed-offer)`.
 - **2026-09-21 — draw step + calm timers (8) (`117c528`).** Phase
   `awaitingDraw { deck }` + `drawCard` action/request (protocol, timing default,
   `roll()` helper walk through it). `ChanceCard` in `Effects.tsx` slides out of
