@@ -388,7 +388,7 @@ the turn cue compared itself with the previous cue instead of with the camera).
       the table stops at the payment with the amount **big** on screen and a
       Pagar [P] button (sell / mortgage / negotiate as before); paying then
       flies the bills. Taxes and cards keep paying as before. (Item 10)
-- [ ] D8.2 Online tables run the engine on the room server, so the droplet
+- [x] D8.2 Online tables run the engine on the room server, so the droplet
       needs `./deploy.sh` for D8.1 to apply there (hot-seat gets it at once).
 
 ## Verification
@@ -455,8 +455,8 @@ Newest entry first. Each entry names the commit(s) so the next agent can `git lo
   3rem; Pagar flies the bills and the camera returns to the pawn.
   Measurement note, again: a hidden browser pane throttles rAF to 1 fps and
   makes a 0.7 s flight look 2 s late — `__chacareroFrames.run(60)` first.
-  Open: D8.2 (the droplet's room server still charges rent on the spot until
-  `./deploy.sh` is run). Known limits: the L overlay's Catastro has no pins
+  D8.2 closed 2026-09-23: the droplet now builds a server-only image from
+  main (`./deploy.sh`, ~12 s; see deploy/README.md). Known limits: the L overlay's Catastro has no pins
   (the Mapa tab keeps them); a hurry lasts until the current replay ends, the
   next action starts at 1×.
 
