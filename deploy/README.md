@@ -35,13 +35,34 @@ The `chacarero` container joins the `pinas-cruzadas_default` network (see
 
 ## Every release
 
+The droplet builds the image itself from a checkout of `main` in
+`/root/chacarero`: the image holds only `server/`, `src/game`, `src/net` and
+zod (no Vite build; the client is on GitHub Pages), so it builds in seconds
+within the droplet's ~450 MB of RAM. `pistasjug.ar/chacarero/` redirects to
+the Pages site.
+
 ```bash
 ./deploy.sh
 ```
 
-Builds the image for linux/amd64 with `VITE_WS_URL=wss://pistasjug.ar/chacarero/ws`
-baked into the client, ships it over SSH and restarts the container. The
-droplet has ~1 GB free; the image is ~350 MB and the script prunes old ones.
+SSHes in, resets the checkout to `origin/main` and runs `deploy/remote.sh`
+(`docker compose up -d --build`). Push first: it deploys what is on GitHub.
+
+### Automatic on push (optional, one-time setup)
+
+The `server` job in `.github/workflows/deploy.yml` does the same after the
+tests pass, once two repo secrets exist. Its key can only run the deploy:
+
+```bash
+ssh-keygen -t ed25519 -N "" -C chacarero-deploy -f /tmp/chacarero_deploy
+ssh pinas-cruzadas "echo 'command=\"cd /root/chacarero && git fetch -q origin main && git reset -q --hard origin/main && exec deploy/remote.sh\",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty $(cat /tmp/chacarero_deploy.pub)' >> ~/.ssh/authorized_keys"
+gh secret set DEPLOY_SSH_KEY < /tmp/chacarero_deploy
+ssh-keyscan -t ed25519 167.172.140.176 | gh secret set DEPLOY_KNOWN_HOSTS
+rm /tmp/chacarero_deploy /tmp/chacarero_deploy.pub
+```
+
+Anyone who can push to `main` can then run code on the droplet (through
+`deploy/remote.sh`); that is the trade-off for never forgetting a deploy.
 
 Health: `curl https://pistasjug.ar/chacarero/health` → `{"ok":true,"rooms":N}`.
 Logs: `ssh pinas-cruzadas 'docker logs -f chacarero'`.

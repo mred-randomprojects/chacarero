@@ -63,3 +63,22 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # The room server: the droplet pulls main and rebuilds its image (seconds,
+  # only changed layers). Skipped until the DEPLOY_SSH_KEY secret exists; see
+  # deploy/README.md. The key is pinned to one forced command on the droplet.
+  server:
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+    steps:
+      - name: Deploy room server
+        if: env.DEPLOY_SSH_KEY != ''
+        run: |
+          install -m 600 /dev/null ~/deploy_key
+          echo "$DEPLOY_SSH_KEY" > ~/deploy_key
+          echo "$DEPLOY_KNOWN_HOSTS" > ~/known_hosts
+          ssh -i ~/deploy_key -o UserKnownHostsFile=~/known_hosts root@167.172.140.176 deploy
+          curl -sf https://pistasjug.ar/chacarero/health

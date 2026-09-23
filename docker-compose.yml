@@ -1,5 +1,6 @@
 # Runs next to Piñas Cruzadas on the droplet: same Docker network, so the
 # existing Caddy can reverse-proxy pistasjug.ar/chacarero/* to this container.
+# Built on the droplet from a checkout of this repo (deploy/remote.sh).
 services:
   chacarero:
     build: .
@@ -10,7 +11,6 @@ services:
       - "9902"
     environment:
       - PORT=9902
-      - STATIC_DIR=/app/dist
 
 networks:
   default:

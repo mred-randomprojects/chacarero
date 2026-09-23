@@ -34,6 +34,7 @@ import {
 const PORT = Number(process.env.PORT ?? 9902);
 const STATIC_DIR = process.env.STATIC_DIR ?? "dist";
 const BASE_PATH = "/chacarero";
+const PAGES_URL = "https://mred-randomprojects.github.io/chacarero/";
 const LOBBY_IDLE_MS = 60_000;
 const ROOM_ABANDONED_MS = 30 * 60_000;
 const TICK_MS = 250;
@@ -214,10 +215,13 @@ const server = Bun.serve<SocketData>({
       return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
     }
     if (url.pathname === "/health" || url.pathname === `${BASE_PATH}/health`) return Response.json({ ok: true, rooms: rooms.size });
-    // Static client, built into dist/ with the /chacarero/ base path.
+    // Static client, built into dist/ with the /chacarero/ base path. The
+    // deployed image has no dist/: the client lives on GitHub Pages.
+    const indexFile = Bun.file(`${STATIC_DIR}/index.html`);
+    if (!(await indexFile.exists())) return Response.redirect(PAGES_URL, 302);
     if (!url.pathname.startsWith(BASE_PATH)) return Response.redirect(`${BASE_PATH}/`, 302);
     const path = url.pathname.slice(BASE_PATH.length);
-    const index = () => new Response(Bun.file(`${STATIC_DIR}/index.html`), { headers: { "content-type": "text/html; charset=utf-8" } });
+    const index = () => new Response(indexFile, { headers: { "content-type": "text/html; charset=utf-8" } });
     if (path === "" || path === "/") return index();
     const file = Bun.file(`${STATIC_DIR}${path}`);
     if (await file.exists()) return new Response(file);
