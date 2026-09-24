@@ -643,6 +643,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         onShakeEnd={releaseDice}
         onTrade={proposer ? proposeTrade : null}
         dispatch={dispatch}
+        deadline={session.deadline}
       />
       <div className="stage">
         <Banner state={game} event={playback.current} onHurry={hurry} />

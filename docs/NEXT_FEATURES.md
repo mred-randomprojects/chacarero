@@ -439,12 +439,12 @@ their own turn and the table sat waiting.
 
 ## F1. Strict clocks, if the table wants them
 
-- [ ] F1.1 A table setting (hot-seat setup and online lobby, chosen before the
+- [x] F1.1 A table setting (hot-seat setup and online lobby, chosen before the
       game starts) for how long each decision gets: from the current generous
       3 min down to 10 s. The default stays 3 min.
-- [ ] F1.2 A separate limit for throwing the dice, shown as a bar in the roll
+- [x] F1.2 A separate limit for throwing the dice, shown as a bar in the roll
       prompt that fills up; when it is full the dice are thrown for you.
-- [ ] F1.3 Both limits live in the game state so the server and the hot-seat
+- [x] F1.3 Both limits live in the game state so the server and the hot-seat
       clock agree, and the server accepts old clients that do not send them.
 
 ## F2. Everyone watches the trade being built

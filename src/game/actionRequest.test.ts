@@ -98,6 +98,22 @@ describe("timing", () => {
     expect(defaultAction(over)).toBeNull();
   });
 
+  it("uses the table's clocks: the roll clock while the dice wait, the decision clock otherwise", () => {
+    let state = createGame({ players, openingRoll: true, decisionSeconds: 10, rollSeconds: 5, random: () => 0.5 });
+    expect(state.clock).toEqual({ decisionSeconds: 10, rollSeconds: 5 });
+    expect(phaseSeconds(state)).toBe(5);
+    state = { ...state, phase: { type: "awaitingRoll" } };
+    expect(phaseSeconds(state)).toBe(5);
+    expect(phaseSeconds({ ...state, phase: { type: "awaitingJailDecision" } })).toBe(5);
+    state = applyActionRequest(state, { type: "rollDice" }, [2, 3]);
+    expect(state.phase.type).toBe("awaitingMove");
+    expect(phaseSeconds(state)).toBe(10);
+    // No roll clock of its own: the dice get the decision clock.
+    const same = createGame({ players, decisionSeconds: 30, random: () => 0.5 });
+    expect(phaseSeconds(same)).toBe(30);
+    expect(() => createGame({ players, decisionSeconds: 0 })).toThrow(/segundos/);
+  });
+
   it("sums replay time from the events, scaled, allowing for the scene's hop pace", () => {
     const state = roll(createGame({ players, openingRoll: false, random: () => 0.5 }), undefined, [1, 2]);
     const seconds = replaySeconds(state.events);

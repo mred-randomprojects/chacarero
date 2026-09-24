@@ -24,3 +24,13 @@ export const DEAL_DEEDS_MAX = 4;
 export const DEAL_DEEDS_OPTIONS = [0, 2, 3, 4] as const;
 export const BILL_DENOMINATIONS = [10, 50, 100, 200, 500, 1_000, 2_000, 5_000] as const;
 export const BOARD_SIZE = 42;
+/**
+ * Seconds a player gets for any decision before the table decides for them.
+ * Generous by default, like a real table: the clock is there for players who
+ * left, not to hurry the ones who stayed. A table can pick a stricter one.
+ */
+export const DECISION_SECONDS = 180;
+/** Decision-clock choices at setup, strictest first. */
+export const DECISION_SECONDS_OPTIONS = [10, 20, 30, 60, DECISION_SECONDS] as const;
+/** Choices for a separate, shorter clock on throwing the dice; null keeps the decision clock. */
+export const ROLL_SECONDS_OPTIONS = [null, 5, 10, 15, 30] as const;

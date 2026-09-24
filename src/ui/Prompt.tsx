@@ -7,6 +7,7 @@ import { bandColor } from "../scene/cardTextures";
 import { canAct, tradeProposer, waitingFor } from "./perspective";
 import { OfferItems } from "./OfferItems";
 import { useNow } from "./useNow";
+import { clockWindow } from "./clockWindow";
 import { Key } from "./Key";
 import { TokenIcon } from "./TokenIcon";
 
@@ -30,16 +31,13 @@ export interface PromptProps {
   readonly canRestart: boolean;
 }
 
-/** The clock only shows itself for the last minute; before that nobody should feel hurried. */
-const COUNTDOWN_SHOWN_SECONDS = 60;
-
-function Countdown({ deadline, now }: { readonly deadline: number | null; readonly now: number }) {
+function Countdown({ deadline, now, window }: { readonly deadline: number | null; readonly now: number; readonly window: number }) {
   if (deadline === null) return null;
   const remaining = Math.max(0, (deadline - now) / 1000);
-  if (remaining > COUNTDOWN_SHOWN_SECONDS) return null;
+  if (remaining > window) return null;
   return (
-    <div className={`countdown${remaining <= 20 ? " urgent" : ""}`} aria-hidden>
-      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / COUNTDOWN_SHOWN_SECONDS) * 100)}%` }} />
+    <div className={`countdown${remaining <= Math.min(20, window / 3) ? " urgent" : ""}`} aria-hidden>
+      <div className="countdown-bar" style={{ width: `${Math.min(100, (remaining / window) * 100)}%` }} />
       <span>{Math.ceil(remaining)}s</span>
     </div>
   );
@@ -69,8 +67,10 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
   const mine = (action: ActionRequest) => canAct(state, you, action);
   const waiting = (action: ActionRequest) => <p className="waiting-for">{waitingFor(state, action)}</p>;
   const canTrade = tradeProposer(state, you) !== null;
+  const window = clockWindow(state);
 
   switch (phase.type) {
+    // The roll phases have no Countdown here: their clock is the bar that fills under the dice button.
     case "openingRoll": {
       const rolled = Object.keys(phase.rolls).length;
       return (
@@ -91,7 +91,6 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               );
             })}
           </ul>
-          <Countdown deadline={deadline} now={now} />
         </div>
       );
     }
@@ -124,7 +123,6 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
         </div>
       );
     }
@@ -152,7 +150,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -179,7 +177,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -206,7 +204,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -251,7 +249,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
             ) : (
               waiting(action)
             )}
-            <Countdown deadline={deadline} now={now} />
+            <Countdown deadline={deadline} now={now} window={window} />
           </div>
           <div className="deed-offer-details">
             <h4>Lo que dice la escritura</h4>
@@ -284,7 +282,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -326,7 +324,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -365,7 +363,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -430,7 +428,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               </div>
             </>
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }
@@ -461,7 +459,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
           ) : (
             waiting(action)
           )}
-          <Countdown deadline={deadline} now={now} />
+          <Countdown deadline={deadline} now={now} window={window} />
         </div>
       );
     }

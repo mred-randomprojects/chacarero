@@ -29,7 +29,7 @@ export function SettingsPanel({ settings, onChange, onClose }: SettingsPanelProp
               Tiempo para decidir: {settings.countdownScale === 0 ? "sin límite" : `×${settings.countdownScale.toFixed(1)}`}
             </span>
             <input type="range" min={0} max={4} step={0.25} value={settings.countdownScale} onChange={(e) => set("countdownScale", Number(e.target.value))} />
-            <small>Cada decisión tiene {DECISION_SECONDS / 60} minutos, multiplicados por este valor; al terminarse, la mesa decide sola.</small>
+            <small>En modo mesa, el tiempo elegido al empezar (de fábrica, {DECISION_SECONDS / 60} minutos) se multiplica por este valor; al terminarse, la mesa decide sola.</small>
           </label>
           <label>
             <span>Volumen: {Math.round(settings.soundVolume * 100)} %</span>

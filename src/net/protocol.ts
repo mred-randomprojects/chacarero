@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import type { ActionRequest, DeedId, GameState, TokenId } from "../game";
-import { DEAL_DEEDS_MAX, DEEDS, TOKEN_IDS } from "../game";
+import { DEAL_DEEDS_MAX, DECISION_SECONDS, DEEDS, TOKEN_IDS } from "../game";
 
 const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
 const DeedIdSchema = z.enum(deedIds);
@@ -51,7 +51,15 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("leave"), playerId: PlayerId }),
   z.object({ type: z.literal("updateName"), playerId: PlayerId, name: Name }),
   z.object({ type: z.literal("chooseToken"), playerId: PlayerId, token: TokenIdSchema }),
-  z.object({ type: z.literal("startGame"), playerId: PlayerId, startingCash: z.number().int().min(1_000).max(1_000_000), dealDeeds: z.number().int().min(0).max(DEAL_DEEDS_MAX).default(0) }),
+  z.object({
+    type: z.literal("startGame"),
+    playerId: PlayerId,
+    startingCash: z.number().int().min(1_000).max(1_000_000),
+    dealDeeds: z.number().int().min(0).max(DEAL_DEEDS_MAX).default(0),
+    // Older clients send no clock: they get the generous default.
+    decisionSeconds: z.number().int().min(5).max(600).default(DECISION_SECONDS),
+    rollSeconds: z.number().int().min(3).max(600).nullable().default(null),
+  }),
   z.object({ type: z.literal("newGame"), playerId: PlayerId }),
   z.object({ type: z.literal("shake"), playerId: PlayerId, shaking: z.boolean() }),
   /** The player is at the trade screen: the clock must not decide for them meanwhile. */

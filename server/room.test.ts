@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DECISION_SECONDS } from "../src/game";
+import { DECISION_SECONDS, DEFAULT_SETUP } from "../src/game";
+import { parseClientMessage } from "../src/net/protocol";
 import type { Room } from "./room";
 import {
   COMPOSING_GRACE_MS,
@@ -32,7 +33,7 @@ function lobby() {
 
 /** A started room, with the opening roll already decided so Ana rolls first. */
 function playing(): Room {
-  const room = startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
+  const room = startGame(lobby(), ana.playerId, { ...DEFAULT_SETUP, startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
   if (!room.game) throw new Error("no game");
   return { ...room, game: { ...room.game, phase: { type: "awaitingRoll" } } };
 }
@@ -66,7 +67,7 @@ describe("lobby", () => {
     // Re-picking your own token is a no-op, not an error.
     expect(chooseToken(room, beto.playerId, "gallo", NOW).players[1]?.token).toBe("gallo");
     expect(() => chooseToken(playing(), ana.playerId, "gallo", NOW)).toThrow(RoomError);
-    const game = startGame(room, ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5).game;
+    const game = startGame(room, ana.playerId, { ...DEFAULT_SETUP, startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5).game;
     expect(game?.players.map((p) => p.token)).toEqual(["tractor", "gallo"]);
   });
 
@@ -87,8 +88,8 @@ describe("lobby", () => {
   });
 
   it("only the host starts, with at least two players", () => {
-    expect(() => startGame(lobby(), beto.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/anfitrión/);
-    expect(() => startGame(createRoom("ABCD", ana, NOW), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/2 jugadores/);
+    expect(() => startGame(lobby(), beto.playerId, { ...DEFAULT_SETUP, startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/anfitrión/);
+    expect(() => startGame(createRoom("ABCD", ana, NOW), ana.playerId, { ...DEFAULT_SETUP, startingCash: 35_000, dealDeeds: 0 }, NOW)).toThrow(/2 jugadores/);
     const room = playing();
     expect(room.status).toBe("playing");
     expect(room.game?.players.map((p) => p.id)).toEqual([ana.playerId, beto.playerId]);
@@ -97,9 +98,26 @@ describe("lobby", () => {
   });
 });
 
+describe("table clock", () => {
+  it("starts the game with the host's clocks and times the dice with the roll clock", () => {
+    let room = startGame(lobby(), ana.playerId, { ...DEFAULT_SETUP, decisionSeconds: 10, rollSeconds: 5 }, NOW, () => 0.5);
+    expect(room.game?.clock).toEqual({ decisionSeconds: 10, rollSeconds: 5 });
+    expect(room.deadline).toBe(NOW + 5_000);
+    // Nobody throws: when the bar fills, the table throws for them.
+    room = fireDeadline(room, NOW + 5_000, [2, 3]);
+    expect(room.lastAction).toBe("rollDice");
+    expect(room.game?.phase).toMatchObject({ type: "openingRoll", rolls: { [ana.playerId]: 5 } });
+  });
+
+  it("gives old clients that send no clock the generous default", () => {
+    const parsed = parseClientMessage(JSON.stringify({ type: "startGame", playerId: ana.playerId, startingCash: 35_000 }));
+    expect(parsed).toMatchObject({ type: "startGame", decisionSeconds: DECISION_SECONDS, rollSeconds: null, dealDeeds: 0 });
+  });
+});
+
 describe("dealt deeds", () => {
   it("hands each player the agreed number of deeds before the first roll", () => {
-    const room = startGame(lobby(), ana.playerId, { startingCash: 50_000, dealDeeds: 3 }, NOW, () => 0.5);
+    const room = startGame(lobby(), ana.playerId, { ...DEFAULT_SETUP, startingCash: 50_000, dealDeeds: 3 }, NOW, () => 0.5);
     const holdings = Object.values(room.game?.holdings ?? {});
     expect(holdings).toHaveLength(6);
     expect(holdings.filter((h) => h.ownerId === ana.playerId)).toHaveLength(3);
@@ -110,7 +128,7 @@ describe("dealt deeds", () => {
 
 describe("playing", () => {
   it("throws for who starts before the first turn, re-throwing ties", () => {
-    let room = startGame(lobby(), ana.playerId, { startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
+    let room = startGame(lobby(), ana.playerId, { ...DEFAULT_SETUP, startingCash: 35_000, dealDeeds: 0 }, NOW, () => 0.5);
     expect(room.game?.phase).toEqual({ type: "openingRoll", contenders: [ana.playerId, beto.playerId], rolls: {} });
     expect(() => applyRequest(room, beto.playerId, room.seq, { type: "rollDice" }, NOW, [1, 2])).toThrow(/turno/);
     room = applyRequest(room, ana.playerId, room.seq, { type: "rollDice" }, NOW, [2, 3]);

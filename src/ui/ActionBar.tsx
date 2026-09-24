@@ -1,6 +1,8 @@
 import type { ActionRequest, Card, GameState, Player } from "../game";
 import { JAIL_BAIL, currentPlayer, pesos } from "../game";
+import { clockWindow } from "./clockWindow";
 import { Key } from "./Key";
+import { useNow } from "./useNow";
 import { canAct } from "./perspective";
 import { TokenIcon } from "./TokenIcon";
 
@@ -21,6 +23,8 @@ export interface ActionBarProps {
   /** Opens the trade dialog; absent when this screen may not propose right now. */
   readonly onTrade: (() => void) | null;
   readonly dispatch: Dispatch;
+  /** Local-clock ms when the dice are thrown for the player, or null when there is no clock. */
+  readonly deadline: number | null;
 }
 
 interface DiceButtonProps {
@@ -52,6 +56,25 @@ function DiceButton({ label, shaking, disabled, onShakeStart, onShakeEnd }: Dice
   );
 }
 
+/**
+ * The dice clock as a bar that fills up while someone holds the dice; full,
+ * the table throws for them. Everyone sees it, so the table knows how long
+ * it will wait.
+ */
+function RollBar({ state, deadline, mine, name }: { readonly state: GameState; readonly deadline: number; readonly mine: boolean; readonly name: string }) {
+  const now = useNow(true);
+  const window = clockWindow(state);
+  const remaining = Math.max(0, (deadline - now) / 1000);
+  if (remaining > window) return null;
+  const filled = 1 - remaining / window;
+  return (
+    <div className={`roll-bar${remaining <= Math.min(5, window / 3) ? " urgent" : ""}`} role="timer" aria-label={`Se tiran solos en ${Math.ceil(remaining)} segundos`}>
+      <div className="roll-bar-fill" style={{ width: `${Math.min(100, filled * 100)}%` }} />
+      <span>{remaining <= 0 ? "¡Se tiran solos!" : mine ? `Tirá antes de que se llene · ${Math.ceil(remaining)} s` : `${name} tiene ${Math.ceil(remaining)} s para tirar`}</span>
+    </div>
+  );
+}
+
 /** The last throw; "¡Doble!" only while the extra turn it earned is still pending (never during the opening throws). */
 function Dice({ dice, rollAgain }: { readonly dice: readonly [number, number] | null; readonly rollAgain: boolean }) {
   if (!dice) return null;
@@ -65,7 +88,7 @@ function Dice({ dice, rollAgain }: { readonly dice: readonly [number, number] | 
 }
 
 /** Bottom-left bar: whose turn, the last dice, and the dice button (plus jail options). */
-export function ActionBar({ state, shownPlayer, cardOnTable, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch }: ActionBarProps) {
+export function ActionBar({ state, shownPlayer, cardOnTable, you, busy, shaking, canRoll, onShakeStart, onShakeEnd, onTrade, dispatch, deadline }: ActionBarProps) {
   // The buttons act on the real state; the name and the dice shown follow the table.
   const player = busy ? shownPlayer : currentPlayer(state);
   const { phase } = state;
@@ -123,6 +146,7 @@ export function ActionBar({ state, shownPlayer, cardOnTable, you, busy, shaking,
           )}
         </div>
       )}
+      {rolling && !busy && deadline !== null && <RollBar state={state} deadline={deadline} mine={mine} name={player.name} />}
       {!rolling && phase.type !== "gameOver" && <span className="waiting">{busy ? "Mirá la mesa…" : "Esperando decisión…"}</span>}
     </div>
   );

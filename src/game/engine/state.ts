@@ -1,5 +1,5 @@
 import type { Card, Deck, DeedId } from "../types";
-import { DEAL_DEEDS_MAX, STARTING_CASH } from "../constants";
+import { DEAL_DEEDS_MAX, DECISION_SECONDS, STARTING_CASH } from "../constants";
 import { shuffledDeck } from "../cards";
 import { DEEDS } from "../deeds";
 import type { TokenId } from "../tokens";
@@ -136,8 +136,17 @@ export type GameEvent =
   | { readonly type: "bankrupt"; readonly playerId: string; readonly text: string }
   | { readonly type: "turn"; readonly playerId: string; readonly text: string };
 
+/** How long the table waits for each decision before taking the default. */
+export interface TableClock {
+  /** Seconds for any decision. */
+  readonly decisionSeconds: number;
+  /** Seconds to throw the dice (openings, turns, jail); null means the decision clock. */
+  readonly rollSeconds: number | null;
+}
+
 export interface GameState {
   readonly players: readonly Player[];
+  readonly clock: TableClock;
   readonly currentPlayerIndex: number;
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
   /** Card ids, top of the deck first. Cards held by players are absent. */
@@ -176,14 +185,20 @@ export interface GameSetup {
    * available from turn one.
    */
   readonly dealDeeds: number;
+  /** Seconds per decision before the table takes the default. */
+  readonly decisionSeconds: number;
+  /** Seconds to throw the dice; null uses `decisionSeconds`. */
+  readonly rollSeconds: number | null;
 }
 
-export const DEFAULT_SETUP: GameSetup = { startingCash: STARTING_CASH, dealDeeds: 0 };
+export const DEFAULT_SETUP: GameSetup = { startingCash: STARTING_CASH, dealDeeds: 0, decisionSeconds: DECISION_SECONDS, rollSeconds: null };
 
 export interface CreateGameOptions {
   readonly players: readonly NewPlayer[];
   readonly startingCash?: number;
   readonly dealDeeds?: number;
+  readonly decisionSeconds?: number;
+  readonly rollSeconds?: number | null;
   /** Whether the table throws for who starts (default); off, the first player in the list rolls first. */
   readonly openingRoll?: boolean;
   readonly random?: () => number;
@@ -218,7 +233,7 @@ function dealHoldings(players: readonly NewPlayer[], perPlayer: number, random: 
  * decks shuffled, optionally a few deeds each, and the first player in the
  * list to roll.
  */
-export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, openingRoll = true, random = Math.random }: CreateGameOptions): GameState {
+export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, decisionSeconds = DECISION_SECONDS, rollSeconds = null, openingRoll = true, random = Math.random }: CreateGameOptions): GameState {
   if (players.length < 2 || players.length > 6) {
     throw new Error("Chacarero se juega de 2 a 6 jugadores");
   }
@@ -231,7 +246,11 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
   if (!Number.isInteger(dealDeeds) || dealDeeds < 0 || dealDeeds > DEAL_DEEDS_MAX) {
     throw new Error(`Se reparten de 0 a ${DEAL_DEEDS_MAX} escrituras por jugador`);
   }
+  if (!(decisionSeconds > 0) || (rollSeconds !== null && !(rollSeconds > 0))) {
+    throw new Error("El reloj de la mesa necesita segundos positivos");
+  }
   return {
+    clock: { decisionSeconds, rollSeconds },
     players: players.map((p) => ({
       id: p.id,
       name: p.name,

@@ -17,12 +17,7 @@ export const JUMP_SECONDS = 1.6;
 /** Seconds the replay waits before a flight or a drop, so the camera can get there first. */
 export const CUE_LEAD_SECONDS = 0.4;
 
-/**
- * Seconds a player gets for any decision before the table decides for them.
- * Generous on purpose, like a real table: the clock is there for players who
- * left, not to hurry the ones who stayed. Scaled by the countdown setting.
- */
-export const DECISION_SECONDS = 180;
+export { DECISION_SECONDS } from "./constants";
 
 /** Minimum seconds an event stays on screen at the default pace. */
 export function eventSeconds(event: GameEvent): number {
@@ -59,12 +54,21 @@ export function replaySeconds(events: readonly GameEvent[], scale = 1): number {
   return events.reduce((sum, event) => sum + eventSeconds(event) * scale, 0);
 }
 
+/** Whether the phase is waiting for the dice to be thrown (the roll clock applies). */
+export function isRollPhase(state: GameState): boolean {
+  const { type } = state.phase;
+  return type === "openingRoll" || type === "awaitingRoll" || type === "awaitingJailDecision";
+}
+
 /**
  * Seconds a player gets to decide in the current phase before the default
- * kicks in: the same for every decision. Null means no clock (game over).
+ * kicks in: the table's decision clock, or its roll clock while the dice
+ * wait to be thrown. Null means no clock (game over).
  */
 export function phaseSeconds(state: GameState): number | null {
-  return state.phase.type === "gameOver" ? null : DECISION_SECONDS;
+  if (state.phase.type === "gameOver") return null;
+  const { decisionSeconds, rollSeconds } = state.clock;
+  return isRollPhase(state) && rollSeconds !== null ? rollSeconds : decisionSeconds;
 }
 
 /** What the table does for an absent or undecided player when the clock runs out. */
