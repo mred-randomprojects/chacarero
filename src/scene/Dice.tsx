@@ -54,11 +54,18 @@ const PRESENT_RISE = 0.45;
 const PRESENT_HOLD = 0.85;
 const PRESENT_RETURN = 0.45;
 const PRESENT_DISTANCE = 4.8;
-/** The hands: just in front of and below the camera. */
-const HAND_DISTANCE = 3.0;
-const HAND_DROP = 0.75;
+/** The hands: the middle of the screen (NDC y), far enough that the dice read as dice, not as a wall. */
+const HAND_SCREEN_Y = 0.15;
+const HAND_DISTANCE = 5.5;
+/** Horizontal gap between the two dice in the hands (world units, centre to centre). */
+const HAND_GAP = 1.0;
+/** The hands never go lower than this above the felt; a low camera brings them closer instead. */
+const HAND_CLEARANCE = 0.55;
 
-type Mode = "rest" | "grab" | "shake" | "fly" | "settle" | "present";
+/** After letting go, the dice wait in the air where the hands were for the roll (a round trip online); if none comes, they are put down. */
+const RELEASE_WAIT_SECONDS = 3;
+
+type Mode = "rest" | "grab" | "shake" | "release" | "fly" | "settle" | "present";
 
 interface DieState {
   mode: Mode;
@@ -139,16 +146,15 @@ export function Dice({ target, obstacles, shaking, throwing, tableY, onLanded, o
 
   /** Where die `i` sits in the cupped hands, before the rattle is added. */
   const handPose = (i: number): Vector3 => {
-    const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const right = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-    const up = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-    const hand = camera.position
+    // The ray through the hands' spot on screen; stop short of the felt if the camera looks down steeply.
+    const ray = new Vector3(0, HAND_SCREEN_Y, 0.5).unproject(camera).sub(camera.position).normalize();
+    const above = camera.position.y - (restY + HAND_CLEARANCE);
+    const distance = ray.y < -1e-3 ? Math.max(1.5, Math.min(HAND_DISTANCE, above / -ray.y)) : HAND_DISTANCE;
+    return camera.position
       .clone()
-      .addScaledVector(forward, HAND_DISTANCE)
-      .addScaledVector(right, i === 0 ? -0.55 : 0.55)
-      .addScaledVector(up, -HAND_DROP);
-    hand.y = Math.max(restY + 0.4, hand.y);
-    return hand;
+      .addScaledVector(ray, distance)
+      .addScaledVector(right, ((i === 0 ? -1 : 1) * HAND_GAP * distance) / HAND_DISTANCE / 2);
   };
 
   /** Where die `i` floats during the close-up, and how it faces the viewer. */
@@ -208,8 +214,10 @@ export function Dice({ target, obstacles, shaking, throwing, tableY, onLanded, o
         die.t = 0;
         die.from = mesh ? mesh.position.clone() : die.end.clone();
         die.fromQuat = mesh ? mesh.quaternion.clone() : die.finalQuat.clone();
-      } else if (!shaking && die.mode !== "rest") {
-        die.mode = "rest";
+      } else if (!shaking && (die.mode === "grab" || die.mode === "shake")) {
+        // Let go: the throw leaves from right here, the middle of the screen, once the roll arrives.
+        die.mode = "release";
+        die.t = 0;
       }
     }
     if (!shaking) return;
@@ -266,6 +274,15 @@ export function Dice({ target, obstacles, shaking, throwing, tableY, onLanded, o
           die.spinAxis.lerp(randomUnit(), delta * 0.8).normalize();
           break;
         }
+        case "release":
+          // Out of the hands, the roll not here yet: hang where they were, still tumbling.
+          die.spinQuat.premultiply(new Quaternion().setFromAxisAngle(die.spinAxis, delta * 8));
+          mesh.quaternion.copy(die.spinQuat);
+          if (die.t >= RELEASE_WAIT_SECONDS) {
+            die.mode = "rest";
+            die.t = 0;
+          }
+          break;
         case "fly": {
           const started = Math.max(0, die.t - i * STAGGER);
           const u = Math.min(1, started / FLIGHT_SECONDS);
