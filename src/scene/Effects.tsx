@@ -6,6 +6,7 @@ import type { Card } from "../game";
 import { getDeed } from "../game";
 import type { Anchors } from "./anchors";
 import { deedAnchor, moneyAnchor, partyYaw } from "./anchors";
+import { CARD_H, CARD_W, seatSlots } from "./deedSlots";
 import { billTexture } from "./billTextures";
 import { buildingSpot } from "./buildingSpots";
 import { chanceBackTexture, chanceCardTexture, deedCardTexture } from "./cardTextures";
@@ -201,9 +202,16 @@ interface DeedFlightProps {
 
 const DEED_FLIGHT = 1.0;
 
+/** Where a deed lies (or will lie) for a party: its own slot at a seat, the pile for the bank. */
+function deedSpot(anchors: Anchors, party: DeedFlightProps["from"], deedId: DeedFlightProps["deedId"]): Vector3 {
+  const slot = party.type === "player" ? seatSlots.get(party.playerId)?.get(deedId) : undefined;
+  return slot ? new Vector3(...slot) : deedAnchor(anchors, party);
+}
+
 function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
-  const start = useMemo(() => deedAnchor(anchors, from), [anchors, from]);
-  const end = useMemo(() => deedAnchor(anchors, to), [anchors, to]);
+  // Leaves from where the card lay; lands in the slot the seat keeps free for it (read each frame: the row makes room as it flies).
+  const start = useMemo(() => deedSpot(anchors, from, deedId), [anchors, from, deedId]);
+  const end = useRef(deedAnchor(anchors, to));
   const yawFrom = useMemo(() => partyYaw(anchors, from), [anchors, from]);
   const yawTo = useMemo(() => partyYaw(anchors, to), [anchors, to]);
   const texture = useMemo(() => deedCardTexture(getDeed(deedId), { ownerId: "", chacras: 0, estancia: false, mortgaged: false }), [deedId]);
@@ -220,7 +228,8 @@ function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
     const k = Math.min(1, t.current / DEED_FLIGHT);
     const node = mesh.current;
     if (!node) return;
-    node.position.copy(arc(start, end, easeInOut(k), 2.8));
+    end.current = deedSpot(anchors, to, deedId);
+    node.position.copy(arc(start, end.current, easeInOut(k), 2.8));
     node.rotation.set(-Math.PI / 2 + Math.sin(k * Math.PI) * 0.9, 0, yawFrom + (yawTo - yawFrom) * k);
     // The camera follows the card across the table.
     pawnTracker.kind = "flight";
@@ -236,7 +245,7 @@ function DeedFlight({ anchors, deedId, from, to, onDone }: DeedFlightProps) {
 
   return (
     <mesh ref={mesh} castShadow name="deed-flight">
-      <planeGeometry args={[1.15, 1.63]} />
+      <planeGeometry args={[CARD_W, CARD_H]} />
       <meshStandardMaterial map={texture} roughness={1} side={DoubleSide} />
     </mesh>
   );
