@@ -43,6 +43,13 @@ const HOP_HEIGHT = 0.55;
 const JUMP_HEIGHT = 4.5;
 /** How long a pawn wobbles after a die bumps it. */
 const KNOCK_SECONDS = 0.8;
+/** How fast the piece turns to face where it is going (per second, exponential). */
+const TURN_RATE = 14;
+
+/** Yaw that points a piece's nose (+x, see Token.tsx) along a board-space direction. */
+function headingOf(dx: number, dy: number): number {
+  return Math.atan2(dy, dx);
+}
 
 /**
  * A player's piece (see Token.tsx for the shapes) that hops along `route`.
@@ -52,6 +59,9 @@ const KNOCK_SECONDS = 0.8;
  */
 export function Pawn({ layout, position, route, routeId, jump, token, color, slot, y, knockId, dimmed = false, onArrive }: PawnProps) {
   const group = useRef<Group>(null);
+  const body = useRef<Group>(null);
+  /** Where the piece faces; starts looking forward along the ring and then keeps the last direction walked. */
+  const heading = useRef<number | null>(null);
   const path = useRef<number[]>([position]);
   const isJump = useRef(false);
   const progress = useRef(0);
@@ -104,6 +114,23 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
     const hop = frac > 0 ? Math.sin(frac * Math.PI) * height : 0;
     const [wx, wy, wz] = boardToWorld({ x: a.x + (b.x - a.x) * frac, y: a.y + (b.y - a.y) * frac }, y + hop);
     node.position.set(wx, wy, wz);
+    // Face the way it is walking (or leaping); idle, keep facing the last way it went.
+    if (heading.current === null) {
+      const next = layout.tiles[(position + 1) % layout.tiles.length];
+      const here = layout.tiles[position];
+      if (next && here) {
+        const n = pawnPosition(next, slot, spacing);
+        const h = pawnPosition(here, slot, spacing);
+        heading.current = headingOf(n.x - h.x, n.y - h.y);
+      }
+    }
+    if (wasMoving && (b.x !== a.x || b.y !== a.y)) {
+      const target = headingOf(b.x - a.x, b.y - a.y);
+      const current = heading.current ?? target;
+      const diff = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+      heading.current = current + diff * Math.min(1, delta * pace.rate * TURN_RATE);
+    }
+    if (body.current && heading.current !== null) body.current.rotation.y = heading.current;
     // A die just hit us: rock in the direction of the shove, settling back upright.
     const knock = pawnKnocks.get(knockId);
     if (knock) {
@@ -139,7 +166,9 @@ export function Pawn({ layout, position, route, routeId, jump, token, color, slo
 
   return (
     <group ref={group}>
-      <TokenShape token={token} color={color} dimmed={dimmed} />
+      <group ref={body}>
+        <TokenShape token={token} color={color} dimmed={dimmed} />
+      </group>
     </group>
   );
 }
