@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { ActionRequest, GameState } from "../game";
-import { MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
+import { JAIL_BAIL, MAX_JAIL_TURNS, MIN_BID_INCREMENT, canRaiseCash, checkTrade, currentPlayer, deedName, getDeed, getPlayer, pesos } from "../game";
 import type { Dispatch } from "./ActionBar";
 import { DeedDetails } from "./DeedDetails";
 import { bandColor } from "../scene/cardTextures";
@@ -91,6 +91,39 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
               );
             })}
           </ul>
+          <Countdown deadline={deadline} now={now} />
+        </div>
+      );
+    }
+    case "awaitingJailDecision": {
+      // Front and centre: whoever is jailed must see the way out before throwing by habit.
+      const action: ActionRequest = { type: "payBail" };
+      const attempt = player.jailTurns + 1;
+      const last = attempt >= MAX_JAIL_TURNS;
+      return (
+        <div className="prompt jail">
+          <h3>
+            <TokenIcon token={player.token} size={20} /> {player.name} está preso en la Comisaría
+          </h3>
+          <p>
+            Pagá la fianza y jugá el turno normal, o tirá los dados: con doble salís
+            {last ? "; es el último intento, sale igual aunque no saque doble." : ` (intento ${attempt} de ${MAX_JAIL_TURNS}).`}
+          </p>
+          {mine(action) ? (
+            <div className="buttons">
+              <button type="button" className="primary" disabled={player.cash < JAIL_BAIL} onClick={() => dispatch(action)}>
+                Pagar fianza {pesos(JAIL_BAIL)} <Key k="p" />
+              </button>
+              {player.getOutOfJailCards > 0 && (
+                <button type="button" onClick={() => dispatch({ type: "spendJailCard" })}>
+                  Usar tarjeta de salida <Key k="u" />
+                </button>
+              )}
+              <span className="hint">o mantené apretada la barra espaciadora para tirar</span>
+            </div>
+          ) : (
+            waiting(action)
+          )}
           <Countdown deadline={deadline} now={now} />
         </div>
       );
