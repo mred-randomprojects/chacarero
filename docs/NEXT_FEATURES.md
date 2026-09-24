@@ -432,6 +432,44 @@ the turn cue compared itself with the previous cue instead of with the camera).
 
 ---
 
+# Batch 6 (2026-09-24 — tables with people who wander off)
+
+Three notes from a real online game where one player went "ausente" on
+their own turn and the table sat waiting.
+
+## F1. Strict clocks, if the table wants them
+
+- [ ] F1.1 A table setting (hot-seat setup and online lobby, chosen before the
+      game starts) for how long each decision gets: from the current generous
+      3 min down to 10 s. The default stays 3 min.
+- [ ] F1.2 A separate limit for throwing the dice, shown as a bar in the roll
+      prompt that fills up; when it is full the dice are thrown for you.
+- [ ] F1.3 Both limits live in the game state so the server and the hot-seat
+      clock agree, and the server accepts old clients that do not send them.
+
+## F2. Everyone watches the trade being built
+
+- [ ] F2.1 While a player composes a trade (or a counter-offer), every other
+      screen sees the same trade screen, read-only and live: who they picked,
+      the deeds and cash on each side, the values — so a table on voice chat
+      can talk it over.
+- [ ] F2.2 It opens by itself when the composing starts; a watcher can close it
+      and reopen it (V), and it goes away when the composer closes theirs or
+      the table moves on.
+
+## F3. Vote a missing player out
+
+- [ ] F3.1 When a player is ausente (offline), the others can start a vote to
+      take them out of the game; everyone still in votes yes or no, and it
+      passes with a majority of the players still in (the missing one does not
+      count).
+- [ ] F3.2 Passing it removes them: their deeds go back to the bank, free and
+      unbuilt, their cash and jail cards to the bank; whatever was waiting on
+      them (their turn, a bid, a trade, a debt) moves on without them. The
+      replay shows it like a bankruptcy. The vote is dropped if they come back.
+
+---
+
 ## Structural analysis
 
 What the requirements touch, from the bottom of the stack up:
