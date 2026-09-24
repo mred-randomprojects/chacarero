@@ -398,6 +398,38 @@ the turn cue compared itself with the previous cue instead of with the camera).
       cue, and Space during a walk (2× pace, arrival at the destination, no
       teleport).
 
+## E1. Pawns face where they go
+
+- [x] E1.1 The piece turns (smoothly, through corners) to face the direction it
+      walks or leaps; standing still it keeps the last heading, starting out
+      facing forward along the ring. (Batch 5, item 1)
+
+## E2. The way out of jail is up front
+
+- [x] E2.1 In jail, a centre prompt says so, with Pagar fianza [P] as the big
+      button, the jail card [U] if held, and which attempt the throw would be.
+      Space still throws for doubles. (Item 2)
+
+## E3. Dice that behave in the hands
+
+- [x] E3.1 Shaken in the middle of the screen at a readable size (a ray through
+      the centre, stopping above the felt), not a wall of dice at the bottom.
+      (Item 3)
+- [x] E3.2 Letting go keeps them where the hands were until the roll arrives,
+      and the throw leaves from there; before, they rushed back to the felt in
+      the gap (a round trip online) and were thrown from the table. (Item 6)
+
+## E4. A deed lands in its own place
+
+- [x] E4.1 The flying card leaves from where it lay and lands in the exact slot
+      it keeps; the row opens the gap while it flies and the other cards
+      slide, never jump (`src/scene/deedSlots.ts`). (Item 4)
+
+## E5. Modals open in the same place
+
+- [x] E5.1 The Lista tab's long table stretched the backdrop's grid row and
+      pushed the modal down; the backdrop now has a definite track. (Item 5)
+
 ---
 
 ## Structural analysis
@@ -437,6 +469,16 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-23 — batch 5 shipped and measured** (`38eb3eb` heading, `8be58a9`
+  jail, `d416adb` dice, `93378b7` deeds, `8e77a2f` modals). Sampled: a 7-square
+  walk with the piece's yaw against its motion, median 0.00 rad, max 0.33
+  through a corner; a throw from the hands with no jump (largest step 0.34
+  per 40 ms), hands 5.1 units from the camera instead of 2.8; buying a third
+  deed with two held: the neighbours slide ±0.74→±1.27 during the flight, the
+  card lands at the middle slot exactly and the seat card is there the next
+  sample (no frame without it); all three `L` tabs open at top 16.
+  Online: the deploy is now `./deploy.sh` (droplet builds, ~12 s).
 
 - **2026-09-21 — batch 4 shipped and measured** (`5d3cca6` camera, `51ea219`
   hurry, `c532e90` rent, `adb46e7` trade, `7853989` Catastro, `71310ec`).
