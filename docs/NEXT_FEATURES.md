@@ -509,7 +509,7 @@ Order of work (each step is one or more commits, each pushed to `main`):
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
 
 - **2026-09-24 — batch 6 shipped** (`cb1182a` clocks, `d41169c` shared trade,
-  next commit the vote). F1: `GameState.clock { decisionSeconds, rollSeconds }`
+  `c250f44` vote). F1: `GameState.clock { decisionSeconds, rollSeconds }`
   from `GameSetup` (lobby + hot-seat setup buttons; 3 min stays the default,
   old clients get it via Zod defaults); `phaseSeconds` uses the roll clock in
   the roll phases; the `RollBar` under the dice button fills over the last
