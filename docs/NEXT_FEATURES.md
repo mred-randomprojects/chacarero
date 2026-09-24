@@ -449,11 +449,11 @@ their own turn and the table sat waiting.
 
 ## F2. Everyone watches the trade being built
 
-- [ ] F2.1 While a player composes a trade (or a counter-offer), every other
+- [x] F2.1 While a player composes a trade (or a counter-offer), every other
       screen sees the same trade screen, read-only and live: who they picked,
       the deeds and cash on each side, the values — so a table on voice chat
       can talk it over.
-- [ ] F2.2 It opens by itself when the composing starts; a watcher can close it
+- [x] F2.2 It opens by itself when the composing starts; a watcher can close it
       and reopen it (V), and it goes away when the composer closes theirs or
       the table moves on.
 

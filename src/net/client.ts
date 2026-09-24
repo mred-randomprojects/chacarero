@@ -1,5 +1,5 @@
 import type { ActionRequest, GameSetup, TokenId } from "../game";
-import type { ClientMessage, RoomView, ServerMessage } from "./protocol";
+import type { ClientMessage, RoomView, ServerMessage, TradeDraftMessage } from "./protocol";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
 
@@ -90,8 +90,8 @@ export class RoomClient {
     this.send({ type: "shake", playerId: this.playerId, shaking });
   }
 
-  composing(composing: boolean): void {
-    this.send({ type: "composing", playerId: this.playerId, composing });
+  composing(composing: boolean, draft?: TradeDraftMessage): void {
+    this.send(draft ? { type: "composing", playerId: this.playerId, composing, draft } : { type: "composing", playerId: this.playerId, composing });
   }
 
   action(seq: number, action: ActionRequest): void {

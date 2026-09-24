@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DeedId, GameState, Player, Trade, TradeOffer } from "../game";
 import { DEEDS, canTradeDeed, checkTrade, deedName, getDeed, getPlayer, mortgageTransferFee, pesos, tradeBalance } from "../game";
+import type { SharedTradeDraft } from "../net/protocol";
 import { bandColor } from "../scene/cardTextures";
 import type { Dispatch } from "./ActionBar";
 import { DeedCard, Hand } from "./DeedCard";
@@ -26,7 +27,9 @@ export interface TradeDraft {
 export type TradeScreenMode =
   | { readonly kind: "compose"; readonly draft: TradeDraft }
   /** A proposal on the table, seen by the player who must answer it (or by the proposer, who may withdraw). */
-  | { readonly kind: "review"; readonly trade: Trade };
+  | { readonly kind: "review"; readonly trade: Trade }
+  /** Someone else's deal, still being put together, watched live and read-only. */
+  | { readonly kind: "watch"; readonly draft: SharedTradeDraft };
 
 export interface TradeScreenProps {
   readonly state: GameState;
@@ -38,6 +41,8 @@ export interface TradeScreenProps {
   /** Review mode: answer with a different deal. */
   readonly onCounter: () => void;
   readonly onClose: () => void;
+  /** Compose mode: the deal as it stands after every change, for the other screens to watch. */
+  readonly onDraftChange?: (partnerId: string | null, gives: TradeOffer, receives: TradeOffer) => void;
 }
 
 const CASH_STEPS = [500, 1_000, 5_000] as const;
@@ -205,34 +210,49 @@ function Fairness({ a, b, aPlayer, bPlayer }: { readonly a: number; readonly b: 
  * face-value of each side so the fairness of the deal is plain. The same
  * screen shows a proposal to the player who must answer it.
  */
-export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCounter, onClose }: TradeScreenProps) {
+export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCounter, onClose, onDraftChange }: TradeScreenProps) {
   const review = mode.kind === "review" ? mode.trade : null;
-  const draft: TradeDraft = mode.kind === "compose" ? mode.draft : { me: mode.trade.fromId, partnerId: mode.trade.toId, gives: mode.trade.gives, receives: mode.trade.receives, counter: false };
+  const watched = mode.kind === "watch" ? mode.draft : null;
+  const draft: TradeDraft =
+    mode.kind === "compose"
+      ? mode.draft
+      : mode.kind === "review"
+        ? { me: mode.trade.fromId, partnerId: mode.trade.toId, gives: mode.trade.gives, receives: mode.trade.receives, counter: false }
+        : { me: mode.draft.fromId, partnerId: mode.draft.toId, gives: mode.draft.gives, receives: mode.draft.receives, counter: mode.draft.counter };
   const me = getPlayer(state, draft.me);
   const partners = useMemo(() => state.players.filter((p) => p.id !== me.id && !p.bankrupt), [state.players, me.id]);
-  const [partnerId, setPartnerId] = useState<string | null>(draft.partnerId);
-  const [gives, setGives] = useState<TradeOffer>(draft.gives);
-  const [receives, setReceives] = useState<TradeOffer>(draft.receives);
+  const [ownPartnerId, setPartnerId] = useState<string | null>(draft.partnerId);
+  const [ownGives, setGives] = useState<TradeOffer>(draft.gives);
+  const [ownReceives, setReceives] = useState<TradeOffer>(draft.receives);
+  // Watching, the deal is whatever the composer has right now; otherwise it is this screen's own.
+  const partnerId = watched ? watched.toId : ownPartnerId;
+  const gives = watched ? watched.gives : ownGives;
+  const receives = watched ? watched.receives : ownReceives;
   const [hovered, setHovered] = useState<DeedId | null>(null);
+  const composing = mode.kind === "compose";
+  useEffect(() => {
+    if (composing) onDraftChange?.(ownPartnerId, ownGives, ownReceives);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- report the deal when it changes, not when the callback's identity does
+  }, [composing, ownPartnerId, ownGives, ownReceives]);
   const partner = partnerId ? state.players.find((p) => p.id === partnerId) : undefined;
 
   const trade: Trade | null = partner ? { fromId: me.id, toId: partner.id, gives, receives } : null;
   const check = trade ? checkTrade(state, trade) : { ok: false as const, reason: "Elegí con quién canjear" };
   const balance = trade ? tradeBalance(state, trade) : null;
   const empty = gives.deeds.length + receives.deeds.length === 0 && gives.cash === 0 && receives.cash === 0;
-  const editable = review === null;
+  const editable = composing;
   // Review: the responder answers; the proposer may only withdraw; anyone else just looks.
   const responder = review !== null && you !== null ? review.toId === you : review !== null && you === null;
   const proposer = review !== null && you !== null && review.fromId === you;
 
-  const title = review ? "Propuesta de canje" : draft.counter ? "Contraoferta" : "Canje";
+  const title = watched ? `${me.name} arma ${draft.counter ? "una contraoferta" : "un canje"}` : review ? "Propuesta de canje" : draft.counter ? "Contraoferta" : "Canje";
   const previewId = hovered ?? gives.deeds[0] ?? receives.deeds[0] ?? null;
 
   return (
     <div className="trade-screen" role="dialog" aria-label={title}>
       <header className="trade-header">
         <h2>{title}</h2>
-        {partner && !review && !draft.counter && partners.length > 1 && (
+        {partner && editable && !draft.counter && partners.length > 1 && (
           <button type="button" className="link-button" onClick={() => setPartnerId(null)}>
             cambiar de jugador
           </button>
@@ -242,7 +262,16 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
         </button>
       </header>
 
-      {!partner ? (
+      {!partner && watched ? (
+        <div className="partner-choice">
+          <h3>{me.name} está eligiendo con quién negociar…</h3>
+          <div className="trade-footer">
+            <button type="button" onClick={onClose}>
+              Mirar la mesa
+            </button>
+          </div>
+        </div>
+      ) : !partner ? (
         <div className="partner-choice">
           <h3>¿Con quién negociás?</h3>
           {partners.length === 0 && <p className="trade-problem">No queda nadie con quien canjear.</p>}
@@ -261,9 +290,9 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
       ) : (
         <>
           <div className="trade-table">
-            <Side state={state} owner={me} title={review ? `${me.name} da` : "Ofrecés"} offer={gives} onChange={editable ? setGives : null} onHover={setHovered} />
+            <Side state={state} owner={me} title={editable ? "Ofrecés" : `${me.name} da`} offer={gives} onChange={editable ? setGives : null} onHover={setHovered} />
             <div className="trade-middle">
-              <div className="trade-preview-slot">{previewId ? <DeedPreview state={state} deedId={previewId} /> : <p className="trade-preview-hint">Pasá el mouse por una escritura para verla grande; clic para ponerla en la mesa.</p>}</div>
+              <div className="trade-preview-slot">{previewId ? <DeedPreview state={state} deedId={previewId} /> : <p className="trade-preview-hint">{editable ? "Pasá el mouse por una escritura para verla grande; clic para ponerla en la mesa." : "Pasá el mouse por una escritura para verla grande."}</p>}</div>
               <Fairness a={offerValue(gives)} b={offerValue(receives)} aPlayer={me} bPlayer={partner} />
               {balance && (
                 <p className="trade-balance">
@@ -272,10 +301,19 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
               )}
               {!check.ok && !empty && <p className="trade-problem">{check.reason}</p>}
             </div>
-            <Side state={state} owner={partner} title={review ? `${partner.name} da` : "Pedís"} offer={receives} onChange={editable ? setReceives : null} onHover={setHovered} />
+            <Side state={state} owner={partner} title={editable ? "Pedís" : `${partner.name} da`} offer={receives} onChange={editable ? setReceives : null} onHover={setHovered} />
           </div>
           <footer className="trade-footer">
-            {review ? (
+            {watched ? (
+              <>
+                <p className="waiting-for">
+                  {me.name} todavía no lo mandó: lo ves mientras lo arma{you === partner.id ? "; cuando lo mande, te toca contestar" : ""}.
+                </p>
+                <button type="button" onClick={onClose}>
+                  Mirar la mesa
+                </button>
+              </>
+            ) : review ? (
               responder ? (
                 <>
                   <button type="button" className="primary big" disabled={busy || !check.ok} title={check.ok ? "" : check.reason} onClick={() => dispatch({ type: "acceptTrade" })}>

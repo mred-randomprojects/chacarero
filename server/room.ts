@@ -6,7 +6,7 @@
 import type { ActionRequest, GameSetup, GameState, TokenId } from "../src/game";
 import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, firstFreeToken, getToken, phaseSeconds, replaySeconds } from "../src/game";
 import type { Dice } from "../src/game";
-import type { RoomPlayer, RoomStatus, RoomView } from "../src/net/protocol";
+import type { RoomPlayer, RoomStatus, RoomView, SharedTradeDraft, TradeDraftMessage } from "../src/net/protocol";
 
 export const MAX_PLAYERS = 6;
 
@@ -27,6 +27,8 @@ export interface Room {
   readonly shakingPlayerId: string | null;
   /** Player at the trade screen; the clock waits for them instead of deciding. */
   readonly composingPlayerId: string | null;
+  /** The deal being put together at that screen, shown to everyone else. */
+  readonly tradeDraft: SharedTradeDraft | null;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
@@ -55,6 +57,7 @@ export function createRoom(code: string, host: { playerId: string; name: string 
     deadline: null,
     shakingPlayerId: null,
     composingPlayerId: null,
+    tradeDraft: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -150,14 +153,32 @@ export function startGame(room: Room, playerId: string, setup: GameSetup, now: n
 /** Back to the lobby once a game is over (host only). */
 export function newGame(room: Room, playerId: string, now: number): Room {
   if (room.hostId !== playerId) throw new RoomError("Solo el anfitrión puede volver a la sala");
-  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null, composingPlayerId: null }, now);
+  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null }, now);
 }
 
-/** A player opened (or closed) the trade screen. Only the player the clock is waiting on matters. */
-export function setComposing(room: Room, playerId: string, composing: boolean): Room {
+/** Whether `playerId` may be putting this deal together: the proposer, or the player answering with a counter-offer. */
+function mayDraft(game: GameState, playerId: string, draft: TradeDraftMessage): boolean {
+  if (draft.toId !== null && (draft.toId === playerId || !game.players.some((p) => p.id === draft.toId && !p.bankrupt))) return false;
+  if (draft.counter) return game.phase.type === "awaitingTradeResponse" && game.phase.trade.toId === playerId && draft.toId === game.phase.trade.fromId;
+  return allowedPlayerFor(game, { type: "proposeTrade", toId: draft.toId ?? playerId, gives: draft.gives, receives: draft.receives }) === playerId;
+}
+
+/**
+ * A player opened (or closed) the trade screen. The clock only cares about
+ * the player it is waiting on; the draft, when there is one, is what every
+ * other screen watches being built. Returns the same room when nothing
+ * anyone sees changed, so the server need not broadcast.
+ */
+export function setComposing(room: Room, playerId: string, composing: boolean, draft?: TradeDraftMessage): Room {
   if (!room.game) return room;
-  if (composing) return { ...room, composingPlayerId: playerId };
-  return room.composingPlayerId === playerId ? { ...room, composingPlayerId: null } : room;
+  if (!composing) {
+    if (room.composingPlayerId !== playerId && room.tradeDraft?.fromId !== playerId) return room;
+    return { ...room, composingPlayerId: room.composingPlayerId === playerId ? null : room.composingPlayerId, tradeDraft: room.tradeDraft?.fromId === playerId ? null : room.tradeDraft };
+  }
+  // No draft (the screen only said it is open, e.g. reviewing a proposal): what everyone watches stays as it is.
+  const tradeDraft = draft === undefined ? room.tradeDraft : mayDraft(room.game, playerId, draft) ? { fromId: playerId, ...draft } : room.tradeDraft?.fromId === playerId ? null : room.tradeDraft;
+  if (room.composingPlayerId === playerId && tradeDraft === room.tradeDraft) return room;
+  return { ...room, composingPlayerId: playerId, tradeDraft };
 }
 
 export function setShaking(room: Room, playerId: string, shaking: boolean): Room {
@@ -168,7 +189,7 @@ export function setShaking(room: Room, playerId: string, shaking: boolean): Room
 
 function afterChange(room: Room, game: GameState, action: ActionRequest["type"], actorId: string | null, now: number): Room {
   const status: RoomStatus = game.phase.type === "gameOver" ? "finished" : "playing";
-  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null, composingPlayerId: null }, now), now);
+  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null }, now), now);
 }
 
 /**
@@ -209,6 +230,7 @@ export function toView(room: Room, now: number): RoomView {
     lastActorId: room.lastActorId,
     deadline: room.deadline,
     shakingPlayerId: room.shakingPlayerId,
+    tradeDraft: room.tradeDraft,
     now,
   };
 }

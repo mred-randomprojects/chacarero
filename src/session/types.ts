@@ -1,4 +1,5 @@
 import type { ActionRequest, ActionType, GameState } from "../game";
+import type { SharedTradeDraft, TradeDraftMessage } from "../net/protocol";
 
 export type SessionMode = "local" | "online";
 
@@ -27,8 +28,13 @@ export interface Session {
   readonly error: string | null;
   readonly dispatch: (action: ActionRequest) => void;
   readonly setShaking: (shaking: boolean) => void;
-  /** This screen's player is at the trade screen; the clock should wait for them. */
-  readonly setComposing: (composing: boolean) => void;
+  /** The trade another player is putting together right now (online), for this screen to watch. */
+  readonly tradeDraft: SharedTradeDraft | null;
+  /**
+   * This screen's player is at the trade screen; the clock should wait for
+   * them. `draft` is the deal as it stands, for the other screens to watch.
+   */
+  readonly setComposing: (composing: boolean, draft?: TradeDraftMessage) => void;
   readonly clearError: () => void;
   /** Leaves the table (online: leaves the room). */
   readonly leave: () => void;

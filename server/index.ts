@@ -167,13 +167,10 @@ function handle(ws: Socket, message: ClientMessage): void {
     case "shake":
       if (ws.data.code) update(ws, ws.data.code, (room) => setShaking(room, message.playerId, message.shaking));
       return;
-    case "composing": {
-      // Nothing to broadcast: the room only remembers it for the clock.
-      const code = ws.data.code;
-      const room = code ? rooms.get(code) : undefined;
-      if (room) rooms.set(room.code, setComposing(room, message.playerId, message.composing));
+    case "composing":
+      // Broadcast only when the draft everyone watches changed; the clock part is the room's alone.
+      if (ws.data.code) update(ws, ws.data.code, (room) => setComposing(room, message.playerId, message.composing, message.draft));
       return;
-    }
     case "action":
       if (ws.data.code) update(ws, ws.data.code, (room) => applyRequest(room, message.playerId, message.seq, message.action, now, rollDice()));
       return;

@@ -4,7 +4,7 @@
  * carries the engine's own types, which the server produced itself.
  */
 import { z } from "zod";
-import type { ActionRequest, DeedId, GameState, TokenId } from "../game";
+import type { ActionRequest, DeedId, GameState, TokenId, TradeOffer } from "../game";
 import { DEAL_DEEDS_MAX, DECISION_SECONDS, DEEDS, TOKEN_IDS } from "../game";
 
 const deedIds = DEEDS.map((d) => d.id) as [DeedId, ...DeedId[]];
@@ -16,6 +16,21 @@ const Code = z.string().trim().toUpperCase().length(4);
 /** Far above any cash a game can hold; the engine checks the real balance. */
 const MAX_CASH = 100_000_000;
 const TradeOfferSchema = z.object({ deeds: z.array(DeedIdSchema).max(deedIds.length).readonly(), cash: z.number().int().nonnegative().max(MAX_CASH) });
+
+const TradeDraftSchema = z.object({ toId: PlayerId.nullable(), gives: TradeOfferSchema, receives: TradeOfferSchema, counter: z.boolean() });
+
+/** A deal someone is still putting together at the trade screen, as the client sends it. */
+export type TradeDraftMessage = z.infer<typeof TradeDraftSchema>;
+
+/** The same deal as every screen sees it: who is building it, and with whom (null while they choose). */
+export interface SharedTradeDraft {
+  readonly fromId: string;
+  readonly toId: string | null;
+  readonly gives: TradeOffer;
+  readonly receives: TradeOffer;
+  /** A counter-offer to the proposal on the table rather than a new proposal. */
+  readonly counter: boolean;
+}
 
 export const ActionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("rollDice") }),
@@ -62,8 +77,11 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("newGame"), playerId: PlayerId }),
   z.object({ type: z.literal("shake"), playerId: PlayerId, shaking: z.boolean() }),
-  /** The player is at the trade screen: the clock must not decide for them meanwhile. */
-  z.object({ type: z.literal("composing"), playerId: PlayerId, composing: z.boolean() }),
+  /**
+   * The player is at the trade screen: the clock must not decide for them meanwhile.
+   * `draft` is the deal they are putting together, shown live on everyone else's screen.
+   */
+  z.object({ type: z.literal("composing"), playerId: PlayerId, composing: z.boolean(), draft: TradeDraftSchema.optional() }),
   z.object({ type: z.literal("action"), playerId: PlayerId, seq: z.number().int().nonnegative(), action: ActionRequestSchema }),
   z.object({ type: z.literal("heartbeat"), playerId: PlayerId }),
 ]);
@@ -98,6 +116,8 @@ export interface RoomView {
   readonly deadline: number | null;
   /** Whose hands are rattling the dice, if anyone's. */
   readonly shakingPlayerId: string | null;
+  /** The trade someone is putting together right now, for everyone to watch. */
+  readonly tradeDraft: SharedTradeDraft | null;
   /** Server clock at send time, for countdown offset correction. */
   readonly now: number;
 }

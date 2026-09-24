@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { soundsForTransition } from "./audio/gameSounds";
 import { sfx } from "./audio/sfx";
 import type { DeedId, GameState, TradeOffer } from "./game";
-import { BOARD_SIZE, JAIL_INDEX, currentPlayer, getSquare } from "./game";
+import { BOARD_SIZE, JAIL_INDEX, currentPlayer, getPlayer, getSquare } from "./game";
 import { layoutIndexFor } from "./scene/buildingSpots";
 import { boardToWorld } from "./scene/tileGeometry";
 import type { PawnView, SeatView } from "./scene/Board";
@@ -27,6 +27,7 @@ import { MoneyFlights } from "./ui/MoneyFlights";
 import { PlayerCards } from "./ui/PlayerCards";
 import { Prompt } from "./ui/Prompt";
 import { UI_KEYS, actionForKey } from "./ui/hotkeys";
+import { Key } from "./ui/Key";
 import { canAct, primaryAction, tradeProposer } from "./ui/perspective";
 import type { BoardTab } from "./ui/BoardMap";
 import { BoardMap } from "./ui/BoardMap";
@@ -68,10 +69,10 @@ const CARD_BACK_OFF = 1.35;
 const CARD_AHEAD = 9;
 const CARD_CLEARANCE = 2.8;
 
-/** The trade screen's contents; `id` remounts it so a fresh draft starts clean. */
+/** The trade screen's contents; `id` remounts it so a fresh draft starts clean. Watching reads the live draft at render. */
 interface OpenTrade {
   readonly id: number;
-  readonly mode: TradeScreenMode;
+  readonly mode: Exclude<TradeScreenMode, { kind: "watch" }> | { readonly kind: "watch" };
 }
 
 const NO_OFFER: TradeOffer = { deeds: [], cash: 0 };
@@ -440,8 +441,8 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     tradeCounter.current += 1;
     setTrade({ id: tradeCounter.current, mode: { kind: "compose", draft: { me: pending.toId, partnerId: pending.fromId, gives: pending.receives, receives: pending.gives, counter: true } } });
   }, [game.phase]);
-  // While the trade screen is open the clock must not decide for us.
-  const composing = trade !== null;
+  // While the trade screen is open the clock must not decide for us (watching someone else's is not deciding anything).
+  const composing = trade !== null && trade.mode.kind !== "watch";
   useEffect(() => {
     if (!composing) return;
     session.setComposing(true);
@@ -455,6 +456,20 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   }, [game.phase]);
   // A state change invalidates any draft.
   useEffect(() => setTrade(null), [seq]);
+  // Someone else putting a deal together: everyone watches it being built (they can close it and come back with V).
+  const sharedDraft = session.tradeDraft !== null && session.tradeDraft.fromId !== you ? session.tradeDraft : null;
+  const watchTrade = useCallback(() => {
+    tradeCounter.current += 1;
+    const id = tradeCounter.current;
+    // A proposal being looked at gives way: the counter-offer being built is the newer news.
+    setTrade((current) => (current === null || current.mode.kind === "review" ? { id, mode: { kind: "watch" } } : current));
+  }, []);
+  const watching = sharedDraft !== null;
+  const tradeMode: TradeScreenMode | null = trade === null ? null : trade.mode.kind !== "watch" ? trade.mode : sharedDraft ? { kind: "watch", draft: sharedDraft } : null;
+  useEffect(() => {
+    if (watching) watchTrade();
+    else setTrade((current) => (current?.mode.kind === "watch" ? null : current));
+  }, [watching, watchTrade]);
   // Once the table has announced the proposal, the player who must answer sees it big.
   const proposalShown = view.phase.type === "awaitingTradeResponse" ? view.phase.trade : null;
   useEffect(() => {
@@ -522,6 +537,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       else if (key === UI_KEYS.map) setOverlay((v) => (v ? null : "catastro"));
       else if (key === UI_KEYS.trade) proposeTrade();
       else if (key === UI_KEYS.settings) setShowSettings((v) => !v);
+      else if (key === "v" && sharedDraft && trade === null) watchTrade();
       else if (busy || showList || showSettings || trade !== null || Date.now() - promptReadyAt.current < PROMPT_GRACE_MS) return;
       else if (key === "o" && game.phase.type === "awaitingTradeResponse" && canAct(game, you, { type: "counterTrade", gives: NO_OFFER, receives: NO_OFFER })) counterTrade();
       else if (key === "v" && game.phase.type === "awaitingTradeResponse") reviewTrade();
@@ -543,7 +559,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, hurry, proposeTrade, counterTrade, reviewTrade, game, you, dispatch, showList, showSettings, trade, throwing, peek, peekSeat]);
+  }, [seats, startShake, releaseDice, lookAt, flyToSeat, mySide, closePanel, playback.busy, busy, canRoll, hurry, proposeTrade, counterTrade, reviewTrade, watchTrade, sharedDraft, game, you, dispatch, showList, showSettings, trade, throwing, peek, peekSeat]);
 
   const pawns = useMemo<readonly PawnView[]>(
     () =>
@@ -685,11 +701,16 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         />
       )}
       {showSettings && <SettingsPanel settings={settings} onChange={onSettings} onClose={() => setShowSettings(false)} />}
-      {trade && (
+      {sharedDraft && trade === null && (
+        <button type="button" className="watch-trade" onClick={watchTrade}>
+          ⇄ {getPlayer(game, sharedDraft.fromId).name} está armando {sharedDraft.counter ? "una contraoferta" : "un canje"} · Ver <Key k="v" />
+        </button>
+      )}
+      {trade && tradeMode && (
         <TradeScreen
           key={trade.id}
           state={game}
-          mode={trade.mode}
+          mode={tradeMode}
           you={you}
           busy={busy}
           dispatch={dispatch}
@@ -698,6 +719,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
           }
           onCounter={counterTrade}
           onClose={() => setTrade(null)}
+          onDraftChange={(partnerId, gives, receives) => session.setComposing(true, { toId: partnerId, gives, receives, counter: trade.mode.kind === "compose" && trade.mode.draft.counter })}
         />
       )}
       <LiftedDeed state={game} deedId={offeredDeed} />

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActionRequest } from "../game";
 import type { ConnectionStatus } from "../net/client";
 import { RoomClient } from "../net/client";
-import type { RoomView } from "../net/protocol";
+import type { RoomView, TradeDraftMessage } from "../net/protocol";
 import type { Session } from "./types";
 
 export interface OnlineState {
@@ -82,7 +82,9 @@ export function useOnlineSession({ client, room, you, status, clockOffset, error
       error,
       dispatch: (action: ActionRequest) => client.action(seqRef.current, action),
       setShaking: (shaking: boolean) => client.shake(shaking),
-      setComposing: (composing: boolean) => client.composing(composing),
+      // An older server sends no draft at all.
+      tradeDraft: room.tradeDraft ?? null,
+      setComposing: (composing: boolean, draft?: TradeDraftMessage) => client.composing(composing, draft),
       clearError,
       leave: () => client.leave(),
       newGame: () => client.newGame(),

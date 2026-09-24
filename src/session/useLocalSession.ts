@@ -118,6 +118,7 @@ export function useLocalSession(options: LocalSessionOptions): Session & { reado
       error,
       dispatch: (action: ActionRequest) => apply(action),
       setShaking: (shaking: boolean) => setShakingPlayerId(shaking ? allowedPlayerFor(turnRef.current.game, { type: "rollDice" }) : null),
+      tradeDraft: null,
       setComposing: (value: boolean) => {
         composing.current = value;
       },

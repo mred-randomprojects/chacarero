@@ -200,6 +200,31 @@ describe("playing", () => {
     expect(room.composingPlayerId).toBeNull();
   });
 
+  it("shares the trade being built with everyone, and only from the player who may propose it", () => {
+    const base = playing();
+    if (!base.game) throw new Error("no game");
+    let room: Room = { ...base, game: { ...base.game, holdings: { "salta-sur": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
+    const draft = { toId: beto.playerId, gives: { deeds: ["salta-sur" as const], cash: 0 }, receives: { deeds: [], cash: 500 }, counter: false };
+    // Beto is not on turn: his draft is not shown (his clock flag is harmless).
+    room = setComposing(room, beto.playerId, true, draft);
+    expect(toView(room, NOW).tradeDraft).toBeNull();
+    room = setComposing(room, ana.playerId, true, { ...draft, toId: null });
+    expect(toView(room, NOW).tradeDraft).toEqual({ fromId: ana.playerId, toId: null, gives: draft.gives, receives: draft.receives, counter: false });
+    room = setComposing(room, ana.playerId, true, draft);
+    expect(room.tradeDraft?.toId).toBe(beto.playerId);
+    // A plain "the screen is open" keeps the draft; the same message twice changes nothing to broadcast.
+    const same = setComposing(room, ana.playerId, true);
+    expect(same).toBe(room);
+    // Proposing it (any change of the game) ends the draft; so does closing the screen.
+    const proposed = applyRequest(room, ana.playerId, room.seq, { type: "proposeTrade", toId: beto.playerId, gives: draft.gives, receives: draft.receives }, NOW, [1, 2]);
+    expect(proposed.tradeDraft).toBeNull();
+    expect(setComposing(room, ana.playerId, false).tradeDraft).toBeNull();
+    // Beto answers with a counter-offer: now Ana watches his.
+    const counter = setComposing(proposed, beto.playerId, true, { toId: ana.playerId, gives: { deeds: [], cash: 0 }, receives: { deeds: [], cash: 900 }, counter: true });
+    expect(counter.tradeDraft).toMatchObject({ fromId: beto.playerId, counter: true });
+    expect(setComposing(proposed, beto.playerId, true, { ...draft, toId: ana.playerId, counter: false }).tradeDraft).toBeNull();
+  });
+
   it("rejects a trade for an absent responder when its clock runs out", () => {
     let room = playing();
     const game = room.game;

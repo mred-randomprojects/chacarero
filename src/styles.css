@@ -417,6 +417,21 @@ button.danger {
   border-top: 1px solid rgba(0, 0, 0, 0.15);
 }
 
+/* Someone else is putting a trade together and this screen closed it: the way back. */
+.watch-trade {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 8px 14px;
+  background: rgba(29, 26, 23, 0.92);
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: var(--shadow);
+}
+
 .toast {
   position: absolute;
   top: 16px;
