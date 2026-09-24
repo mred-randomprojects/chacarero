@@ -84,6 +84,8 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("composing"), playerId: PlayerId, composing: z.boolean(), draft: TradeDraftSchema.optional() }),
   z.object({ type: z.literal("action"), playerId: PlayerId, seq: z.number().int().nonnegative(), action: ActionRequestSchema }),
   z.object({ type: z.literal("heartbeat"), playerId: PlayerId }),
+  /** Starts (or joins) the vote to take an absent player out of the game. */
+  z.object({ type: z.literal("voteKick"), playerId: PlayerId, targetId: PlayerId, yes: z.boolean() }),
 ]);
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
@@ -95,6 +97,14 @@ export interface RoomPlayer {
   /** The token's colour. */
   readonly color: string;
   readonly connected: boolean;
+}
+
+/** A vote in progress to take an absent player out of the game. */
+export interface KickVote {
+  readonly targetId: string;
+  /** Who voted yes (the first one started the vote). */
+  readonly yes: readonly string[];
+  readonly no: readonly string[];
 }
 
 export type RoomStatus = "lobby" | "playing" | "finished";
@@ -118,6 +128,8 @@ export interface RoomView {
   readonly shakingPlayerId: string | null;
   /** The trade someone is putting together right now, for everyone to watch. */
   readonly tradeDraft: SharedTradeDraft | null;
+  /** The vote in progress to take an absent player out, if any. */
+  readonly kickVote: KickVote | null;
   /** Server clock at send time, for countdown offset correction. */
   readonly now: number;
 }

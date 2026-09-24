@@ -171,6 +171,8 @@ export interface PlateInfo {
   readonly inJail: boolean;
   readonly jailCards: number;
   readonly bankrupt: boolean;
+  /** Voted out: shown as out, not broke. */
+  readonly expelled: boolean;
   readonly isCurrent: boolean;
 }
 
@@ -182,7 +184,7 @@ export function namePlateTexture(info: PlateInfo): CanvasTexture {
   ctx.fillStyle = info.color;
   ctx.fillRect(0, 0, 28, PLATE_H);
   fit(ctx, info.name, PLATE_W / 2 + 14, 50, 54, PLATE_W - 80, 800, info.bankrupt ? "#8a847a" : "#1d1a17");
-  const cash = info.bankrupt ? "QUEBRÓ" : pesos(info.cash);
+  const cash = info.expelled ? "AFUERA" : info.bankrupt ? "QUEBRÓ" : pesos(info.cash);
   fit(ctx, cash, PLATE_W / 2 + 14, 120, 66, PLATE_W - 80, 800, info.bankrupt ? "#c8261f" : "#1f5e2e");
   const status = [info.inJail ? "PRESO" : "", info.jailCards > 0 ? `${info.jailCards} tarjeta${info.jailCards > 1 ? "s" : ""} de salida` : ""]
     .filter(Boolean)

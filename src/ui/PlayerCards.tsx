@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { GameState } from "../game";
-import { pesos } from "../game";
+import { kickVotesNeeded, pesos } from "../game";
+import type { KickVote } from "../net/protocol";
 import { partyKey } from "./partyKey";
 import { TokenIcon } from "./TokenIcon";
 
@@ -15,6 +16,10 @@ export interface PlayerCardsProps {
   readonly offline: ReadonlySet<string>;
   /** Look at that player's side of the table (their deeds and money). */
   readonly onFocus: (playerId: string) => void;
+  /** The vote in progress to take an absent player out. */
+  readonly kickVote: KickVote | null;
+  /** Votes on taking an absent player out; null where the table cannot vote (hot-seat). */
+  readonly onVoteKick: ((targetId: string, yes: boolean) => void) | null;
 }
 
 const COUNT_MS = 650;
@@ -60,7 +65,7 @@ interface CardProps {
 function PlayerCard({ player, cash, isCurrent, isYou, away, seat, onFocus }: CardProps) {
   const shown = useCountingNumber(player.bankrupt ? 0 : cash);
   const classes = ["player-card", isCurrent ? "current" : "", player.bankrupt ? "bankrupt" : "", away ? "away" : "", isYou ? "you" : ""].filter(Boolean).join(" ");
-  const status = player.bankrupt ? "quebró" : [player.inJail ? "preso" : "", away ? "ausente" : "", player.getOutOfJailCards > 0 ? `🎫${player.getOutOfJailCards}` : ""].filter(Boolean).join(" · ");
+  const status = player.expelled ? "afuera" : player.bankrupt ? "quebró" : [player.inJail ? "preso" : "", away ? "ausente" : "", player.getOutOfJailCards > 0 ? `🎫${player.getOutOfJailCards}` : ""].filter(Boolean).join(" · ");
   return (
     <button
       type="button"
@@ -84,26 +89,64 @@ function PlayerCard({ player, cash, isCurrent, isYou, away, seat, onFocus }: Car
   );
 }
 
+/** Above an absent player's card: the way to start a vote to take them out. No key on purpose: nobody should be voted out by a stray keystroke. */
+function KickStart({ name, onStart }: { readonly name: string; readonly onStart: () => void }) {
+  return (
+    <button type="button" className="kick-start" title={`${name} no está: la mesa puede votar para sacarlo de la partida (lo suyo vuelve al Banco)`} onClick={onStart}>
+      Votar para sacarlo
+    </button>
+  );
+}
+
+/** The vote in progress, above the absent player's card: the count and this screen's yes / no. */
+function KickBubble({ state, name, vote, you, onVote }: { readonly state: GameState; readonly name: string; readonly vote: KickVote; readonly you: string | null; readonly onVote: (yes: boolean) => void }) {
+  const needed = kickVotesNeeded(state, vote.targetId);
+  const mine = you === null ? null : vote.yes.includes(you) ? "sí" : vote.no.includes(you) ? "no" : null;
+  return (
+    <div className="kick-bubble" role="group" aria-label={`Votación para sacar a ${name}`}>
+      <p>
+        ¿Sacamos a <strong>{name}</strong>? Lo suyo vuelve al Banco.
+      </p>
+      <p className="kick-count">
+        {vote.yes.length} de {needed} votos
+        {vote.no.length > 0 && ` · ${vote.no.length} en contra`}
+      </p>
+      {mine === null ? (
+        <div className="kick-buttons">
+          <button type="button" className="danger" onClick={() => onVote(true)}>
+            Sí, sacarlo
+          </button>
+          <button type="button" onClick={() => onVote(false)}>
+            No, esperarlo
+          </button>
+        </div>
+      ) : (
+        <p className="kick-count">Votaste {mine}.</p>
+      )}
+    </div>
+  );
+}
+
 /**
  * The row of player cards floating at the bottom of the screen: token,
  * name, cash and status per player, the one on turn lit up, plus the bank
  * at the end so money flights have somewhere to go.
  */
-export function PlayerCards({ state, cash, currentId, you, offline, onFocus }: PlayerCardsProps) {
+export function PlayerCards({ state, cash, currentId, you, offline, onFocus, kickVote, onVoteKick }: PlayerCardsProps) {
+  // Only someone still in the game has a say.
+  const canVote = onVoteKick !== null && you !== null && state.phase.type !== "gameOver" && state.players.some((p) => p.id === you && !p.bankrupt);
   return (
     <div className="player-cards">
-      {state.players.map((player, i) => (
-        <PlayerCard
-          key={player.id}
-          player={player}
-          cash={cash[player.id] ?? player.cash}
-          isCurrent={player.id === currentId}
-          isYou={player.id === you}
-          away={offline.has(player.id)}
-          seat={i + 1}
-          onFocus={() => onFocus(player.id)}
-        />
-      ))}
+      {state.players.map((player, i) => {
+        const away = offline.has(player.id);
+        const votable = canVote && away && !player.bankrupt && player.id !== you;
+        return (
+          <div key={player.id} className="player-seat">
+            {votable && onVoteKick && (kickVote?.targetId === player.id ? <KickBubble state={state} name={player.name} vote={kickVote} you={you} onVote={(yes) => onVoteKick(player.id, yes)} /> : kickVote === null && <KickStart name={player.name} onStart={() => onVoteKick(player.id, true)} />)}
+            <PlayerCard player={player} cash={cash[player.id] ?? player.cash} isCurrent={player.id === currentId} isYou={player.id === you} away={away} seat={i + 1} onFocus={() => onFocus(player.id)} />
+          </div>
+        );
+      })}
       <div className="player-card bank" data-party={partyKey({ type: "bank" })}>
         <span className="pc-bank-icon">🏦</span>
         <div className="pc-body">

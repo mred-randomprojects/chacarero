@@ -4,9 +4,9 @@
  * test; index.ts wires it to the network.
  */
 import type { ActionRequest, GameSetup, GameState, TokenId } from "../src/game";
-import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, firstFreeToken, getToken, phaseSeconds, replaySeconds } from "../src/game";
+import { allowedPlayerFor, applyActionRequest, autoResolveDebt, createGame, defaultAction, expelPlayer, firstFreeToken, getToken, kickVoters, kickVotesNeeded, phaseSeconds, replaySeconds } from "../src/game";
 import type { Dice } from "../src/game";
-import type { RoomPlayer, RoomStatus, RoomView, SharedTradeDraft, TradeDraftMessage } from "../src/net/protocol";
+import type { KickVote, RoomPlayer, RoomStatus, RoomView, SharedTradeDraft, TradeDraftMessage } from "../src/net/protocol";
 
 export const MAX_PLAYERS = 6;
 
@@ -29,6 +29,7 @@ export interface Room {
   readonly composingPlayerId: string | null;
   /** The deal being put together at that screen, shown to everyone else. */
   readonly tradeDraft: SharedTradeDraft | null;
+  readonly kickVote: KickVote | null;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
@@ -58,6 +59,7 @@ export function createRoom(code: string, host: { playerId: string; name: string 
     shakingPlayerId: null,
     composingPlayerId: null,
     tradeDraft: null,
+    kickVote: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -77,7 +79,11 @@ function updatePlayerRecord(room: Room, playerId: string, patch: Partial<RoomPla
 /** Joins a new player, or reconnects a known one (also during a game). */
 export function joinRoom(room: Room, player: { playerId: string; name: string }, now: number): Room {
   const existing = room.players.find((p) => p.playerId === player.playerId);
-  if (existing) return touch(updatePlayerRecord(room, player.playerId, { connected: true, lastSeen: now, name: player.name }), now);
+  if (existing) {
+    // They are back: a vote to take them out no longer makes sense.
+    const kickVote = room.kickVote?.targetId === player.playerId ? null : room.kickVote;
+    return touch({ ...updatePlayerRecord(room, player.playerId, { connected: true, lastSeen: now, name: player.name }), kickVote }, now);
+  }
   if (room.status !== "lobby") throw new RoomError("La partida ya empezó");
   if (room.players.length >= MAX_PLAYERS) throw new RoomError("La mesa está llena");
   const token = firstFreeToken(room.players.map((p) => p.token));
@@ -153,7 +159,7 @@ export function startGame(room: Room, playerId: string, setup: GameSetup, now: n
 /** Back to the lobby once a game is over (host only). */
 export function newGame(room: Room, playerId: string, now: number): Room {
   if (room.hostId !== playerId) throw new RoomError("Solo el anfitrión puede volver a la sala");
-  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null }, now);
+  return touch({ ...room, status: "lobby", game: null, seq: 0, lastAction: null, lastActorId: null, deadline: null, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null, kickVote: null }, now);
 }
 
 /** Whether `playerId` may be putting this deal together: the proposer, or the player answering with a counter-offer. */
@@ -187,9 +193,12 @@ export function setShaking(room: Room, playerId: string, shaking: boolean): Room
   return { ...room, shakingPlayerId: shaking ? playerId : null };
 }
 
-function afterChange(room: Room, game: GameState, action: ActionRequest["type"], actorId: string | null, now: number): Room {
+function afterChange(room: Room, game: GameState, action: ActionRequest["type"] | null, actorId: string | null, now: number): Room {
   const status: RoomStatus = game.phase.type === "gameOver" ? "finished" : "playing";
-  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null }, now), now);
+  // A vote against someone who is out of the game anyway (broke, or the game ended) is over.
+  const target = room.kickVote ? game.players.find((p) => p.id === room.kickVote?.targetId) : undefined;
+  const kickVote = status === "playing" && target && !target.bankrupt ? room.kickVote : null;
+  return touch(withClock({ ...room, game, status, seq: room.seq + 1, lastAction: action, lastActorId: actorId, shakingPlayerId: null, composingPlayerId: null, tradeDraft: null, kickVote }, now), now);
 }
 
 /**
@@ -218,6 +227,35 @@ export function fireDeadline(room: Room, now: number, dice: Dice): Room {
   return afterChange(room, game, action.type, actorId, now);
 }
 
+/**
+ * A player votes to take an absent one out of the game (the first yes starts
+ * the vote; only one vote runs at a time). A majority of the players still
+ * in, besides the absent one, takes them out: the engine gives their things
+ * back to the bank and the table replays it. When the yes can no longer
+ * reach a majority, the vote is dropped.
+ */
+export function voteKick(room: Room, voterId: string, targetId: string, yes: boolean, now: number): Room {
+  const { game } = room;
+  if (!game || room.status !== "playing") throw new RoomError("No hay una partida en curso");
+  const voters = kickVoters(game, targetId);
+  if (!voters.includes(voterId)) throw new RoomError("No podés votar en esto");
+  const target = game.players.find((p) => p.id === targetId);
+  if (!target || target.bankrupt) throw new RoomError("Ese jugador ya no está en la partida");
+  if (room.players.find((p) => p.playerId === targetId)?.connected) throw new RoomError(`${target.name} está conectado: solo se puede sacar a alguien ausente`);
+  const current = room.kickVote;
+  if (current && current.targetId !== targetId) throw new RoomError("Ya hay una votación en curso");
+  if (!current && !yes) return room;
+  const vote: KickVote = {
+    targetId,
+    yes: yes ? [...(current?.yes ?? []).filter((id) => id !== voterId), voterId] : (current?.yes ?? []).filter((id) => id !== voterId),
+    no: yes ? (current?.no ?? []).filter((id) => id !== voterId) : [...(current?.no ?? []).filter((id) => id !== voterId), voterId],
+  };
+  const needed = kickVotesNeeded(game, targetId);
+  if (vote.yes.length >= needed) return afterChange({ ...room, kickVote: null }, expelPlayer(game, targetId), null, null, now);
+  if (voters.length - vote.no.length < needed) return touch({ ...room, kickVote: null }, now);
+  return touch({ ...room, kickVote: vote }, now);
+}
+
 export function toView(room: Room, now: number): RoomView {
   return {
     code: room.code,
@@ -231,6 +269,7 @@ export function toView(room: Room, now: number): RoomView {
     deadline: room.deadline,
     shakingPlayerId: room.shakingPlayerId,
     tradeDraft: room.tradeDraft,
+    kickVote: room.kickVote,
     now,
   };
 }

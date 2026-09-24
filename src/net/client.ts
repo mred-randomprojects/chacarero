@@ -94,6 +94,10 @@ export class RoomClient {
     this.send(draft ? { type: "composing", playerId: this.playerId, composing, draft } : { type: "composing", playerId: this.playerId, composing });
   }
 
+  voteKick(targetId: string, yes: boolean): void {
+    this.send({ type: "voteKick", playerId: this.playerId, targetId, yes });
+  }
+
   action(seq: number, action: ActionRequest): void {
     this.send({ type: "action", playerId: this.playerId, seq, action });
   }

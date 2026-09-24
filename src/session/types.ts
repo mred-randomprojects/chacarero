@@ -1,5 +1,5 @@
 import type { ActionRequest, ActionType, GameState } from "../game";
-import type { SharedTradeDraft, TradeDraftMessage } from "../net/protocol";
+import type { KickVote, SharedTradeDraft, TradeDraftMessage } from "../net/protocol";
 
 export type SessionMode = "local" | "online";
 
@@ -35,6 +35,10 @@ export interface Session {
    * them. `draft` is the deal as it stands, for the other screens to watch.
    */
   readonly setComposing: (composing: boolean, draft?: TradeDraftMessage) => void;
+  /** The vote in progress to take an absent player out (online). */
+  readonly kickVote: KickVote | null;
+  /** Votes on taking an absent player out (the first yes starts it); null where there is no such vote (hot-seat). */
+  readonly voteKick: ((targetId: string, yes: boolean) => void) | null;
   readonly clearError: () => void;
   /** Leaves the table (online: leaves the room). */
   readonly leave: () => void;

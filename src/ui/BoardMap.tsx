@@ -192,7 +192,7 @@ function MapStats({ state }: { readonly state: GameState }) {
               <TokenIcon token={player.token} size={20} />
               <span className="name">{player.name}</span>
               <span className="detail">
-                {player.bankrupt ? "quebró" : `${deeds} escr. (${pesos(value)}) · ${chacras} chacras · ${estancias} est.${mortgaged ? ` · ${mortgaged} hip.` : ""}`}
+                {player.expelled ? "afuera" : player.bankrupt ? "quebró" : `${deeds} escr. (${pesos(value)}) · ${chacras} chacras · ${estancias} est.${mortgaged ? ` · ${mortgaged} hip.` : ""}`}
               </span>
             </li>
           ))}

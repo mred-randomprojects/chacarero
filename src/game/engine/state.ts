@@ -23,7 +23,10 @@ export interface Player {
   readonly doublesThisTurn: number;
   /** Cash received from the bank this turn; returned if the turn ends with a third doubles. */
   readonly bankIncomeThisTurn: number;
+  /** Out of the game: went broke, or (with `expelled`) voted out by the table. */
   readonly bankrupt: boolean;
+  /** Taken out of the game by the table's vote after leaving; also `bankrupt`, so nothing waits for them. */
+  readonly expelled: boolean;
 }
 
 export interface Holding {
@@ -264,6 +267,7 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
       doublesThisTurn: 0,
       bankIncomeThisTurn: 0,
       bankrupt: false,
+      expelled: false,
     })),
     currentPlayerIndex: 0,
     holdings: dealDeeds > 0 ? dealHoldings(players, dealDeeds, random) : {},

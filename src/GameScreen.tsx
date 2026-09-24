@@ -142,6 +142,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         inJail: p.inJail,
         jailCards: p.getOutOfJailCards,
         bankrupt: p.bankrupt,
+        expelled: p.expelled,
         isCurrent: p.id === view.currentPlayerId,
       },
     }));
@@ -642,7 +643,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openCatastro} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
-      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} />
+      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} kickVote={session.kickVote} onVoteKick={session.voteKick} />
       <MoneyFlights />
       {offeredDeed === null && (
         <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />

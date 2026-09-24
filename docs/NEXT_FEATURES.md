@@ -459,11 +459,11 @@ their own turn and the table sat waiting.
 
 ## F3. Vote a missing player out
 
-- [ ] F3.1 When a player is ausente (offline), the others can start a vote to
+- [x] F3.1 When a player is ausente (offline), the others can start a vote to
       take them out of the game; everyone still in votes yes or no, and it
       passes with a majority of the players still in (the missing one does not
       count).
-- [ ] F3.2 Passing it removes them: their deeds go back to the bank, free and
+- [x] F3.2 Passing it removes them: their deeds go back to the bank, free and
       unbuilt, their cash and jail cards to the bank; whatever was waiting on
       them (their turn, a bid, a trade, a debt) moves on without them. The
       replay shows it like a bankruptcy. The vote is dropped if they come back.
@@ -507,6 +507,32 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-24 — batch 6 shipped** (`cb1182a` clocks, `d41169c` shared trade,
+  next commit the vote). F1: `GameState.clock { decisionSeconds, rollSeconds }`
+  from `GameSetup` (lobby + hot-seat setup buttons; 3 min stays the default,
+  old clients get it via Zod defaults); `phaseSeconds` uses the roll clock in
+  the roll phases; the `RollBar` under the dice button fills over the last
+  `clockWindow()` seconds and the table throws when it is full (measured in
+  hot-seat at 10 s / 10 s: the opening, the first roll and the move all went
+  by themselves). The roll prompts dropped their own draining Countdown so
+  there is one clock on screen. F2: the `composing` message carries the draft;
+  the room keeps `tradeDraft` (only from whoever may propose, or the responder
+  countering) and broadcasts it; other screens open the trade screen in
+  `watch` mode, live and read-only, closeable, reopened with V or the pill;
+  checked across two tabs (partner pick, deed, cash, close/reopen, the
+  composer closing clears it, a counter-offer watched by the proposer). F3:
+  `expelPlayer` in the engine (deeds back free and unbuilt, cash and jail
+  cards to the bank, debts dropped or redirected to the bank, their opening
+  throw, bid, trade or turn carried on without them; `Player.expelled`) and
+  `voteKick` in the room (only against an offline player, by players still
+  in; a majority of the others passes it; dropped when it cannot pass or they
+  reconnect). The vote lives above the absent player's card; deliberately no
+  hotkey. Checked with three tabs: one leaves, two vote, the opening goes on.
+  Known limits: `composing` still has no cap, so someone who leaves the trade
+  screen open holds their own clock 30 s at a time (the vote covers them once
+  they disconnect); a connected-but-idle player cannot be voted out, only
+  timed out; the trade screen is cramped below ~900 px wide (it was before).
 
 - **2026-09-23 — batch 5 shipped and measured** (`38eb3eb` heading, `8be58a9`
   jail, `d416adb` dice, `93378b7` deeds, `8e77a2f` modals). Sampled: a 7-square

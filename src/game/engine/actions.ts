@@ -158,6 +158,8 @@ function bill(state: GameState, debtorId: string, amount: number, to: Creditor, 
 /** Decides what comes after the current move is fully resolved. */
 function finishMove(state: GameState): GameState {
   const current = currentPlayer(state);
+  // Nobody is left to end a turn for an expelled player: it passes by itself.
+  if (current.expelled) return passTurn(setPhase(state, { type: "turnEnd" }));
   if (current.bankrupt) return setPhase(state, { type: "turnEnd" });
   if (state.rollAgain && !current.inJail) return setPhase(state, { type: "awaitingRoll" });
   return setPhase(state, { type: "turnEnd" });
@@ -380,15 +382,28 @@ function openingRoll(state: GameState, phase: Extract<Phase, { type: "openingRol
   const current = currentPlayer(state);
   const total = dice[0] + dice[1];
   const rolls = { ...phase.rolls, [current.id]: total };
-  let next = log(state, `${current.name} saca ${dice[0]} y ${dice[1]}: ${total}.`);
-  const pending = phase.contenders.filter((id) => rolls[id] === undefined);
+  return settleOpening(log(state, `${current.name} saca ${dice[0]} y ${dice[1]}: ${total}.`), phase.contenders, rolls);
+}
+
+/** Hands the dice to the next contender still to throw, or, when all have, names who starts (or who re-throws a tie). */
+function settleOpening(state: GameState, contenders: readonly string[], rolls: Readonly<Record<string, number>>): GameState {
+  let next = state;
+  const [only] = contenders;
+  if (contenders.length === 1 && only !== undefined) {
+    // Everyone else left the opening: the one still in starts.
+    const starter = getPlayer(next, only);
+    next = { ...next, currentPlayerIndex: next.players.findIndex((p) => p.id === only) };
+    next = emit(next, { type: "turn", playerId: only, text: `¡Empieza ${starter.name}!` }, only);
+    return setPhase(next, { type: "awaitingRoll" });
+  }
+  const pending = contenders.filter((id) => rolls[id] === undefined);
   const [nextId] = pending;
   if (nextId !== undefined) {
     next = { ...next, currentPlayerIndex: next.players.findIndex((p) => p.id === nextId) };
-    return setPhase(next, { type: "openingRoll", contenders: phase.contenders, rolls });
+    return setPhase(next, { type: "openingRoll", contenders, rolls });
   }
-  const best = Math.max(...phase.contenders.map((id) => rolls[id] ?? 0));
-  const winners = phase.contenders.filter((id) => rolls[id] === best);
+  const best = Math.max(...contenders.map((id) => rolls[id] ?? 0));
+  const winners = contenders.filter((id) => rolls[id] === best);
   const [winnerId] = winners;
   if (winners.length > 1 || winnerId === undefined) {
     const names = winners.map((id) => getPlayer(next, id).name);
@@ -499,6 +514,11 @@ export function spendJailCard(input: GameState): GameState {
 export function endTurn(input: GameState): GameState {
   const state = begin(input);
   expectPhase(state, "turnEnd");
+  return passTurn(state);
+}
+
+/** Hands the dice on (or ends the game when one player is left), as part of the current action. */
+function passTurn(state: GameState): GameState {
   const solvent = solventPlayers(state);
   const winner = solvent.length === 1 ? solvent[0] : undefined;
   if (winner) {
@@ -822,4 +842,99 @@ export function declareBankruptcy(input: GameState): GameState {
   }
   if (solventPlayers(next).length <= 1) return setPhase(next, { type: "turnEnd" });
   return continueTurn(next);
+}
+
+// ---------- leaving ----------
+
+/** A debt (or a phase waiting on one, even under a pending trade) owed to `goneId` is owed to the bank instead. */
+function withoutCreditor(phase: Phase, goneId: string): Phase {
+  if (phase.type === "awaitingPayment" && phase.to.type === "player" && phase.to.playerId === goneId) return { ...phase, to: { type: "bank" } };
+  if (phase.type === "awaitingTradeResponse") return { ...phase, resume: withoutCreditor(phase.resume, goneId) };
+  return phase;
+}
+
+/** Whatever was waiting on `goneId` moves on without them. */
+function carryOnWithout(state: GameState, goneId: string): GameState {
+  const { phase } = state;
+  switch (phase.type) {
+    case "gameOver":
+      return state;
+    case "openingRoll": {
+      if (!phase.contenders.includes(goneId)) return state;
+      const rolls = Object.fromEntries(Object.entries(phase.rolls).filter(([id]) => id !== goneId));
+      return settleOpening(state, phase.contenders.filter((id) => id !== goneId), rolls);
+    }
+    case "awaitingTradeResponse": {
+      const { trade, resume } = phase;
+      if (trade.fromId !== goneId && trade.toId !== goneId) return state;
+      return carryOnWithout(setPhase(log(state, "El canje que estaba sobre la mesa queda sin efecto.", trade.fromId === goneId ? trade.toId : trade.fromId), resume), goneId);
+    }
+    case "auction": {
+      const { auction } = phase;
+      if (!auction.bidders.includes(goneId)) return state;
+      const lostBid = auction.highestBidderId === goneId;
+      const updated: Auction = { ...auction, bidders: auction.bidders.filter((id) => id !== goneId), ...(lostBid ? { highestBid: 0, highestBidderId: null } : {}) };
+      let next = lostBid ? log(state, `La oferta de ${getPlayer(state, goneId).name} queda sin efecto.`) : state;
+      if (updated.bidders.length === 0) return finishAuction(next, updated);
+      if (auction.turnBidderId !== goneId) return setPhase(next, { type: "auction", auction: updated });
+      const nextId = nextBidderAfterLeaving(updated, auction.bidders, goneId);
+      if (nextId === null) return finishAuction(next, updated);
+      next = setPhase(next, { type: "auction", auction: { ...updated, turnBidderId: nextId } });
+      return next;
+    }
+    case "awaitingPayment":
+      // Their own debt died with them; anyone else's still stands (now owed to the bank if it was owed to them).
+      return phase.debtorId === goneId ? continueTurn(setPhase(state, { type: "turnEnd" })) : state;
+    default:
+      // Every other phase waits on the player on turn.
+      return currentPlayer(state).id === goneId ? passTurn(setPhase(state, { type: "turnEnd" })) : state;
+  }
+}
+
+/**
+ * Takes a player out of the game by the table's vote (they left and are not
+ * coming back). Like a bankruptcy to the bank, except that their deeds come
+ * back free and unbuilt instead of being auctioned; their cash and jail
+ * cards go back too, and whatever was waiting on them — their turn, their
+ * throw in the opening, a bid, a trade, a debt either way — moves on without
+ * them.
+ */
+export function expelPlayer(input: GameState, goneId: string): GameState {
+  const state = begin(input);
+  if (state.phase.type === "gameOver") throw new Error("La partida terminó");
+  const gone = getPlayer(state, goneId);
+  if (gone.bankrupt) throw new Error(`${gone.name} ya no está en la partida`);
+
+  let next = emit(state, { type: "bankrupt", playerId: goneId, text: `La mesa saca a ${gone.name} de la partida. Lo suyo vuelve al Banco.` }, goneId);
+  for (const [id, holding] of Object.entries(state.holdings) as [DeedId, Holding][]) {
+    if (holding.ownerId !== goneId) continue;
+    const name = deedName(getDeed(id));
+    if (holding.estancia || holding.chacras > 0) {
+      next = setHolding(next, id, { ...holding, chacras: 0, estancia: false });
+      next = emit(next, { type: "building", deedId: id, chacras: 0, estancia: false, text: `Las construcciones de ${name} vuelven al Banco.` }, goneId);
+    }
+    next = setHolding(next, id, undefined);
+    next = emit(next, { type: "deed", deedId: id, from: player(goneId), to: BANK, text: `${name} vuelve al Banco, libre.` }, goneId);
+  }
+  if (gone.cash > 0) next = emit(next, { type: "transfer", from: player(goneId), to: BANK, amount: gone.cash, text: `Los ${pesos(gone.cash)} de ${gone.name} vuelven al Banco.` }, goneId);
+  // Their jail cards go back under the Suerte deck, as a used one does.
+  let decks = next.decks;
+  for (let i = 0; i < gone.getOutOfJailCards; i++) {
+    const cardId = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && !decks.suerte.includes(c.id) && !decks.destino.includes(c.id))?.id;
+    if (cardId) decks = { ...decks, suerte: [...decks.suerte, cardId] };
+  }
+  next = updatePlayer({ ...next, decks }, goneId, { cash: 0, bankrupt: true, expelled: true, inJail: false, jailTurns: 0, getOutOfJailCards: 0 });
+  const bank: Creditor = { type: "bank" };
+  next = {
+    ...next,
+    phase: withoutCreditor(next.phase, goneId),
+    pendingDebts: next.pendingDebts.filter((d) => d.debtorId !== goneId).map((d) => (d.to.type === "player" && d.to.playerId === goneId ? { ...d, to: bank } : d)),
+  };
+
+  const solvent = solventPlayers(next);
+  const [winner] = solvent;
+  if (solvent.length === 1 && winner) {
+    return setPhase(log(next, `¡${winner.name} se queda con todo el campo!`, winner.id), { type: "gameOver", winnerId: winner.id });
+  }
+  return carryOnWithout(next, goneId);
 }

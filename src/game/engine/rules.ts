@@ -270,3 +270,13 @@ export function buildingCount(state: GameState, playerId: string): { chacras: nu
   }
   return { chacras, estancias };
 }
+
+/** Players who get a say when the table votes someone out: everyone still in the game but them. */
+export function kickVoters(state: GameState, targetId: string): readonly string[] {
+  return state.players.filter((p) => !p.bankrupt && p.id !== targetId).map((p) => p.id);
+}
+
+/** Yes votes it takes to vote `targetId` out: a majority of the players still in besides them. */
+export function kickVotesNeeded(state: GameState, targetId: string): number {
+  return Math.floor(kickVoters(state, targetId).length / 2) + 1;
+}

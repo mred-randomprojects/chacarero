@@ -20,6 +20,7 @@ import {
   decline,
   drawCard,
   endTurn,
+  expelPlayer,
   mortgage,
   movePawn,
   passBid,
@@ -34,6 +35,7 @@ import {
   spendJailCard,
 } from "./actions";
 import { camposOf } from "../deeds";
+import { ALL_CARDS } from "../cards";
 import { canBuildChacra, canBuildEstancia, canTradeDeed, checkTrade, mortgageProceeds, mortgageTransferFee, rentFor, tradeBalance, unmortgageCost } from "./rules";
 
 const ANA: NewPlayer = { id: "ana", name: "Ana", token: "tractor" };
@@ -1035,5 +1037,121 @@ describe("trades", () => {
     expect(() => proposeTrade(over, "beto", { deeds: ["salta-sur"], cash: 0 }, NOTHING)).toThrow(/terminó/);
     expect(() => acceptTrade(table())).toThrow();
     expect(() => rejectTrade(table())).toThrow();
+  });
+});
+
+describe("voted out", () => {
+  const BIRTHDAY = "destino-01";
+
+  it("returns their deeds free and unbuilt, their cash and jail cards to the bank, and passes their turn", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = withProvince(state, "ana", FORMOSA, 2);
+    state = withHolding(state, "salta-sur", { ownerId: "ana", mortgaged: true });
+    // Ana holds a jail card, so it is out of its deck.
+    const jailCard = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && c.deck === "suerte")?.id ?? "";
+    state = withDecks(state, state.decks.suerte.filter((id) => id !== jailCard), state.decks.destino);
+    state = withPlayer(state, "ana", { getOutOfJailCards: 1, inJail: true });
+    const suerteBefore = state.decks.suerte.length;
+    state = expelPlayer(state, "ana");
+    expect(getPlayer(state, "ana")).toMatchObject({ bankrupt: true, expelled: true, cash: 0, getOutOfJailCards: 0, inJail: false });
+    for (const id of [...FORMOSA, "salta-sur" as const]) expect(state.holdings[id]).toBeUndefined();
+    expect(state.decks.suerte).toHaveLength(suerteBefore + 1);
+    expect(state.decks.suerte.at(-1)).toBe(jailCard);
+    expect(state.pendingAuctions).toEqual([]);
+    // Ana was on turn: Beto has the dice now, and the replay says what happened, step by step.
+    expect(currentPlayer(state).id).toBe("beto");
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    const types = state.events.map((e) => e.type);
+    expect(types[0]).toBe("bankrupt");
+    expect(types.filter((t) => t === "building")).toHaveLength(3);
+    expect(types.filter((t) => t === "deed")).toHaveLength(4);
+    expect(state.events).toContainEqual(expect.objectContaining({ type: "transfer", amount: STARTING_CASH, to: { type: "bank" } }));
+    expect(types.at(-1)).toBe("turn");
+    // Nobody waits for Ana again: after Beto comes Carla, then Beto.
+    state = endTurn({ ...state, phase: { type: "turnEnd" } });
+    expect(currentPlayer(state).id).toBe("carla");
+    state = endTurn({ ...state, phase: { type: "turnEnd" } });
+    expect(currentPlayer(state).id).toBe("beto");
+  });
+
+  it("leaves someone else's turn alone, and ends the game when one player is left", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = expelPlayer(state, "carla");
+    expect(currentPlayer(state).id).toBe("ana");
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    state = expelPlayer(state, "beto");
+    expect(state.phase).toEqual({ type: "gameOver", winnerId: "ana" });
+    expect(() => expelPlayer(state, "ana")).toThrow(/terminó/);
+  });
+
+  it("drops them from the opening throws", () => {
+    let state = createGame({ players: [ANA, BETO, CARLA], random: () => 0.5 });
+    state = rollDice(state, () => 0.5, [3, 3]);
+    // Beto is up next and gone: Carla throws, then the highest of Ana and Carla starts.
+    state = expelPlayer(state, "beto");
+    expect(state.phase).toEqual({ type: "openingRoll", contenders: ["ana", "carla"], rolls: { ana: 6 } });
+    expect(currentPlayer(state).id).toBe("carla");
+    state = rollDice(state, () => 0.5, [1, 2]);
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    expect(currentPlayer(state).id).toBe("ana");
+    // With only one contender left, that one starts.
+    let two = createGame({ players: [ANA, BETO, CARLA], random: () => 0.5 });
+    two = expelPlayer(expelPlayer(two, "ana"), "beto");
+    expect(two.phase).toEqual({ type: "gameOver", winnerId: "carla" });
+  });
+
+  it("takes them out of an auction, voiding their bid", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = decline(movePawn(rollDice(state, () => 0.5, [2, 3])));
+    expect(state.phase.type).toBe("auction");
+    state = bid(state, 500); // Beto
+    state = expelPlayer(state, "beto");
+    expect(state.phase).toMatchObject({ type: "auction", auction: { highestBid: 0, highestBidderId: null, bidders: ["carla", "ana"], turnBidderId: "carla" } });
+    state = bid(state, 300); // Carla
+    // Ana, whose turn it is, leaves while she is the bidder on turn: Carla, the only one left, wins.
+    state = expelPlayer(state, "ana");
+    expect(state.phase).toEqual({ type: "gameOver", winnerId: "carla" });
+  });
+
+  it("the auction goes on without the player on turn, and their turn passes when it ends", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = decline(movePawn(rollDice(state, () => 0.5, [2, 3])));
+    state = expelPlayer(state, "ana");
+    expect(state.phase).toMatchObject({ type: "auction", auction: { bidders: ["beto", "carla"], turnBidderId: "beto" } });
+    state = passBid(bid(state, 400));
+    expect(state.holdings["rioNegro-sur"]?.ownerId).toBe("beto");
+    expect(currentPlayer(state).id).toBe("beto");
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+  });
+
+  it("voids a trade they are part of and picks up where the game was", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = withHolding(state, "salta-sur", { ownerId: "ana" });
+    state = proposeTrade(state, "beto", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 100 });
+    state = expelPlayer(state, "beto");
+    expect(state.phase).toEqual({ type: "awaitingRoll" });
+    expect(currentPlayer(state).id).toBe("ana");
+    // The proposer leaving voids it too, and their turn passes.
+    state = proposeTrade(state, "carla", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 0 });
+    state = expelPlayer(state, "ana");
+    expect(state.phase).toEqual({ type: "gameOver", winnerId: "carla" });
+  });
+
+  it("cancels their debts, and a debt owed to them is owed to the bank", () => {
+    let state = game([ANA, BETO, CARLA]);
+    state = withDecks(state, [], [BIRTHDAY]);
+    state = withPlayer(state, "beto", { cash: 10 });
+    state = withPlayer(state, "carla", { cash: 10 });
+    state = { ...state, phase: { type: "awaitingDraw", deck: "destino" } };
+    state = acknowledgeCard(drawCard(state));
+    expect(state.phase).toMatchObject({ type: "awaitingPayment", debtorId: "beto", to: { type: "player", playerId: "ana" } });
+    // Ana, who was collecting, leaves: Beto and Carla now owe the bank.
+    const creditorGone = expelPlayer(state, "ana");
+    expect(creditorGone.phase).toMatchObject({ type: "awaitingPayment", debtorId: "beto", to: { type: "bank" } });
+    expect(creditorGone.pendingDebts.every((d) => d.to.type === "bank")).toBe(true);
+    // Beto, who owed, leaves: his debt goes with him and Carla's is next.
+    const debtorGone = expelPlayer(state, "beto");
+    expect(debtorGone.phase).toMatchObject({ type: "awaitingPayment", debtorId: "carla", to: { type: "player", playerId: "ana" } });
+    expect(debtorGone.pendingDebts).toHaveLength(1);
   });
 });

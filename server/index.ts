@@ -29,6 +29,7 @@ import {
   setShaking,
   startGame,
   toView,
+  voteKick,
 } from "./room";
 
 const PORT = Number(process.env.PORT ?? 9902);
@@ -173,6 +174,9 @@ function handle(ws: Socket, message: ClientMessage): void {
       return;
     case "action":
       if (ws.data.code) update(ws, ws.data.code, (room) => applyRequest(room, message.playerId, message.seq, message.action, now, rollDice()));
+      return;
+    case "voteKick":
+      if (ws.data.code) update(ws, ws.data.code, (room) => voteKick(room, message.playerId, message.targetId, message.yes, now));
       return;
     case "heartbeat": {
       const code = ws.data.code;

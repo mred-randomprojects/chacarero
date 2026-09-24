@@ -73,10 +73,12 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
     // The roll phases have no Countdown here: their clock is the bar that fills under the dice button.
     case "openingRoll": {
       const rolled = Object.keys(phase.rolls).length;
+      // Players voted out before throwing are not a tie-break.
+      const inGame = state.players.filter((p) => !p.bankrupt).length;
       return (
         <div className="prompt opening">
           <h3>¿Quién empieza?</h3>
-          <p>{rolled === 0 && phase.contenders.length === state.players.length ? "Cada uno tira una vez: el más alto empieza." : phase.contenders.length < state.players.length ? "Desempate: tiran de nuevo solo los empatados." : "El más alto empieza; si empatan, tiran de nuevo."}</p>
+          <p>{rolled === 0 && phase.contenders.length === inGame ? "Cada uno tira una vez: el más alto empieza." : phase.contenders.length < inGame ? "Desempate: tiran de nuevo solo los empatados." : "El más alto empieza; si empatan, tiran de nuevo."}</p>
           <ul className="opening-rolls">
             {state.players.map((p) => {
               const roll = phase.rolls[p.id];

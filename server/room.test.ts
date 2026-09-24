@@ -20,6 +20,7 @@ import {
   setShaking,
   startGame,
   toView,
+  voteKick,
 } from "./room";
 
 const NOW = 1_000_000;
@@ -255,5 +256,55 @@ describe("playing", () => {
     expect(room.status).toBe("lobby");
     expect(room.game).toBeNull();
     expect(toView(room, NOW).players).toHaveLength(2);
+  });
+});
+
+describe("voting an absent player out", () => {
+  const carla = { playerId: "carla-001", name: "Carla" };
+  const dani = { playerId: "dani-0001", name: "Dani" };
+
+  function table(): Room {
+    const lobbyRoom = [carla, dani].reduce((room, p) => joinRoom(room, p, NOW), lobby());
+    const room = startGame(lobbyRoom, ana.playerId, DEFAULT_SETUP, NOW, () => 0.5);
+    if (!room.game) throw new Error("no game");
+    return { ...room, game: { ...room.game, phase: { type: "awaitingRoll" } } };
+  }
+
+  it("only against someone absent, by someone still in", () => {
+    const room = table();
+    expect(() => voteKick(room, beto.playerId, ana.playerId, true, NOW)).toThrow(/ausente/);
+    const away = markDisconnected(room, ana.playerId, NOW);
+    expect(() => voteKick(away, ana.playerId, ana.playerId, true, NOW)).toThrow(/votar/);
+    expect(voteKick(away, beto.playerId, ana.playerId, false, NOW)).toBe(away);
+  });
+
+  it("takes them out with a majority of the others, and the table replays it", () => {
+    let room = markDisconnected(table(), ana.playerId, NOW);
+    room = voteKick(room, beto.playerId, ana.playerId, true, NOW);
+    expect(toView(room, NOW).kickVote).toEqual({ targetId: ana.playerId, yes: [beto.playerId], no: [] });
+    expect(() => voteKick(markDisconnected(room, carla.playerId, NOW), beto.playerId, carla.playerId, true, NOW)).toThrow(/en curso/);
+    const seq = room.seq;
+    // Three others: two yes is a majority.
+    room = voteKick(room, dani.playerId, ana.playerId, true, NOW);
+    expect(room.kickVote).toBeNull();
+    expect(room.seq).toBe(seq + 1);
+    expect(room.lastAction).toBeNull();
+    expect(room.game?.players.find((p) => p.id === ana.playerId)).toMatchObject({ bankrupt: true, expelled: true });
+    // It was Ana's turn: Beto has the dice, with a fresh clock.
+    expect(room.game?.players[room.game.currentPlayerIndex]?.id).toBe(beto.playerId);
+    expect(room.deadline).toBeGreaterThan(NOW);
+  });
+
+  it("drops the vote when it can no longer pass, or when they come back", () => {
+    let room = markDisconnected(table(), ana.playerId, NOW);
+    room = voteKick(room, beto.playerId, ana.playerId, true, NOW);
+    room = voteKick(room, carla.playerId, ana.playerId, false, NOW);
+    expect(room.kickVote?.no).toEqual([carla.playerId]);
+    room = voteKick(room, dani.playerId, ana.playerId, false, NOW);
+    expect(room.kickVote).toBeNull();
+    room = voteKick(room, beto.playerId, ana.playerId, true, NOW);
+    room = joinRoom(room, ana, NOW);
+    expect(room.kickVote).toBeNull();
+    expect(room.game?.players[0]?.bankrupt).toBe(false);
   });
 });

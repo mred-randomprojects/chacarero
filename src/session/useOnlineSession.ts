@@ -85,6 +85,8 @@ export function useOnlineSession({ client, room, you, status, clockOffset, error
       // An older server sends no draft at all.
       tradeDraft: room.tradeDraft ?? null,
       setComposing: (composing: boolean, draft?: TradeDraftMessage) => client.composing(composing, draft),
+      kickVote: room.kickVote ?? null,
+      voteKick: (targetId: string, yes: boolean) => client.voteKick(targetId, yes),
       clearError,
       leave: () => client.leave(),
       newGame: () => client.newGame(),
