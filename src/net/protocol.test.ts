@@ -10,10 +10,10 @@ describe("parseClientMessage", () => {
         type: "action",
         playerId,
         seq: 3,
-        action: { type: "proposeTrade", toId: "beto-0000001", gives: { deeds: ["salta-sur", "fc-mitre"], cash: 500 }, receives: { deeds: [], cash: 0 } },
+        action: { type: "proposeTrade", toId: "beto-0000001", gives: { deeds: ["cachi", "ruta7"], cash: 500 }, receives: { deeds: [], cash: 0 } },
       }),
     );
-    expect(message).toMatchObject({ type: "action", seq: 3, action: { type: "proposeTrade", toId: "beto-0000001", gives: { deeds: ["salta-sur", "fc-mitre"], cash: 500 } } });
+    expect(message).toMatchObject({ type: "action", seq: 3, action: { type: "proposeTrade", toId: "beto-0000001", gives: { deeds: ["cachi", "ruta7"], cash: 500 } } });
   });
 
   it("rejects unknown deeds, fractional or negative cash, and malformed payloads", () => {

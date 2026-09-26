@@ -162,7 +162,7 @@ describe("playing", () => {
     // The clock waits for the replay (one log event, 2 s) before the decision time starts.
     expect(room.deadline).toBe(NOW + 2_000 + DECISION_MS);
     room = applyRequest(room, ana.playerId, 2, { type: "movePawn" }, NOW, [1, 2]);
-    expect(room.game?.phase).toEqual({ type: "awaitingBuyDecision", deedId: "formosa-norte" });
+    expect(room.game?.phase).toEqual({ type: "awaitingBuyDecision", deedId: "purmamarca" });
   });
 
   it("clears shaking when the dice are thrown and ignores shaking from the wrong player", () => {
@@ -204,8 +204,8 @@ describe("playing", () => {
   it("shares the trade being built with everyone, and only from the player who may propose it", () => {
     const base = playing();
     if (!base.game) throw new Error("no game");
-    let room: Room = { ...base, game: { ...base.game, holdings: { "salta-sur": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
-    const draft = { toId: beto.playerId, gives: { deeds: ["salta-sur" as const], cash: 0 }, receives: { deeds: [], cash: 500 }, counter: false };
+    let room: Room = { ...base, game: { ...base.game, holdings: { "cachi": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
+    const draft = { toId: beto.playerId, gives: { deeds: ["cachi" as const], cash: 0 }, receives: { deeds: [], cash: 500 }, counter: false };
     // Beto is not on turn: his draft is not shown (his clock flag is harmless).
     room = setComposing(room, beto.playerId, true, draft);
     expect(toView(room, NOW).tradeDraft).toBeNull();
@@ -230,8 +230,8 @@ describe("playing", () => {
     let room = playing();
     const game = room.game;
     if (!game) throw new Error("no game");
-    room = { ...room, game: { ...game, phase: { type: "turnEnd" }, holdings: { "salta-sur": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
-    const propose = { type: "proposeTrade", toId: beto.playerId, gives: { deeds: ["salta-sur"], cash: 0 }, receives: { deeds: [], cash: 1_000 } } as const;
+    room = { ...room, game: { ...game, phase: { type: "turnEnd" }, holdings: { "cachi": { ownerId: ana.playerId, chacras: 0, estancia: false, mortgaged: false } } } };
+    const propose = { type: "proposeTrade", toId: beto.playerId, gives: { deeds: ["cachi"], cash: 0 }, receives: { deeds: [], cash: 1_000 } } as const;
     expect(() => applyRequest(room, beto.playerId, room.seq, propose, NOW, [1, 2])).toThrow(/turno/);
     room = applyRequest(room, ana.playerId, room.seq, propose, NOW, [1, 2]);
     expect(room.game?.phase.type).toBe("awaitingTradeResponse");
@@ -243,7 +243,7 @@ describe("playing", () => {
     expect(room.lastAction).toBe("rejectTrade");
     expect(room.lastActorId).toBe(beto.playerId);
     expect(room.game?.phase).toEqual({ type: "turnEnd" });
-    expect(room.game?.holdings["salta-sur"]?.ownerId).toBe(ana.playerId);
+    expect(room.game?.holdings["cachi"]?.ownerId).toBe(ana.playerId);
   });
 
   it("ends the game and lets the host go back to the lobby", () => {

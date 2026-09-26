@@ -8,7 +8,7 @@ de 42 casilleros, en una escena Three.js.
 Se juega **online** (armás una mesa, pasás el link, cada uno desde su pantalla)
 o en **modo mesa** (todos por turnos en la misma pantalla, sin servidor ni
 internet). Tirás los dados,
-comprás campos, cobrás alquileres, levantás tarjetas de Suerte y Destino,
+comprás campos, cobrás alquileres, levantás tarjetas de Suerte y de Yeta,
 construís chacras y estancias, hipotecás cuando no te alcanza y, si no hay
 más remedio, quebrás. Gana el último que queda.
 
@@ -35,7 +35,7 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
   recién después suben a la cámara (un doble brilla en dorado); los
   casilleros que vas a recorrer se iluminan en orden y movés el peón con un
   clic, con la cámara pegada atrás, salto a salto. Si caés en Suerte o
-  Destino, levantás la tarjeta: sale del mazo, se da vuelta frente a la
+  Yeta, levantás la tarjeta: sale del mazo, se da vuelta frente a la
   cámara (la cámara retrocede para que se vea entera) y la aplicás cuando la
   leíste. Si caés en una escritura libre, la escritura sube grande a la
   pantalla (siempre del mismo tamaño) con todo lo que dice al lado: comprás o
@@ -83,7 +83,7 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 - **Ajustes** (`,` o el engranaje): ritmo de los avisos, tiempo para decidir
   (o sin límite), volumen, qué hace la cámara sola, y la lista de controles.
 - **Sonido**: dados que se mezclan y rebotan, pasos del peón, cartas, plata,
-  martillo del remate, la puerta de la Comisaría, una fanfarria al ganar y el
+  martillo del remate, la puerta del Destacamento, una fanfarria al ganar y el
   trombón triste de un canje rechazado. Muestras CC0 de
   [Kenney](https://kenney.nl); el trombón es sintetizado.
 - **Decisiones**: cada decisión (tirar, mover, levantar o aplicar la tarjeta,

@@ -6,18 +6,18 @@ const held = (ownerId: string): Holding => ({ ownerId, chacras: 0, estancia: fal
 
 describe("seat deed layout", () => {
   it("keeps a slot free for a card flying in, in board order, so it lands where it will stay", () => {
-    const holdings: Partial<Record<DeedId, Holding>> = { "formosa-sur": held("p1"), "rioNegro-sur": held("p1"), "salta-sur": held("p2") };
-    const laid = seatDeeds(holdings, "p1", new Set<DeedId>(["formosa-centro"]), new Set());
-    expect(laid).toEqual(["formosa-sur", "formosa-centro", "rioNegro-sur"]);
+    const holdings: Partial<Record<DeedId, Holding>> = { "tilcara": held("p1"), "posadas": held("p1"), "cachi": held("p2") };
+    const laid = seatDeeds(holdings, "p1", new Set<DeedId>(["humahuaca"]), new Set());
+    expect(laid).toEqual(["tilcara", "humahuaca", "posadas"]);
     // The incoming card's slot while flying is the slot it keeps once the table says it is owned.
-    const after = seatDeeds({ ...holdings, "formosa-centro": held("p1") }, "p1", new Set(), new Set());
+    const after = seatDeeds({ ...holdings, "humahuaca": held("p1") }, "p1", new Set(), new Set());
     expect(after).toEqual(laid);
-    expect(deedSlot(laid.indexOf("formosa-centro"), laid.length)).toEqual(deedSlot(after.indexOf("formosa-centro"), after.length));
+    expect(deedSlot(laid.indexOf("humahuaca"), laid.length)).toEqual(deedSlot(after.indexOf("humahuaca"), after.length));
   });
 
   it("drops a card flying away, so the others close up while it flies", () => {
-    const holdings: Partial<Record<DeedId, Holding>> = { "formosa-sur": held("p1"), "rioNegro-sur": held("p1") };
-    expect(seatDeeds(holdings, "p1", new Set(), new Set<DeedId>(["formosa-sur"]))).toEqual(["rioNegro-sur"]);
+    const holdings: Partial<Record<DeedId, Holding>> = { "tilcara": held("p1"), "posadas": held("p1") };
+    expect(seatDeeds(holdings, "p1", new Set(), new Set<DeedId>(["tilcara"]))).toEqual(["posadas"]);
   });
 
   it("centres each row", () => {

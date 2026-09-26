@@ -9,49 +9,46 @@
 
 /** The eight provinces on the board, in board order (cheapest first). */
 export type Province =
-  | "formosa"
-  | "rioNegro"
+  | "jujuy"
+  | "misiones"
   | "salta"
+  | "chubut"
   | "mendoza"
-  | "santaFe"
-  | "tucuman"
+  | "rioNegro"
   | "cordoba"
   | "buenosAires";
 
-/** A province is split into up to three zones; Río Negro and Tucumán only have two. */
-export type Zone = "sur" | "centro" | "norte";
-
-/** Stable identifiers for every purchasable deed. */
+/** Stable identifiers for every purchasable deed: one city per campo, then the routes and the companies. */
 export type DeedId =
-  | "formosa-sur"
-  | "formosa-centro"
-  | "formosa-norte"
-  | "rioNegro-sur"
-  | "rioNegro-norte"
-  | "salta-sur"
-  | "salta-centro"
-  | "salta-norte"
-  | "mendoza-sur"
-  | "mendoza-centro"
-  | "mendoza-norte"
-  | "santaFe-sur"
-  | "santaFe-centro"
-  | "santaFe-norte"
-  | "tucuman-sur"
-  | "tucuman-norte"
-  | "cordoba-sur"
-  | "cordoba-centro"
-  | "cordoba-norte"
-  | "buenosAires-sur"
-  | "buenosAires-centro"
-  | "buenosAires-norte"
-  | "fc-belgrano"
-  | "fc-sanMartin"
-  | "fc-mitre"
-  | "fc-urquiza"
-  | "petrolera"
-  | "bodega"
-  | "ingenio";
+  | "tilcara"
+  | "humahuaca"
+  | "purmamarca"
+  | "posadas"
+  | "puertoIguazu"
+  | "cachi"
+  | "cafayate"
+  | "saltaCapital"
+  | "trelew"
+  | "esquel"
+  | "puertoMadryn"
+  | "malargue"
+  | "sanRafael"
+  | "mendozaCapital"
+  | "elBolson"
+  | "bariloche"
+  | "villaGeneralBelgrano"
+  | "carlosPaz"
+  | "cordobaCapital"
+  | "areco"
+  | "tandil"
+  | "marDelPlata"
+  | "ruta9"
+  | "ruta3"
+  | "ruta7"
+  | "ruta40"
+  | "tambo"
+  | "frigorifico"
+  | "cerealera";
 
 /** Rent schedule for a campo, indexed by what is built on it. */
 export interface CampoRent {
@@ -67,7 +64,8 @@ export interface CampoDeed {
   readonly kind: "campo";
   readonly id: DeedId;
   readonly province: Province;
-  readonly zone: Zone;
+  /** The city printed on the deed, e.g. "Bariloche". */
+  readonly city: string;
   readonly price: number;
   /** Cash the bank lends against the deed (always half the price). */
   readonly mortgage: number;
@@ -78,13 +76,13 @@ export interface CampoDeed {
   readonly rent: CampoRent;
 }
 
-export interface FerrocarrilDeed {
-  readonly kind: "ferrocarril";
+export interface RutaDeed {
+  readonly kind: "ruta";
   readonly id: DeedId;
   readonly name: string;
   readonly price: number;
   readonly mortgage: number;
-  /** Rent when the owner holds 1, 2, 3 or 4 railways. */
+  /** Rent when the owner holds 1, 2, 3 or 4 routes. */
   readonly rentByCount: readonly [number, number, number, number];
 }
 
@@ -98,32 +96,32 @@ export interface CompaniaDeed {
   readonly diceMultiplierByCount: readonly [number, number, number];
 }
 
-export type Deed = CampoDeed | FerrocarrilDeed | CompaniaDeed;
+export type Deed = CampoDeed | RutaDeed | CompaniaDeed;
 
 /** Every kind of square on the ring. */
 export type SquareKind =
-  | "salida"
+  | "tranquera"
   | "campo"
-  | "ferrocarril"
+  | "ruta"
   | "compania"
   | "suerte"
-  | "destino"
+  | "yeta"
   | "impuesto"
   | "premio"
-  | "comisaria"
-  | "descanso"
-  | "libreEstacionamiento"
-  | "marchePreso";
+  | "destacamento"
+  | "siesta"
+  | "mateada"
+  | "enCana";
 
 interface SquareBase {
-  /** Position on the ring, 0 = Salida, increasing clockwise. */
+  /** Position on the ring, 0 = Tranquera, increasing clockwise. */
   readonly index: number;
   /** Display name, as printed on the tile. */
   readonly name: string;
 }
 
 export interface DeedSquare extends SquareBase {
-  readonly kind: "campo" | "ferrocarril" | "compania";
+  readonly kind: "campo" | "ruta" | "compania";
   readonly deedId: DeedId;
 }
 
@@ -134,19 +132,13 @@ export interface MoneySquare extends SquareBase {
 }
 
 export interface PlainSquare extends SquareBase {
-  readonly kind:
-    | "salida"
-    | "suerte"
-    | "destino"
-    | "comisaria"
-    | "descanso"
-    | "libreEstacionamiento"
-    | "marchePreso";
+  readonly kind: "tranquera" | "suerte" | "yeta" | "destacamento" | "siesta" | "mateada" | "enCana";
 }
 
 export type Square = DeedSquare | MoneySquare | PlainSquare;
 
-export type Deck = "suerte" | "destino";
+/** Suerte is mostly good news, Yeta mostly bad. */
+export type Deck = "suerte" | "yeta";
 
 export type CardEffect =
   | { readonly type: "collect"; readonly amount: number }
@@ -155,8 +147,8 @@ export type CardEffect =
   | {
       readonly type: "moveTo";
       readonly square: number;
-      /** Whether passing Salida on the way pays the usual bonus. */
-      readonly collectSalida: boolean;
+      /** Whether passing the Tranquera on the way pays the usual bonus. */
+      readonly collectTranquera: boolean;
       /** Which way the pawn travels; only affects animation, never the bonus. */
       readonly direction: "forward" | "backward";
     }
@@ -173,7 +165,7 @@ export type CardEffect =
 export interface Card {
   readonly id: string;
   readonly deck: Deck;
-  /** Text shown to the player, Spanish, as on the physical card. */
+  /** Text shown to the player, Spanish. */
   readonly text: string;
   readonly effect: CardEffect;
 }

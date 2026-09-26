@@ -21,10 +21,10 @@ describe("soundsForTransition", () => {
   });
 
   it("voices a trade being proposed, countered, accepted or turned down", () => {
-    const start: GameState = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
-    const proposed = proposeTrade(start, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 1_000 });
+    const start: GameState = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const proposed = proposeTrade(start, "b", { deeds: ["cachi"], cash: 0 }, { deeds: [], cash: 1_000 });
     expect(soundsForTransition(start, proposed)).toEqual(["open"]);
-    const countered = counterTrade(proposed, { deeds: [], cash: 500 }, { deeds: ["salta-sur"], cash: 0 });
+    const countered = counterTrade(proposed, { deeds: [], cash: 500 }, { deeds: ["cachi"], cash: 0 });
     expect(soundsForTransition(proposed, countered)).toEqual(["open"]);
     expect(soundsForTransition(countered, acceptTrade(countered), "acceptTrade")).toEqual(["dealDone", "auctionWon"]);
     expect(soundsForTransition(countered, rejectTrade(countered), "rejectTrade")).toEqual(["sadTrombone"]);

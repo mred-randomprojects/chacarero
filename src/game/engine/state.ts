@@ -83,9 +83,9 @@ export type Phase =
   | { readonly type: "awaitingJailDecision" }
   /** Dice are on the table; the player still has to move the pawn. */
   | { readonly type: "awaitingMove" }
-  /** The pawn stands on Suerte/Destino; the player still has to lift the top card. */
+  /** The pawn stands on Suerte/Yeta; the player still has to lift the top card. */
   | { readonly type: "awaitingDraw"; readonly deck: Deck }
-  /** A Suerte/Destino card is face up; its effect applies once acknowledged. */
+  /** A Suerte/Yeta card is face up; its effect applies once acknowledged. */
   | { readonly type: "awaitingCardAck"; readonly card: Card }
   | { readonly type: "awaitingBuyDecision"; readonly deedId: DeedId }
   | { readonly type: "awaitingPayOrDraw"; readonly amount: number; readonly deck: Deck }
@@ -153,7 +153,7 @@ export interface GameState {
   readonly currentPlayerIndex: number;
   readonly holdings: Readonly<Partial<Record<DeedId, Holding>>>;
   /** Card ids, top of the deck first. Cards held by players are absent. */
-  readonly decks: { readonly suerte: readonly string[]; readonly destino: readonly string[] };
+  readonly decks: { readonly suerte: readonly string[]; readonly yeta: readonly string[] };
   /** Debts waiting to be settled, oldest first; the head is what `awaitingPayment` shows. */
   readonly pendingDebts: readonly Debt[];
   /** Deeds the bank still has to auction this turn (after a bankruptcy to the bank). */
@@ -232,7 +232,7 @@ function dealHoldings(players: readonly NewPlayer[], perPlayer: number, random: 
 }
 
 /**
- * Sets up a fresh game: every player on Salida with the starting cash, both
+ * Sets up a fresh game: every player on the Tranquera with the starting cash, both
  * decks shuffled, optionally a few deeds each, and the first player in the
  * list to roll.
  */
@@ -275,7 +275,7 @@ export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 
     pendingAuctions: [],
     decks: {
       suerte: shuffledDeck("suerte", random).map((c) => c.id),
-      destino: shuffledDeck("destino", random).map((c) => c.id),
+      yeta: shuffledDeck("yeta", random).map((c) => c.id),
     },
     phase: openingRoll ? { type: "openingRoll", contenders: players.map((p) => p.id), rolls: {} } : { type: "awaitingRoll" },
     dice: null,

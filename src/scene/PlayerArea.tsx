@@ -38,7 +38,7 @@ const SETTLE_TIMEOUT_MS = 1500;
 
 const SQUARE_OF_DEED = new Map<DeedId, number>();
 for (const square of SQUARES) {
-  if (square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania") SQUARE_OF_DEED.set(square.deedId, square.index);
+  if (square.kind === "campo" || square.kind === "ruta" || square.kind === "compania") SQUARE_OF_DEED.set(square.deedId, square.index);
 }
 
 /**

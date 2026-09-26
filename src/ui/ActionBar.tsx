@@ -12,7 +12,7 @@ export interface ActionBarProps {
   readonly state: GameState;
   /** The player the table shows on turn (lags the real one during a replay). */
   readonly shownPlayer: Player;
-  /** The Suerte/Destino card face up on the table, from the view, so it shows here the moment it shows there. */
+  /** The Suerte/Yeta card face up on the table, from the view, so it shows here the moment it shows there. */
   readonly cardOnTable: Card | null;
   readonly you: string | null;
   readonly busy: boolean;
@@ -105,7 +105,7 @@ export function ActionBar({ state, shownPlayer, cardOnTable, you, busy, shaking,
       </div>
       {cardOnTable && (
         <div className={`card ${cardOnTable.deck}`}>
-          <span className="card-title">{cardOnTable.deck === "suerte" ? "Suerte" : "Destino"}</span>
+          <span className="card-title">{cardOnTable.deck === "suerte" ? "Suerte" : "Yeta"}</span>
           {cardOnTable.text}
         </div>
       )}

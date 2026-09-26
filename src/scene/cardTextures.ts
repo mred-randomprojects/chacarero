@@ -1,6 +1,7 @@
 import { CanvasTexture, SRGBColorSpace } from "three";
-import type { Card, Deed, Holding } from "../game";
-import { PROVINCE_COLORS, PROVINCE_NAMES, ZONE_NAMES, deedText, pesos } from "../game";
+import type { Card, Deck, Deed, Holding } from "../game";
+import { PROVINCE_COLORS, PROVINCE_NAMES, deedText, pesos } from "../game";
+import { DECK_ART, drawDeckSymbol } from "./deckArt";
 import { TILE_FONT } from "./tileTexture";
 
 const CARD_W = 240;
@@ -40,7 +41,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, 
 const cardCache = new Map<string, CanvasTexture>();
 
 export function bandColor(deed: Deed): string {
-  return deed.kind === "campo" ? PROVINCE_COLORS[deed.province] : deed.kind === "ferrocarril" ? "#2b2b2b" : "#7a5230";
+  return deed.kind === "campo" ? PROVINCE_COLORS[deed.province] : deed.kind === "ruta" ? "#2b2b2b" : "#7a5230";
 }
 
 /**
@@ -61,13 +62,12 @@ export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): Canvas
   ctx.fillRect(0, 0, CARD_W, 62);
 
   if (deed.kind === "campo") {
-    fit(ctx, PROVINCE_NAMES[deed.province].toUpperCase(), CARD_W / 2, 26, 30, CARD_W - 20, 800, "#ffffff");
-    fit(ctx, ZONE_NAMES[deed.zone].toUpperCase(), CARD_W / 2, 50, 16, CARD_W - 20, 600, "#ffffff");
+    fit(ctx, deed.city.toUpperCase(), CARD_W / 2, 26, 30, CARD_W - 20, 800, "#ffffff");
+    fit(ctx, PROVINCE_NAMES[deed.province].toUpperCase(), CARD_W / 2, 50, 16, CARD_W - 20, 600, "#ffffff");
   } else {
-    const label = deed.kind === "ferrocarril" ? "FERROCARRIL" : "COMPAÑÍA";
-    const name = deed.name.replace(/^Ferrocarril General /, "").replace(/^Compañía /, "").replace("Bartolomé ", "B. ");
+    const label = deed.kind === "ruta" ? "RUTA NACIONAL" : "COMPAÑÍA";
     fit(ctx, label, CARD_W / 2, 22, 16, CARD_W - 20, 600, "#ffffff");
-    fit(ctx, name.toUpperCase(), CARD_W / 2, 46, 26, CARD_W - 20, 800, "#ffffff");
+    fit(ctx, deed.name.toUpperCase(), CARD_W / 2, 46, 26, CARD_W - 20, 800, "#ffffff");
   }
 
   fit(ctx, pesos(deed.price), CARD_W / 2, 92, 34, CARD_W - 20, 800, "#1a5fb4");
@@ -87,8 +87,8 @@ export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): Canvas
           ["Estancia", pesos(deed.rent.estancia)],
           ["Chacra", pesos(deed.chacraCost)],
         ]
-      : deed.kind === "ferrocarril"
-        ? deed.rentByCount.map((rent, i): [string, string] => [`${i + 1} FF.CC.`, pesos(rent)])
+      : deed.kind === "ruta"
+        ? deed.rentByCount.map((rent, i): [string, string] => [`${i + 1} ruta${i > 0 ? "s" : ""}`, pesos(rent)])
         : deed.diceMultiplierByCount.map((mult, i): [string, string] => [`${i + 1} cía.`, `dados × ${mult}`]);
   let y = 126;
   for (const [label, value] of rows) {
@@ -99,7 +99,7 @@ export function deedCardTexture(deed: Deed, holding: Holding, scale = 1): Canvas
     y += 22;
   }
 
-  // Railways and companies explain their rent in words, as the physical card does.
+  // Routes and companies explain their rent in words.
   const explanation = deedText(deed);
   if (explanation) {
     ctx.font = `500 13px ${TILE_FONT}`;
@@ -216,19 +216,21 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-/** A Suerte/Destino card, face up: deck header and the full text. */
+/** A Suerte/Yeta card, face up: deck header and the full text. */
 export function chanceCardTexture(card: Card): CanvasTexture {
   const cached = chanceCache.get(card.id);
   if (cached) return cached;
   const w = 480;
   const h = 300;
   const [element, ctx] = canvas(w, h);
-  const suerte = card.deck === "suerte";
+  const art = DECK_ART[card.deck];
   ctx.fillStyle = "#f7f2e4";
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = suerte ? "#e8891c" : "#1f7a3a";
+  ctx.fillStyle = art.color;
   ctx.fillRect(0, 0, w, 64);
-  fit(ctx, suerte ? "SUERTE" : "DESTINO", w / 2, 33, 38, w - 40, 800, "#ffffff");
+  drawDeckSymbol(ctx, card.deck, 44, 32, 50);
+  drawDeckSymbol(ctx, card.deck, w - 44, 32, 50);
+  fit(ctx, art.label, w / 2, 33, 38, w - 140, 800, "#ffffff");
   ctx.fillStyle = "#1d1a17";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -253,21 +255,21 @@ export function chanceCardTexture(card: Card): CanvasTexture {
   return tex;
 }
 
-/** The face-down back of a Suerte/Destino card. */
-export function chanceBackTexture(deck: "suerte" | "destino"): CanvasTexture {
+/** The face-down back of a Suerte/Yeta card. */
+export function chanceBackTexture(deck: Deck): CanvasTexture {
   const key = `back-${deck}`;
   const cached = chanceCache.get(key);
   if (cached) return cached;
   const w = 480;
   const h = 300;
   const [element, ctx] = canvas(w, h);
-  ctx.fillStyle = deck === "suerte" ? "#e8891c" : "#1f7a3a";
+  ctx.fillStyle = DECK_ART[deck].color;
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = "#f7f2e4";
   ctx.lineWidth = 10;
   ctx.strokeRect(14, 14, w - 28, h - 28);
-  fit(ctx, deck === "suerte" ? "!" : "?", w / 2, h / 2 - 20, 150, w, 800, "#f7f2e4");
-  fit(ctx, deck === "suerte" ? "SUERTE" : "DESTINO", w / 2, h - 50, 44, w - 40, 800, "#f7f2e4");
+  drawDeckSymbol(ctx, deck, w / 2, h / 2 - 22, 160);
+  fit(ctx, DECK_ART[deck].label, w / 2, h - 50, 44, w - 40, 800, "#f7f2e4");
   const tex = texture(element);
   chanceCache.set(key, tex);
   return tex;

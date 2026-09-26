@@ -14,8 +14,8 @@
  */
 import type { Card, Deck, DeedId, Square } from "../types";
 import { ALL_CARDS } from "../cards";
-import { JAIL_INDEX, getSquare, salidaCrossings } from "../board";
-import { BOARD_SIZE, JAIL_BAIL, MAX_CHACRAS_PER_CAMPO, MAX_JAIL_TURNS, SALIDA_BONUS, DOUBLES_TO_JAIL } from "../constants";
+import { JAIL_INDEX, getSquare, tranqueraCrossings } from "../board";
+import { BOARD_SIZE, JAIL_BAIL, MAX_CHACRAS_PER_CAMPO, MAX_JAIL_TURNS, TRANQUERA_BONUS, DOUBLES_TO_JAIL } from "../constants";
 import { deedName, getDeed } from "../deeds";
 import { describeOffer, pesos } from "../describe";
 import type { Auction, Creditor, Debt, GameEvent, GameState, Holding, MoveKind, Party, Phase, Player, Trade, TradeOffer } from "./state";
@@ -188,29 +188,29 @@ function setPosition(state: GameState, playerId: string, to: number, kind: MoveK
 
 function moveBy(state: GameState, steps: number): GameState {
   const current = currentPlayer(state);
-  const crossings = salidaCrossings(current.position, steps);
+  const crossings = tranqueraCrossings(current.position, steps);
   const position = ((current.position + steps) % BOARD_SIZE + BOARD_SIZE) % BOARD_SIZE;
   const square = getSquare(position);
   const verb = steps >= 0 ? "avanza" : "retrocede";
   let next = setPosition(state, current.id, position, steps >= 0 ? "forward" : "backward", `${current.name} ${verb} ${Math.abs(steps)} hasta ${square.name}.`);
   if (crossings > 0) {
-    next = bankPays(next, current.id, SALIDA_BONUS * crossings, `${current.name} pasa por la Salida y cobra ${pesos(SALIDA_BONUS * crossings)}.`);
+    next = bankPays(next, current.id, TRANQUERA_BONUS * crossings, `${current.name} pasa por la Tranquera y cobra ${pesos(TRANQUERA_BONUS * crossings)}.`);
   }
   return next;
 }
 
-function moveTo(state: GameState, square: number, collectSalida: boolean, direction: MoveKind): GameState {
+function moveTo(state: GameState, square: number, collectTranquera: boolean, direction: MoveKind): GameState {
   const current = currentPlayer(state);
   const forward = (square - current.position + BOARD_SIZE) % BOARD_SIZE;
-  if (collectSalida) return moveBy(state, forward);
+  if (collectTranquera) return moveBy(state, forward);
   return setPosition(state, current.id, square, direction, `${current.name} va hasta ${getSquare(square).name}.`);
 }
 
 function sendToJail(state: GameState, why: string): GameState {
   const current = currentPlayer(state);
-  let next = setPosition(state, current.id, JAIL_INDEX, "jump", `${current.name} marcha preso (${why}).`);
+  let next = setPosition(state, current.id, JAIL_INDEX, "jump", `${current.name} va en cana (${why}).`);
   next = updatePlayer(next, current.id, { inJail: true, jailTurns: 0, doublesThisTurn: 0 });
-  next = emit(next, { type: "jail", playerId: current.id, text: `${current.name} queda preso en la Comisaría.` });
+  next = emit(next, { type: "jail", playerId: current.id, text: `${current.name} queda preso en el Destacamento.` });
   return { ...next, rollAgain: false };
 }
 
@@ -220,22 +220,22 @@ function resolveLanding(state: GameState): GameState {
   const current = currentPlayer(state);
   const square: Square = getSquare(current.position);
   switch (square.kind) {
-    case "salida":
-    case "comisaria":
-    case "descanso":
-    case "libreEstacionamiento":
+    case "tranquera":
+    case "destacamento":
+    case "siesta":
+    case "mateada":
       return continueTurn(log(state, `${current.name} cae en ${square.name}.`));
-    case "marchePreso":
-      return continueTurn(sendToJail(state, "cayó en Marche preso"));
+    case "enCana":
+      return continueTurn(sendToJail(state, "por el casillero"));
     case "impuesto":
       return continueTurn(charge(log(state, `${current.name} cae en ${square.name}.`), current.id, -square.amount, BANK, square.name.toLowerCase()));
     case "premio":
       return continueTurn(bankPays(state, current.id, square.amount, `${current.name} cae en ${square.name} y cobra ${pesos(square.amount)}.`));
     case "suerte":
-    case "destino":
+    case "yeta":
       return setPhase(log(state, `${current.name} cae en ${square.name}.`), { type: "awaitingDraw", deck: square.kind });
     case "campo":
-    case "ferrocarril":
+    case "ruta":
     case "compania":
       return resolveDeedLanding(state, square.deedId);
   }
@@ -282,7 +282,7 @@ function revealCard(state: GameState, deck: Deck): GameState {
   const decks = { ...state.decks, [deck]: keep ? rest : [...rest, topId] };
   const current = currentPlayer(state);
   let next: GameState = { ...state, decks, lastCard: card };
-  next = emit(next, { type: "card", playerId: current.id, deck, cardId: card.id, text: `${current.name} levanta ${deck === "suerte" ? "Suerte" : "Destino"}: "${card.text}"` });
+  next = emit(next, { type: "card", playerId: current.id, deck, cardId: card.id, text: `${current.name} levanta ${deck === "suerte" ? "Suerte" : "Yeta"}: "${card.text}"` });
   return setPhase(next, { type: "awaitingCardAck", card });
 }
 
@@ -303,14 +303,14 @@ function applyCard(state: GameState, card: Card): GameState {
       return continueTurn(next);
     }
     case "moveTo":
-      return resolveLanding(moveTo(state, effect.square, effect.collectSalida, effect.direction));
+      return resolveLanding(moveTo(state, effect.square, effect.collectTranquera, effect.direction));
     case "moveBy":
       return resolveLanding(moveBy(state, effect.steps));
     case "goToJail":
       return continueTurn(sendToJail(state, "por la tarjeta"));
     case "getOutOfJail": {
       const next = updatePlayer(state, current.id, { getOutOfJailCards: current.getOutOfJailCards + 1 });
-      return continueTurn(log(next, `${current.name} se guarda la tarjeta para salir de la Comisaría.`));
+      return continueTurn(log(next, `${current.name} se guarda la tarjeta para salir del Destacamento.`));
     }
     case "payPerBuilding": {
       const { chacras, estancias } = buildingCount(state, current.id);
@@ -343,7 +343,7 @@ export function rollDice(input: GameState, random: () => number = Math.random, f
   if (phase.type === "awaitingJailDecision") {
     if (doubles) {
       next = updatePlayer(next, current.id, { inJail: false, jailTurns: 0 });
-      next = log(next, `${current.name} saca doble y sale de la Comisaría.`);
+      next = log(next, `${current.name} saca doble y sale del Destacamento.`);
       return setPhase(next, { type: "awaitingMove" });
     }
     const jailTurns = current.jailTurns + 1;
@@ -502,11 +502,11 @@ export function spendJailCard(input: GameState): GameState {
   const current = currentPlayer(state);
   if (current.getOutOfJailCards <= 0) throw new Error("No tenés tarjeta");
   // The card goes back to the bottom of the Suerte deck; both decks' cards are interchangeable.
-  const cardId = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && !state.decks.suerte.includes(c.id) && !state.decks.destino.includes(c.id))?.id;
+  const cardId = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && !state.decks.suerte.includes(c.id) && !state.decks.yeta.includes(c.id))?.id;
   const decks = cardId ? { ...state.decks, suerte: [...state.decks.suerte, cardId] } : state.decks;
   let next: GameState = { ...state, decks };
   next = updatePlayer(next, current.id, { inJail: false, jailTurns: 0, getOutOfJailCards: current.getOutOfJailCards - 1 });
-  next = log(next, `${current.name} usa su tarjeta y sale de la Comisaría.`);
+  next = log(next, `${current.name} usa su tarjeta y sale del Destacamento.`);
   return setPhase(next, { type: "awaitingRoll" });
 }
 
@@ -920,7 +920,7 @@ export function expelPlayer(input: GameState, goneId: string): GameState {
   // Their jail cards go back under the Suerte deck, as a used one does.
   let decks = next.decks;
   for (let i = 0; i < gone.getOutOfJailCards; i++) {
-    const cardId = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && !decks.suerte.includes(c.id) && !decks.destino.includes(c.id))?.id;
+    const cardId = ALL_CARDS.find((c) => c.effect.type === "getOutOfJail" && !decks.suerte.includes(c.id) && !decks.yeta.includes(c.id))?.id;
     if (cardId) decks = { ...decks, suerte: [...decks.suerte, cardId] };
   }
   next = updatePlayer({ ...next, decks }, goneId, { cash: 0, bankrupt: true, expelled: true, inJail: false, jailTurns: 0, getOutOfJailCards: 0 });

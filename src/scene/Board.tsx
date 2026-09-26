@@ -69,7 +69,7 @@ function toShape(points: readonly Vec2[]): Shape {
 /**
  * The whole table: a bevelled slab, the felt centre with the title and card
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
- * towards -z (world), so Salida ends up at the bottom-right from the default camera.
+ * towards -z (world), so the Tranquera ends up at the bottom-right from the default camera.
  */
 export function Board({ hovered, selected, path, onHover, onSelect, onFocus, pawns, seats, holdings, colorOf, onPawnArrive }: BoardProps) {
   const layout = BOARD_LAYOUT;
@@ -87,8 +87,8 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
   }, [layout]);
   const feltGeometry = useMemo(() => new ShapeGeometry(toShape(layout.innerHexagon)), [layout]);
   const titleTexture = useMemo(() => createTitleTexture(14, 4.4), []);
-  const suerteTexture = useMemo(() => createSlotTexture("SUERTE", "!", "#e8891c"), []);
-  const destinoTexture = useMemo(() => createSlotTexture("DESTINO", "?", "#1f7a3a"), []);
+  const suerteTexture = useMemo(() => createSlotTexture("suerte"), []);
+  const yetaTexture = useMemo(() => createSlotTexture("yeta"), []);
   const bankTexture = useMemo(() => createBankTexture(), []);
 
   useEffect(
@@ -97,10 +97,10 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
       feltGeometry.dispose();
       titleTexture.dispose();
       suerteTexture.dispose();
-      destinoTexture.dispose();
+      yetaTexture.dispose();
       bankTexture.dispose();
     },
-    [slabGeometry, feltGeometry, titleTexture, suerteTexture, destinoTexture, bankTexture],
+    [slabGeometry, feltGeometry, titleTexture, suerteTexture, yetaTexture, bankTexture],
   );
 
   return (
@@ -146,7 +146,7 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
       </mesh>
       <mesh rotation={FLAT} position={[4.6, DECOR_Y, 4.2]}>
         <planeGeometry args={[3.2, 2]} />
-        <meshStandardMaterial map={destinoTexture} roughness={1} />
+        <meshStandardMaterial map={yetaTexture} roughness={1} />
       </mesh>
 
       {/* The bank: a plate, a pile of bills and the deed pile, where flights start and end. */}
@@ -168,7 +168,7 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
       {layout.tiles.map((tile) => {
         const square = SQUARES[tile.index];
         if (!square) return null;
-        const deed = square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania" ? getDeed(square.deedId) : undefined;
+        const deed = square.kind === "campo" || square.kind === "ruta" || square.kind === "compania" ? getDeed(square.deedId) : undefined;
         return (
           <Tile
             key={tile.index}

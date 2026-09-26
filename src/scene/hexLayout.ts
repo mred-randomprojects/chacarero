@@ -2,11 +2,11 @@
  * Pure geometry for the hexagonal board ring.
  *
  * The board is a regular hexagon with a vertex pointing left and right (flat
- * top and bottom). Salida sits on the bottom-right corner and the 42 squares
+ * top and bottom). the Tranquera sits on the bottom-right corner and the 42 squares
  * run clockwise: six squares along each side, one at each of the six corners.
  *
  * Coordinates are 2D board coordinates with +y pointing "up" when the board is
- * viewed from above with Salida at the bottom-right. The scene maps them onto
+ * viewed from above with the Tranquera at the bottom-right. The scene maps them onto
  * the XZ plane (see Board.tsx).
  */
 

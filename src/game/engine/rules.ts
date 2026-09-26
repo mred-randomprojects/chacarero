@@ -20,7 +20,7 @@ export function deedsOwnedBy(state: GameState, playerId: string): readonly DeedI
   return DEEDS.filter((d) => state.holdings[d.id]?.ownerId === playerId).map((d) => d.id);
 }
 
-/** The player owning every zone of a province, if any. */
+/** The player owning every campo of a province, if any. */
 export function provinceOwner(state: GameState, province: Province): string | null {
   const campos = camposOf(province);
   const first = campos[0];
@@ -51,8 +51,8 @@ export function rentFor(state: GameState, deedId: DeedId, visitorId: string, dic
       if (holding.chacras > 0) return deed.rent.chacras[holding.chacras - 1] ?? deed.rent.campo;
       return deed.rent.campo;
     }
-    case "ferrocarril": {
-      const owned = deedsOwnedBy(state, owner.id).filter((id) => getDeed(id).kind === "ferrocarril").length;
+    case "ruta": {
+      const owned = deedsOwnedBy(state, owner.id).filter((id) => getDeed(id).kind === "ruta").length;
       return deed.rentByCount[Math.min(owned, 4) - 1] ?? 0;
     }
     case "compania": {
@@ -79,13 +79,13 @@ export function canBuildChacra(state: GameState, player: Player, deedId: DeedId)
   const owned = ownedCampo(state, player, deedId);
   if (!owned.ok) return owned;
   const { deed, holding } = owned;
-  if (provinceOwner(state, deed.province) !== player.id) return fail("Necesitás todas las zonas de la provincia");
+  if (provinceOwner(state, deed.province) !== player.id) return fail("Necesitás todos los campos de la provincia");
   if (holding.estancia) return fail("Ya tiene una estancia");
   if (holding.chacras >= MAX_CHACRAS_PER_CAMPO) return fail("Ya tiene 4 chacras; construí una estancia");
   const siblings = camposOf(deed.province);
-  if (siblings.some((c) => state.holdings[c.id]?.mortgaged)) return fail("Hay una zona hipotecada en la provincia");
+  if (siblings.some((c) => state.holdings[c.id]?.mortgaged)) return fail("Hay un campo hipotecado en la provincia");
   const lowest = Math.min(...siblings.map((c) => buildLevel(state.holdings[c.id])));
-  if (holding.chacras > lowest) return fail("Construí parejo: primero las otras zonas");
+  if (holding.chacras > lowest) return fail("Construí parejo: primero los otros campos");
   if (player.cash < deed.chacraCost) return fail("No te alcanza la plata");
   return OK;
 }
@@ -99,7 +99,7 @@ export function canBuildEstancia(state: GameState, player: Player, deedId: DeedI
   if (holding.chacras < MAX_CHACRAS_PER_CAMPO) return fail("Necesitás 4 chacras primero");
   const siblings = camposOf(deed.province);
   const lowest = Math.min(...siblings.map((c) => buildLevel(state.holdings[c.id])));
-  if (lowest < MAX_CHACRAS_PER_CAMPO) return fail("Construí parejo: las otras zonas necesitan 4 chacras");
+  if (lowest < MAX_CHACRAS_PER_CAMPO) return fail("Construí parejo: los otros campos necesitan 4 chacras");
   if (player.cash < deed.estanciaCost) return fail("No te alcanza la plata");
   return OK;
 }
@@ -112,7 +112,7 @@ export function canSellBuilding(state: GameState, player: Player, deedId: DeedId
   if (!holding.estancia && holding.chacras === 0) return fail("No hay nada construido");
   const siblings = camposOf(deed.province);
   const highest = Math.max(...siblings.map((c) => buildLevel(state.holdings[c.id])));
-  if (buildLevel(holding) < highest) return fail("Vendé parejo: primero las zonas con más construido");
+  if (buildLevel(holding) < highest) return fail("Vendé parejo: primero los campos con más construido");
   return OK;
 }
 

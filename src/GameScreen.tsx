@@ -63,7 +63,7 @@ interface Flight {
 
 /** The turn-to-turn flight: long enough to read as a swoop from one pawn to the next. */
 const TURN_FLIGHT_SECONDS = 1.5;
-/** When a Suerte/Destino card rises: at least this much further back, and far enough that a card
+/** When a Suerte/Yeta card rises: at least this much further back, and far enough that a card
  * held `CARD_AHEAD` units in front of the camera (see Effects) floats above `CARD_CLEARANCE`. */
 const CARD_BACK_OFF = 1.35;
 const CARD_AHEAD = 9;
@@ -234,7 +234,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
    * and comes back to it whenever a replay ends and the table waits for the
    * next decision — after paying, buying, an auction, a trade. Nothing flies
    * when the camera already stands there (the opening throws all happen at
-   * Salida; a landing was just framed).
+   * the Tranquera; a landing was just framed).
    */
   const currentPlayerId = currentPlayer(game).id;
   const shownPlayerId = shownPlayer.id;
@@ -304,7 +304,7 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
   const offeredDeed = view.deedOnOffer;
 
   // The pawn stopped: settle the camera on that square before the landing is announced —
-  // unless the pawn is about to move again (marched to jail from Marche preso: the wide
+  // unless the pawn is about to move again (marched to jail from ¡En cana!: the wide
   // shot of the leap comes next) or just leapt (the wide shot holds until the jail lean-in).
   const onPawnArrive = useCallback(
     (pawnId: string, square: number) => {

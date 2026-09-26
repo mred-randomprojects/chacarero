@@ -104,7 +104,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className="prompt jail">
           <h3>
-            <TokenIcon token={player.token} size={20} /> {player.name} está preso en la Comisaría
+            <TokenIcon token={player.token} size={20} /> {player.name} está preso en el Destacamento
           </h3>
           <p>
             Pagá la fianza y jugá el turno normal, o tirá los dados: con doble salís
@@ -162,9 +162,9 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className={`prompt ${phase.deck}`}>
           <h3>
-            <TokenIcon token={player.token} size={20} /> {player.name} cayó en {suerte ? "Suerte" : "Destino"}
+            <TokenIcon token={player.token} size={20} /> {player.name} cayó en {suerte ? "Suerte" : "Yeta"}
           </h3>
-          <p>{suerte ? "Hay que levantar la primera tarjeta del mazo de Suerte." : "Hay que levantar la primera tarjeta del mazo de Destino."}</p>
+          <p>{suerte ? "Hay que levantar la primera tarjeta del mazo de Suerte." : "Hay que levantar la primera tarjeta del mazo de Yeta. A veces se zafa."}</p>
           {mine(action) ? (
             <div className="buttons">
               <button type="button" className="primary" onClick={() => dispatch(action)}>
@@ -189,7 +189,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
       return (
         <div className={`prompt ${card.deck}`}>
           <h3>
-            <TokenIcon token={player.token} size={20} /> {card.deck === "suerte" ? "Suerte" : "Destino"}
+            <TokenIcon token={player.token} size={20} /> {card.deck === "suerte" ? "Suerte" : "Yeta"}
           </h3>
           <p className="card-text">{card.text}</p>
           {mine(action) ? (
@@ -213,7 +213,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
     case "awaitingBuyDecision": {
       const deed = getDeed(phase.deedId);
       const action: ActionRequest = { type: "buy" };
-      const kind = deed.kind === "campo" ? "Este campo" : deed.kind === "ferrocarril" ? "Este ferrocarril" : "Esta compañía";
+      const kind = deed.kind === "campo" ? "Este campo" : deed.kind === "ruta" ? "Esta ruta" : "Esta compañía";
       return (
         <div className="prompt deed-offer" style={{ "--band": bandColor(deed) } as CSSProperties}>
           <div className="deed-offer-band" />
@@ -273,7 +273,7 @@ function PromptCard({ state, you, deadline, dispatch, onNewGame, onManage, onTra
                 Pagar {pesos(phase.amount)} <Key k="p" />
               </button>
               <button type="button" onClick={() => dispatch({ type: "chooseDraw" })}>
-                Levantar {phase.deck === "suerte" ? "Suerte" : "Destino"} <Key k="e" />
+                Levantar {phase.deck === "suerte" ? "Suerte" : "Yeta"} <Key k="e" />
               </button>
               {canTrade && (
                 <button type="button" onClick={onTrade}>

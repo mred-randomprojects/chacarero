@@ -5,60 +5,60 @@ import { BOARD_SIZE } from "./constants";
 export const CORNER_INDICES = [0, 7, 14, 21, 28, 35] as const;
 export const SQUARES_PER_SIDE = 7;
 
-function deed(index: number, kind: "campo" | "ferrocarril" | "compania", deedId: DeedId, name: string): Square {
+function deed(index: number, kind: "campo" | "ruta" | "compania", deedId: DeedId, name: string): Square {
   return { index, kind, deedId, name };
 }
 
 /**
- * The 42 squares of the ring, clockwise from Salida. Corner squares are every
- * 7th index. Numbering matches the digits printed on the physical board.
+ * The 42 squares of the ring, clockwise from the Tranquera. Corner squares are
+ * every 7th index.
  */
 export const SQUARES: readonly Square[] = [
-  { index: 0, kind: "salida", name: "Salida" },
-  deed(1, "campo", "formosa-sur", "Formosa · Zona Sur"),
-  deed(2, "campo", "formosa-centro", "Formosa · Zona Centro"),
-  deed(3, "campo", "formosa-norte", "Formosa · Zona Norte"),
-  { index: 4, kind: "impuesto", name: "Impuesto a los réditos", amount: -5_000 },
-  deed(5, "campo", "rioNegro-sur", "Río Negro · Zona Sur"),
-  deed(6, "campo", "rioNegro-norte", "Río Negro · Zona Norte"),
-  { index: 7, kind: "premio", name: "Premio ganadero", amount: 2_500 },
-  deed(8, "compania", "petrolera", "Compañía Petrolera"),
-  deed(9, "campo", "salta-sur", "Salta · Zona Sur"),
-  { index: 10, kind: "destino", name: "Destino" },
-  deed(11, "campo", "salta-centro", "Salta · Zona Centro"),
-  deed(12, "ferrocarril", "fc-belgrano", "F.C. General Belgrano"),
-  deed(13, "campo", "salta-norte", "Salta · Zona Norte"),
-  { index: 14, kind: "comisaria", name: "Comisaría" },
-  { index: 15, kind: "suerte", name: "Suerte" },
-  deed(16, "compania", "bodega", "Bodega"),
-  deed(17, "campo", "mendoza-sur", "Mendoza · Zona Sur"),
-  deed(18, "ferrocarril", "fc-sanMartin", "F.C. General San Martín"),
-  deed(19, "campo", "mendoza-centro", "Mendoza · Zona Centro"),
-  deed(20, "campo", "mendoza-norte", "Mendoza · Zona Norte"),
-  { index: 21, kind: "descanso", name: "Descanso" },
-  deed(22, "ferrocarril", "fc-mitre", "F.C. General B. Mitre"),
-  deed(23, "campo", "santaFe-sur", "Santa Fe · Zona Sur"),
-  deed(24, "campo", "santaFe-centro", "Santa Fe · Zona Centro"),
-  { index: 25, kind: "destino", name: "Destino" },
-  deed(26, "campo", "santaFe-norte", "Santa Fe · Zona Norte"),
-  deed(27, "ferrocarril", "fc-urquiza", "F.C. General Urquiza"),
-  { index: 28, kind: "libreEstacionamiento", name: "Libre estacionamiento" },
-  deed(29, "campo", "tucuman-sur", "Tucumán · Zona Sur"),
-  deed(30, "campo", "tucuman-norte", "Tucumán · Zona Norte"),
-  deed(31, "compania", "ingenio", "Ingenio"),
-  deed(32, "campo", "cordoba-sur", "Córdoba · Zona Sur"),
-  deed(33, "campo", "cordoba-centro", "Córdoba · Zona Centro"),
-  deed(34, "campo", "cordoba-norte", "Córdoba · Zona Norte"),
-  { index: 35, kind: "marchePreso", name: "Marche preso" },
-  { index: 36, kind: "suerte", name: "Suerte" },
-  deed(37, "campo", "buenosAires-sur", "Buenos Aires · Zona Sur"),
-  { index: 38, kind: "destino", name: "Destino" },
-  deed(39, "campo", "buenosAires-centro", "Buenos Aires · Zona Centro"),
-  deed(40, "campo", "buenosAires-norte", "Buenos Aires · Zona Norte"),
-  { index: 41, kind: "impuesto", name: "Impuesto a las ventas", amount: -2_000 },
+  { index: 0, kind: "tranquera", name: "Tranquera" },
+  deed(1, "campo", "tilcara", "Tilcara"),
+  deed(2, "campo", "humahuaca", "Humahuaca"),
+  deed(3, "campo", "purmamarca", "Purmamarca"),
+  { index: 4, kind: "impuesto", name: "Retenciones", amount: -5_000 },
+  deed(5, "campo", "posadas", "Posadas"),
+  deed(6, "campo", "puertoIguazu", "Puerto Iguazú"),
+  { index: 7, kind: "premio", name: "Cosecha récord", amount: 2_500 },
+  deed(8, "compania", "tambo", "Tambo"),
+  deed(9, "campo", "cachi", "Cachi"),
+  { index: 10, kind: "suerte", name: "Suerte" },
+  deed(11, "campo", "cafayate", "Cafayate"),
+  deed(12, "ruta", "ruta9", "Ruta 9"),
+  deed(13, "campo", "saltaCapital", "Salta"),
+  { index: 14, kind: "destacamento", name: "Destacamento" },
+  { index: 15, kind: "yeta", name: "Yeta" },
+  deed(16, "compania", "frigorifico", "Frigorífico"),
+  deed(17, "campo", "trelew", "Trelew"),
+  deed(18, "ruta", "ruta3", "Ruta 3"),
+  deed(19, "campo", "esquel", "Esquel"),
+  deed(20, "campo", "puertoMadryn", "Puerto Madryn"),
+  { index: 21, kind: "siesta", name: "Siesta" },
+  deed(22, "ruta", "ruta7", "Ruta 7"),
+  deed(23, "campo", "malargue", "Malargüe"),
+  deed(24, "campo", "sanRafael", "San Rafael"),
+  { index: 25, kind: "suerte", name: "Suerte" },
+  deed(26, "campo", "mendozaCapital", "Mendoza"),
+  deed(27, "ruta", "ruta40", "Ruta 40"),
+  { index: 28, kind: "mateada", name: "Mateada" },
+  deed(29, "campo", "elBolson", "El Bolsón"),
+  deed(30, "campo", "bariloche", "Bariloche"),
+  deed(31, "compania", "cerealera", "Cerealera"),
+  deed(32, "campo", "villaGeneralBelgrano", "Villa General Belgrano"),
+  deed(33, "campo", "carlosPaz", "Villa Carlos Paz"),
+  deed(34, "campo", "cordobaCapital", "Córdoba"),
+  { index: 35, kind: "enCana", name: "¡En cana!" },
+  { index: 36, kind: "yeta", name: "Yeta" },
+  deed(37, "campo", "areco", "San Antonio de Areco"),
+  { index: 38, kind: "suerte", name: "Suerte" },
+  deed(39, "campo", "tandil", "Tandil"),
+  deed(40, "campo", "marDelPlata", "Mar del Plata"),
+  { index: 41, kind: "impuesto", name: "Ingresos Brutos", amount: -2_000 },
 ];
 
-/** Index of the Comisaría, where "Marche preso" sends you. */
+/** Index of the Destacamento, where "¡En cana!" sends you. */
 export const JAIL_INDEX = 14;
 
 /**
@@ -78,10 +78,10 @@ export function isCorner(index: number): boolean {
 }
 
 /**
- * Number of Salida crossings when moving forward `steps` from `from`.
- * Landing exactly on Salida counts as a crossing (the bonus is paid either way).
+ * Number of Tranquera crossings when moving forward `steps` from `from`.
+ * Landing exactly on the Tranquera counts as a crossing (the bonus is paid either way).
  */
-export function salidaCrossings(from: number, steps: number): number {
+export function tranqueraCrossings(from: number, steps: number): number {
   if (steps <= 0) return 0;
   return Math.floor((from + steps) / BOARD_SIZE);
 }

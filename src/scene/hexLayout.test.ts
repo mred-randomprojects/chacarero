@@ -52,26 +52,26 @@ describe("computeHexLayout", () => {
     expect(tilesArea).toBeCloseTo(ringArea, 6);
   });
 
-  it("puts Salida at the bottom-right and numbers squares clockwise", () => {
-    const salida = layout.tiles[0];
-    const formosaSur = layout.tiles[1];
-    const premio = layout.tiles[7];
-    const comisaria = layout.tiles[14];
-    const descanso = layout.tiles[21];
-    const libre = layout.tiles[28];
-    const preso = layout.tiles[35];
-    expect(salida?.center.x).toBeGreaterThan(0);
-    expect(salida?.center.y).toBeLessThan(0);
-    expect(formosaSur?.center.x).toBeLessThan(salida?.center.x ?? 0);
-    expect(premio?.center.x).toBeLessThan(0);
-    expect(premio?.center.y).toBeLessThan(0);
-    expect(comisaria?.center.y).toBeCloseTo(0, 6);
-    expect(comisaria?.center.x).toBeLessThan(0);
-    expect(descanso?.center.y).toBeGreaterThan(0);
-    expect(libre?.center.x).toBeGreaterThan(0);
-    expect(libre?.center.y).toBeGreaterThan(0);
-    expect(preso?.center.y).toBeCloseTo(0, 6);
-    expect(preso?.center.x).toBeGreaterThan(0);
+  it("puts the Tranquera at the bottom-right and numbers squares clockwise", () => {
+    const tranquera = layout.tiles[0];
+    const tilcara = layout.tiles[1];
+    const cosecha = layout.tiles[7];
+    const destacamento = layout.tiles[14];
+    const siesta = layout.tiles[21];
+    const mateada = layout.tiles[28];
+    const enCana = layout.tiles[35];
+    expect(tranquera?.center.x).toBeGreaterThan(0);
+    expect(tranquera?.center.y).toBeLessThan(0);
+    expect(tilcara?.center.x).toBeLessThan(tranquera?.center.x ?? 0);
+    expect(cosecha?.center.x).toBeLessThan(0);
+    expect(cosecha?.center.y).toBeLessThan(0);
+    expect(destacamento?.center.y).toBeCloseTo(0, 6);
+    expect(destacamento?.center.x).toBeLessThan(0);
+    expect(siesta?.center.y).toBeGreaterThan(0);
+    expect(mateada?.center.x).toBeGreaterThan(0);
+    expect(mateada?.center.y).toBeGreaterThan(0);
+    expect(enCana?.center.y).toBeCloseTo(0, 6);
+    expect(enCana?.center.x).toBeGreaterThan(0);
   });
 
   it("orients every tile's up vector towards the board centre", () => {

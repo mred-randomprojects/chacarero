@@ -271,11 +271,11 @@ button.danger {
 }
 
 .card.suerte {
-  background: #e8891c;
+  background: #2a7fb8;
 }
 
-.card.destino {
-  background: #1f7a3a;
+.card.yeta {
+  background: #9a2c3e;
 }
 
 .card-title {
@@ -959,11 +959,11 @@ button.danger {
 }
 
 .prompt.suerte {
-  border-left-color: #e8891c;
+  border-left-color: #2a7fb8;
 }
 
-.prompt.destino {
-  border-left-color: #1f7a3a;
+.prompt.yeta {
+  border-left-color: #9a2c3e;
 }
 
 .quick-actions {

@@ -1,4 +1,4 @@
-import type { DeedId, Party } from "../game";
+import type { Deck, DeedId, Party } from "../game";
 
 /** One-off animations the UI asks the scene to play. */
 export type SceneEffect =
@@ -6,7 +6,7 @@ export type SceneEffect =
   | { readonly kind: "deed"; readonly deedId: DeedId; readonly from: Party; readonly to: Party }
   | { readonly kind: "building"; readonly deedId: DeedId; readonly chacras: number; readonly estancia: boolean; readonly removed: boolean }
   /** The card drawn at this step rises from its deck; resolves once it faces the viewer. (What is on the table is a prop of Effects.) */
-  | { readonly kind: "revealCard"; readonly deck: "suerte" | "destino"; readonly cardId: string; readonly playerId: string };
+  | { readonly kind: "revealCard"; readonly deck: Deck; readonly cardId: string; readonly playerId: string };
 
 export interface ActiveEffect {
   readonly id: number;

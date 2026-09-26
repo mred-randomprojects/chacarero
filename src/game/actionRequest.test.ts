@@ -17,40 +17,40 @@ describe("allowedPlayerFor", () => {
     expect(allowedPlayerFor(state, { type: "buy" })).toBeNull();
     state = decline(roll(state, undefined, [1, 2]));
     expect(allowedPlayerFor(state, { type: "bid", amount: 100 })).toBe("b");
-    expect(allowedPlayerFor(state, { type: "mortgage", deedId: "formosa-sur" })).toBeNull();
+    expect(allowedPlayerFor(state, { type: "mortgage", deedId: "tilcara" })).toBeNull();
   });
 
   it("lets the debtor act during someone else's turn", () => {
     let state = createGame({ players, openingRoll: false, random: () => 0.5 });
-    state = { ...state, holdings: { "formosa-norte": { ownerId: "b", chacras: 0, estancia: true, mortgaged: false } }, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 10 } : p)) };
+    state = { ...state, holdings: { "purmamarca": { ownerId: "b", chacras: 0, estancia: true, mortgaged: false } }, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 10 } : p)) };
     state = roll(state, undefined, [1, 2]);
     expect(state.phase.type).toBe("awaitingPayment");
     expect(allowedPlayerFor(state, { type: "settlePayment" })).toBe("a");
-    expect(allowedPlayerFor(state, { type: "sellBuilding", deedId: "formosa-sur" })).toBe("a");
+    expect(allowedPlayerFor(state, { type: "sellBuilding", deedId: "tilcara" })).toBe("a");
   });
 });
 
 describe("trades", () => {
-  const offer = { deeds: ["salta-sur" as const], cash: 0 };
+  const offer = { deeds: ["cachi" as const], cash: 0 };
   const nothing = { deeds: [], cash: 500 };
 
   function pending(): GameState {
-    const state: GameState = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const state: GameState = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
     return proposeTrade(state, "b", offer, nothing);
   }
 
   it("lets the player who must act propose, and only the two parties answer", () => {
-    const start = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
+    const start = { ...createGame({ players, openingRoll: false, random: () => 0.5 }), holdings: { "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } };
     expect(allowedPlayerFor(start, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
     expect(allowedPlayerFor(start, { type: "acceptTrade" })).toBeNull();
     // Building and trading are both fine with the dice on the table; the move waits for the answer.
     const rolled = applyActionRequest(start, { type: "rollDice" }, [1, 2]);
-    expect(allowedPlayerFor(rolled, { type: "mortgage", deedId: "salta-sur" })).toBe("a");
+    expect(allowedPlayerFor(rolled, { type: "mortgage", deedId: "cachi" })).toBe("a");
     expect(allowedPlayerFor(rolled, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBe("a");
     // Never before the first turn is decided.
     const opening = createGame({ players, random: () => 0.5 });
     expect(allowedPlayerFor(opening, { type: "proposeTrade", toId: "b", gives: offer, receives: nothing })).toBeNull();
-    expect(allowedPlayerFor(opening, { type: "mortgage", deedId: "salta-sur" })).toBeNull();
+    expect(allowedPlayerFor(opening, { type: "mortgage", deedId: "cachi" })).toBeNull();
     const state = pending();
     expect(allowedPlayerFor(state, { type: "acceptTrade" })).toBe("b");
     expect(allowedPlayerFor(state, { type: "rejectTrade" })).toBe("b");
@@ -58,7 +58,7 @@ describe("trades", () => {
     expect(allowedPlayerFor(state, { type: "cancelTrade" })).toBe("a");
     // Everything else waits, including the proposer's own turn actions.
     expect(allowedPlayerFor(state, { type: "rollDice" })).toBeNull();
-    expect(allowedPlayerFor(state, { type: "mortgage", deedId: "salta-sur" })).toBeNull();
+    expect(allowedPlayerFor(state, { type: "mortgage", deedId: "cachi" })).toBeNull();
     expect(allowedPlayerFor(state, { type: "proposeTrade", toId: "c", gives: offer, receives: nothing })).toBeNull();
   });
 
@@ -69,7 +69,7 @@ describe("trades", () => {
     const resumed = applyActionRequest(state, { type: "rejectTrade" });
     expect(resumed.phase).toEqual({ type: "awaitingRoll" });
     const accepted = applyActionRequest(state, { type: "acceptTrade" });
-    expect(accepted.holdings["salta-sur"]?.ownerId).toBe("b");
+    expect(accepted.holdings["cachi"]?.ownerId).toBe("b");
     expect(accepted.players.find((p) => p.id === "a")?.cash).toBe(35_000 + 500);
   });
 });
@@ -82,9 +82,9 @@ describe("applyActionRequest", () => {
     expect(state.phase).toEqual({ type: "awaitingMove" });
     state = applyActionRequest(state, { type: "movePawn" });
     expect(state.players[0]?.position).toBe(5);
-    expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "rioNegro-sur" });
+    expect(state.phase).toEqual({ type: "awaitingBuyDecision", deedId: "posadas" });
     state = applyActionRequest(state, { type: "buy" });
-    expect(state.holdings["rioNegro-sur"]?.ownerId).toBe("a");
+    expect(state.holdings["posadas"]?.ownerId).toBe("a");
   });
 });
 
@@ -127,10 +127,10 @@ describe("timing", () => {
     state = {
       ...state,
       holdings: {
-        "formosa-norte": { ownerId: "b", chacras: 0, estancia: true, mortgaged: false },
-        "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false },
-        "salta-centro": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false },
-        "salta-norte": { ownerId: "a", chacras: 2, estancia: false, mortgaged: false },
+        "purmamarca": { ownerId: "b", chacras: 0, estancia: true, mortgaged: false },
+        "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false },
+        "cafayate": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false },
+        "saltaCapital": { ownerId: "a", chacras: 2, estancia: false, mortgaged: false },
       },
       players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 7_000 } : p)),
     };
@@ -139,7 +139,7 @@ describe("timing", () => {
     const resolved = autoResolveDebt(state);
     expect(resolved.phase.type).not.toBe("awaitingPayment");
     expect(resolved.players[1]?.cash).toBe(35_000 + 9_500);
-    const broke = { ...state, holdings: { "formosa-norte": state.holdings["formosa-norte"] } as typeof state.holdings, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 10 } : p)) };
+    const broke = { ...state, holdings: { "purmamarca": state.holdings["purmamarca"] } as typeof state.holdings, players: state.players.map((p) => (p.id === "a" ? { ...p, cash: 10 } : p)) };
     const bust = autoResolveDebt(broke);
     expect(bust.players[0]?.bankrupt).toBe(true);
   });
@@ -164,7 +164,7 @@ describe("primaryAction (Space/Enter)", () => {
     state = applyActionRequest(applyActionRequest(applyActionRequest(state, { type: "passBid" }), { type: "passBid" }), { type: "passBid" });
     expect(state.phase).toEqual({ type: "turnEnd" });
     expect(primaryAction(state, "a")).toEqual({ type: "endTurn" });
-    const proposed = proposeTrade({ ...state, holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 500 });
+    const proposed = proposeTrade({ ...state, holdings: { "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["cachi"], cash: 0 }, { deeds: [], cash: 500 });
     // Nor accept a deal.
     expect(primaryAction(proposed, "b")).toBeNull();
     expect(primaryAction(proposed, "a")).toBeNull();
@@ -187,7 +187,7 @@ describe("action hotkeys", () => {
     const auction = applyActionRequest(state, { type: "decline" });
     expect(actionForKey(auction, "b", "b")).toEqual({ type: "bid", amount: 100 });
     expect(actionForKey(auction, "b", "x")).toEqual({ type: "passBid" });
-    const proposed = proposeTrade({ ...auction, phase: { type: "turnEnd" }, holdings: { "salta-sur": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["salta-sur"], cash: 0 }, { deeds: [], cash: 500 });
+    const proposed = proposeTrade({ ...auction, phase: { type: "turnEnd" }, holdings: { "cachi": { ownerId: "a", chacras: 0, estancia: false, mortgaged: false } } }, "b", { deeds: ["cachi"], cash: 0 }, { deeds: [], cash: 500 });
     expect(actionForKey(proposed, "b", "a")).toEqual({ type: "acceptTrade" });
     expect(actionForKey(proposed, "b", "x")).toEqual({ type: "rejectTrade" });
     expect(actionForKey(proposed, "a", "x")).toEqual({ type: "cancelTrade" });

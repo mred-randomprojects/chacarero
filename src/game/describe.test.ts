@@ -21,18 +21,18 @@ describe("describeSquare", () => {
   it("quotes the amount on money squares", () => {
     expect(describeSquare({ index: 4, kind: "impuesto", name: "x", amount: -5000 })).toContain("$5.000");
     expect(describeSquare({ index: 7, kind: "premio", name: "x", amount: 2500 })).toContain("$2.500");
-    expect(describeSquare({ index: 0, kind: "salida", name: "x" })).toContain("$5.000");
+    expect(describeSquare({ index: 0, kind: "tranquera", name: "x" })).toContain("$5.000");
   });
 });
 
 describe("deedText", () => {
   it("spells out the railway and company rents with the deed's own numbers, and nothing for campos", () => {
-    const railway = deedText(getDeed("fc-belgrano"));
+    const railway = deedText(getDeed("ruta9"));
     expect(railway).toContain("$500");
     expect(railway).toContain("$1.000");
     expect(railway).toContain("$2.000");
     expect(railway).toContain("$4.000");
-    const company = deedText(getDeed("petrolera"));
+    const company = deedText(getDeed("tambo"));
     expect(company).toContain("100 veces");
     expect(company).toContain("200 veces");
     expect(company).toContain("300 veces");

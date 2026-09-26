@@ -22,7 +22,7 @@ export function yaw(tile: TileLayout): number {
 
 const DEED_SQUARES = new Map<DeedId, number>();
 for (const square of SQUARES) {
-  if (square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania") {
+  if (square.kind === "campo" || square.kind === "ruta" || square.kind === "compania") {
     DEED_SQUARES.set(square.deedId, square.index);
   }
 }

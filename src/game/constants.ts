@@ -2,11 +2,11 @@
 export const STARTING_CASH = 35_000;
 /** Starting-cash choices at setup: the rulebook's figure, and more for tables of fewer than five. */
 export const STARTING_CASH_OPTIONS = [STARTING_CASH, 50_000, 70_000] as const;
-/** Paid by the bank every time a player passes or lands on Salida. */
-export const SALIDA_BONUS = 5_000;
-/** Fine to leave the Comisaría voluntarily. */
+/** Paid by the bank every time a player passes or lands on the Tranquera. */
+export const TRANQUERA_BONUS = 5_000;
+/** Fine to leave the Destacamento voluntarily. */
 export const JAIL_BAIL = 1_000;
-/** Turns a player may wait in the Comisaría before paying. */
+/** Turns a player may wait in the Destacamento before paying. */
 export const MAX_JAIL_TURNS = 3;
 /** Fine for helping another player remember a prize. Yes, really. */
 export const HELPING_FINE = 800;
@@ -14,7 +14,7 @@ export const HELPING_FINE = 800;
 export const MORTGAGE_INTEREST = 0.1;
 /** The bank never runs out of chacras or estancias (the box's 32 and 12 are not a rule at this table). */
 export const MAX_CHACRAS_PER_CAMPO = 4;
-/** Consecutive doubles that send you to the Comisaría. */
+/** Consecutive doubles that send you to the Destacamento. */
 export const DOUBLES_TO_JAIL = 3;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;

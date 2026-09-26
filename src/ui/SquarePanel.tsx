@@ -129,10 +129,10 @@ export function SquarePanel({ state, you, square, pinned, busy, dispatch, onTrad
       </aside>
     );
   }
-  const deed = square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania" ? getDeed(square.deedId) : null;
+  const deed = square.kind === "campo" || square.kind === "ruta" || square.kind === "compania" ? getDeed(square.deedId) : null;
   const holding = deed ? state.holdings[deed.id] : undefined;
   const owner = holding ? getPlayer(state, holding.ownerId) : null;
-  const band = deed?.kind === "campo" ? PROVINCE_COLORS[deed.province] : deed?.kind === "ferrocarril" ? "#2b2b2b" : deed ? "#7a5230" : "#1f5e2e";
+  const band = deed?.kind === "campo" ? PROVINCE_COLORS[deed.province] : deed?.kind === "ruta" ? "#2b2b2b" : deed ? "#7a5230" : "#1f5e2e";
 
   return (
     <aside className={`panel${pinned ? " pinned" : ""}`}>

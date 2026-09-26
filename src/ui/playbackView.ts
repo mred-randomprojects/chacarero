@@ -16,7 +16,7 @@ export interface ViewState {
   readonly phase: Phase;
   /** Whose turn the table shows it is (lags like the phase). */
   readonly currentPlayerId: string;
-  /** Suerte/Destino card face up on the table. */
+  /** Suerte/Yeta card face up on the table. */
   readonly cardOnTable: Card | null;
   /** Deed lifted in front of everyone: on offer to the player who landed on it, or under the hammer. */
   readonly deedOnOffer: DeedId | null;

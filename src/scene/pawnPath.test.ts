@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { pawnPath, routeFor } from "./pawnPath";
 
 describe("pawnPath", () => {
-  it("walks forward one square at a time, wrapping past Salida", () => {
+  it("walks forward one square at a time, wrapping past the Tranquera", () => {
     expect(pawnPath(40, 2, "forward")).toEqual([40, 41, 0, 1, 2]);
   });
 

@@ -14,17 +14,17 @@ describe("DEEDS", () => {
     for (const deed of DEEDS) expect(deed.mortgage).toBe(deed.price / 2);
   });
 
-  it("gives Río Negro and Tucumán two zones and every other province three", () => {
+  it("gives Misiones and Río Negro two cities and every other province three", () => {
     const provinces = Object.keys(PROVINCE_NAMES) as Province[];
     for (const province of provinces) {
-      const zones = camposOf(province).map((c) => c.zone);
-      if (province === "rioNegro" || province === "tucuman") {
-        expect(zones).toEqual(["sur", "norte"]);
-      } else {
-        expect(zones).toEqual(["sur", "centro", "norte"]);
-      }
+      const cities = camposOf(province).length;
+      expect(cities).toBe(province === "misiones" || province === "rioNegro" ? 2 : 3);
       expect(PROVINCE_COLORS[province]).toMatch(/^#[0-9a-f]{6}$/);
     }
+  });
+
+  it("gives every campo its own city", () => {
+    expect(new Set(campos.map((c) => c.city)).size).toBe(campos.length);
   });
 
   it("orders provinces from cheapest to dearest", () => {
@@ -44,17 +44,17 @@ describe("DEEDS", () => {
     }
   });
 
-  it("keeps the zona norte the dearest of each province", () => {
+  it("keeps the last city the dearest of each province", () => {
     for (const province of Object.keys(PROVINCE_NAMES) as Province[]) {
-      const zones = camposOf(province);
-      const norte = zones.find((z) => z.zone === "norte");
-      for (const zone of zones) expect(norte?.price).toBeGreaterThanOrEqual(zone.price);
+      const cities = camposOf(province);
+      const last = cities[cities.length - 1];
+      for (const city of cities) expect(last?.price).toBeGreaterThanOrEqual(city.price);
     }
   });
 
-  it("prices railways and companies uniformly", () => {
+  it("prices routes and companies uniformly", () => {
     for (const deed of DEEDS) {
-      if (deed.kind === "ferrocarril") {
+      if (deed.kind === "ruta") {
         expect(deed.price).toBe(3_600);
         expect(deed.rentByCount).toEqual([500, 1_000, 2_000, 4_000]);
       }
@@ -68,8 +68,8 @@ describe("DEEDS", () => {
 
 describe("getDeed / deedName", () => {
   it("finds deeds by id and formats their names", () => {
-    expect(deedName(getDeed("formosa-sur"))).toBe("Formosa · Zona Sur");
-    expect(deedName(getDeed("fc-mitre"))).toBe("Ferrocarril General Bartolomé Mitre");
-    expect(deedName(getDeed("bodega"))).toBe("Bodega");
+    expect(deedName(getDeed("tilcara"))).toBe("Tilcara");
+    expect(deedName(getDeed("ruta7"))).toBe("Ruta 7");
+    expect(deedName(getDeed("frigorifico"))).toBe("Frigorífico");
   });
 });

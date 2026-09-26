@@ -56,7 +56,7 @@ function strip(tile: TileLayout, from: number, to: number, inset = 0.06): string
 }
 
 function bandColorOf(square: Square): string | null {
-  if (square.kind !== "campo" && square.kind !== "ferrocarril" && square.kind !== "compania") return null;
+  if (square.kind !== "campo" && square.kind !== "ruta" && square.kind !== "compania") return null;
   return bandColor(getDeed(square.deedId));
 }
 
@@ -91,7 +91,7 @@ function HexMap({ state, onSelect, onHover }: { readonly state: GameState; reado
       {layout.tiles.map((tile) => {
         const square = SQUARES[tile.index];
         if (!square) return null;
-        const deed = square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania" ? getDeed(square.deedId) : null;
+        const deed = square.kind === "campo" || square.kind === "ruta" || square.kind === "compania" ? getDeed(square.deedId) : null;
         const holding = deed ? state.holdings[deed.id] : undefined;
         const band = bandColorOf(square);
         const { min, max } = tile.localBounds;
@@ -201,7 +201,7 @@ function MapStats({ state }: { readonly state: GameState }) {
       <section>
         <h3>Mazos</h3>
         <p>
-          Suerte {state.decks.suerte.length} · Destino {state.decks.destino.length}
+          Suerte {state.decks.suerte.length} · Yeta {state.decks.yeta.length}
         </p>
       </section>
     </div>

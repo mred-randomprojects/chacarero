@@ -40,7 +40,7 @@ export function DeedDetails({ deed }: { readonly deed: Deed }) {
       </table>
     );
   }
-  if (deed.kind === "ferrocarril") {
+  if (deed.kind === "ruta") {
     return (
       <>
         <p className="deed-text">{text}</p>
@@ -49,7 +49,7 @@ export function DeedDetails({ deed }: { readonly deed: Deed }) {
             {deed.rentByCount.map((rent, i) => (
               <tr key={i}>
                 <th>
-                  Con {i + 1} {i === 0 ? "ferrocarril" : "ferrocarriles"}
+                  Con {i + 1} {i === 0 ? "ruta" : "rutas"}
                 </th>
                 <td>{pesos(rent)}</td>
               </tr>

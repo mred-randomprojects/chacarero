@@ -32,7 +32,7 @@ export interface PropertiesTableProps {
 }
 
 const SQUARE_INDEX = new Map(
-  SQUARES.flatMap((square) => (square.kind === "campo" || square.kind === "ferrocarril" || square.kind === "compania" ? [[square.deedId, square.index] as const] : [])),
+  SQUARES.flatMap((square) => (square.kind === "campo" || square.kind === "ruta" || square.kind === "compania" ? [[square.deedId, square.index] as const] : [])),
 );
 
 /** Every deed on the board, grouped by province: owner, buildings, mortgage and the rent a visitor would pay now. */
@@ -53,7 +53,7 @@ export function PropertiesTable({ state, onSelect, dispatch, you = null, busy = 
     const suffix = owner ? ` — completa: ${getPlayer(state, owner).name}` : "";
     groups.push({ label: `${PROVINCE_NAMES[province]}${suffix}`, color: PROVINCE_COLORS[province], ids });
   }
-  groups.push({ label: "Ferrocarriles", color: "#2b2b2b", ids: DEEDS.filter((d) => d.kind === "ferrocarril").map((d) => d.id) });
+  groups.push({ label: "Rutas", color: "#2b2b2b", ids: DEEDS.filter((d) => d.kind === "ruta").map((d) => d.id) });
   groups.push({ label: "Compañías", color: "#7a5230", ids: DEEDS.filter((d) => d.kind === "compania").map((d) => d.id) });
 
   return (

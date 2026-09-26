@@ -6,6 +6,14 @@ pertenece a la familia Klavins (Yetem) y está licenciada a ToyCo, así que este
 proyecto usa un nombre propio y arte propio. Las mecánicas y los números del
 juego no son protegibles y se documentan acá con sus fuentes.
 
+Desde septiembre de 2026 el tablero también es propio: ciudades reales en vez
+de zonas (con otras provincias), rutas nacionales en vez de ferrocarriles,
+otras compañías, otros nombres para los casilleros especiales y dos mazos
+nuevos, Suerte y Yeta, con textos propios. Lo que sigue documenta de dónde
+salen los **números** (precios, alquileres, hipotecas, montos de las
+tarjetas), que se mantienen; los nombres de abajo son los del juego original,
+casillero por casillero.
+
 ## Layout del tablero (42 casilleros, hexagonal)
 
 - [Wikipedia en español](https://es.wikipedia.org/wiki/Estanciero_(juego)):

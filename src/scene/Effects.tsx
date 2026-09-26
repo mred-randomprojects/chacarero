@@ -18,7 +18,7 @@ import { pace } from "../ui/pace";
 
 export interface EffectsProps {
   readonly anchors: Anchors;
-  /** Suerte/Destino card face up on the table, from the table's view. */
+  /** Suerte/Yeta card face up on the table, from the table's view. */
   readonly cardOnTable: Card | null;
 }
 
@@ -61,7 +61,7 @@ function arc(from: Vector3, to: Vector3, k: number, height: number): Vector3 {
 /**
  * Renders every animation the UI requested through the effects bus: bills and
  * deed cards flying between the bank and the seats, buildings dropping onto
- * tiles, and the face-up Suerte/Destino card hovering over the board.
+ * tiles, and the face-up Suerte/Yeta card hovering over the board.
  */
 export function Effects({ anchors, cardOnTable }: EffectsProps) {
   const [active, setActive] = useState<readonly ActiveEffect[]>([]);
@@ -301,7 +301,7 @@ function BuildingDrop({ anchors, deedId, chacras, estancia, removed, onDone }: B
   );
 }
 
-// ---------- Suerte / Destino ----------
+// ---------- Suerte / Yeta ----------
 
 interface ChanceCardProps {
   readonly card: Card;
