@@ -497,10 +497,10 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
 
 ## Batch 8 (2026-09-26): the Terrateniente identity
 
-- [ ] H1. Maxi picks one of the ten identities in
+- [x] H1. Maxi picks one of the ten identities in
       `docs/design/terrateniente-identity.html` (open it and use ← →; each
       slide shows the logo and the board centre it comes with).
-- [ ] H2. Adopt it everywhere the old one shows: the name "Chacarero" → 
+- [x] H2. Adopt it everywhere the old one shows: the name "Chacarero" →
       "Terrateniente" (page title, top bar, setup screen, rules heading),
       the logo on the felt (`createTitleTexture`), the felt itself (red
       hexagon today, `Board.tsx`), and any fonts it needs in `index.html`.
@@ -544,6 +544,19 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-26 — batch 8 shipped** (`5a91c2c`). Maxi chose #1, "Portón de
+  estancia". `src/scene/logoArt.ts` draws it with the canvas API (text on
+  the arch placed glyph by glyph along the quadratic, like SVG textLength),
+  used by `createTitleTexture` on the table (12 units wide, cream subtitle,
+  soft shadow) and by `src/ui/Logo.tsx` in the Setup, Lobby and Menu cards.
+  `drawPlankTable` + `createFeltTexture` replace the red felt (the felt's
+  ShapeGeometry UVs are board coordinates, hence repeat 1/size, offset 0.5).
+  Alfa Slab One replaces Lobster (index.html, styles, TITLE_FONT, bills).
+  Checked: the menu logo in headless Brave, and the table from three
+  cameras by rendering the live scene with a second WebGLRenderer. Kept on
+  purpose: the repo, the GitHub Pages path and the localStorage keys still
+  say "chacarero" (renaming them would break links and saved settings).
 
 - **2026-09-26 — batch 7 shipped** (`5ef4b17`). Internals renamed with the
   names, so the code reads like the board: `Province` is the new eight,
