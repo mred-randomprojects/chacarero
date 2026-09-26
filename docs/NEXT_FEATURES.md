@@ -468,6 +468,33 @@ their own turn and the table sat waiting.
       them (their turn, a bid, a trade, a debt) moves on without them. The
       replay shows it like a bankruptcy. The vote is dropped if they come back.
 
+## Batch 7 (2026-09-26): a board of our own
+
+Goal: the game is headed for Steam (see the release discussion of
+2026-09-24/26), so the board stops mirroring the original's names and set.
+Rules, numbers and the 42-square layout stay; what is printed changes.
+
+- [ ] G1. Cities instead of zones. Eight provinces, cheapest first, same group
+      sizes and prices as before; each campo is a real city, and each province
+      gets a new colour (not the original palette):
+      Jujuy (Tilcara, Humahuaca, Purmamarca) · Misiones (Posadas, Puerto
+      Iguazú) · Salta (Cachi, Cafayate, Salta) · Chubut (Trelew, Esquel, Puerto
+      Madryn) · Mendoza (Malargüe, San Rafael, Mendoza) · Río Negro (El Bolsón,
+      Bariloche) · Córdoba (Villa General Belgrano, Villa Carlos Paz, Córdoba) ·
+      Buenos Aires (San Antonio de Areco, Tandil, Mar del Plata).
+- [ ] G2. National routes instead of railways: Ruta 9 (12), Ruta 3 (18),
+      Ruta 7 (22), Ruta 40 (27). Same prices and rents.
+- [ ] G3. Companies: Tambo (8), Frigorífico (16), Cerealera (31).
+- [ ] G4. Special squares: Salida → Tranquera, Descanso → Siesta, Premio
+      ganadero → Cosecha récord, Impuesto a los réditos → Retenciones,
+      Impuesto a las ventas → Ingresos Brutos, Libre estacionamiento → Mateada,
+      Comisaría → Destacamento, Marche preso → ¡En cana! (the card says
+      "Averiguación de antecedentes").
+- [ ] G5. Decks: Suerte (horseshoe, mostly good: 13 good + 3 not) and Yeta
+      (black cat, mostly bad: 13 bad + 3 good, the "¡zafé!"). Suerte takes the
+      three squares Destino had (10, 25, 38), Yeta the two Suerte had (15, 36),
+      so the money coming into the game stays about the same. Texts rewritten.
+
 ---
 
 ## Structural analysis
