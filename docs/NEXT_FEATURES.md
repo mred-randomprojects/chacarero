@@ -474,7 +474,7 @@ Goal: the game is headed for Steam (see the release discussion of
 2026-09-24/26), so the board stops mirroring the original's names and set.
 Rules, numbers and the 42-square layout stay; what is printed changes.
 
-- [ ] G1. Cities instead of zones. Eight provinces, cheapest first, same group
+- [x] G1. Cities instead of zones. Eight provinces, cheapest first, same group
       sizes and prices as before; each campo is a real city, and each province
       gets a new colour (not the original palette):
       Jujuy (Tilcara, Humahuaca, Purmamarca) · Misiones (Posadas, Puerto
@@ -482,15 +482,15 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
       Madryn) · Mendoza (Malargüe, San Rafael, Mendoza) · Río Negro (El Bolsón,
       Bariloche) · Córdoba (Villa General Belgrano, Villa Carlos Paz, Córdoba) ·
       Buenos Aires (San Antonio de Areco, Tandil, Mar del Plata).
-- [ ] G2. National routes instead of railways: Ruta 9 (12), Ruta 3 (18),
+- [x] G2. National routes instead of railways: Ruta 9 (12), Ruta 3 (18),
       Ruta 7 (22), Ruta 40 (27). Same prices and rents.
-- [ ] G3. Companies: Tambo (8), Frigorífico (16), Cerealera (31).
-- [ ] G4. Special squares: Salida → Tranquera, Descanso → Siesta, Premio
+- [x] G3. Companies: Tambo (8), Frigorífico (16), Cerealera (31).
+- [x] G4. Special squares: Salida → Tranquera, Descanso → Siesta, Premio
       ganadero → Cosecha récord, Impuesto a los réditos → Retenciones,
       Impuesto a las ventas → Ingresos Brutos, Libre estacionamiento → Mateada,
       Comisaría → Destacamento, Marche preso → ¡En cana! (the card says
       "Averiguación de antecedentes").
-- [ ] G5. Decks: Suerte (horseshoe, mostly good: 13 good + 3 not) and Yeta
+- [x] G5. Decks: Suerte (horseshoe, mostly good: 13 good + 3 not) and Yeta
       (black cat, mostly bad: 13 bad + 3 good, the "¡zafé!"). Suerte takes the
       three squares Destino had (10, 25, 38), Yeta the two Suerte had (15, 36),
       so the money coming into the game stays about the same. Texts rewritten.
@@ -534,6 +534,23 @@ Order of work (each step is one or more commits, each pushed to `main`):
 ## Progress
 
 Newest entry first. Each entry names the commit(s) so the next agent can `git log`.
+
+- **2026-09-26 — batch 7 shipped** (`5ef4b17`). Internals renamed with the
+  names, so the code reads like the board: `Province` is the new eight,
+  `Zone` is gone (a campo has `city`), deed ids are the cities
+  (`saltaCapital`, `mendozaCapital`, `cordobaCapital` where the city shares
+  the province's name), `ferrocarril` → `ruta`, `Deck` is `suerte | yeta`,
+  square kinds `tranquera/destacamento/siesta/mateada/enCana`,
+  `TRANQUERA_BONUS`, `tranqueraCrossings`, `collectTranquera`. Deck art lives
+  in `src/scene/deckArt.ts` (colours + horseshoe and cat as SVG paths drawn
+  with Path2D). Long city names wrap on the tiles; the deed grid shortens a
+  few (Iguazú, Madryn, V. G. Belgrano, Carlos Paz, Areco, Mardel). Tests:
+  ids remapped by board position; card tests now put each card in its own
+  deck and land on a square of that deck; new tests for the 13/3 split and
+  one city per campo. Checked in the browser: every tile kind, both slots,
+  card faces and backs, deed cards, Catastro grid. Not done (not asked):
+  the game is still titled "Chacarero" (logo, felt, page title, rules
+  heading); the red hexagonal felt and the red script logo are unchanged.
 
 - **2026-09-24 — batch 6 shipped** (`cb1182a` clocks, `d41169c` shared trade,
   `c250f44` vote). F1: `GameState.clock { decisionSeconds, rollSeconds }`
