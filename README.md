@@ -1,7 +1,8 @@
-# Chacarero
+# Terrateniente
 
-El clásico juego argentino de compra-venta de campos, con tablero hexagonal
-de 42 casilleros, en una escena Three.js.
+Un juego de campo argentino de compra-venta de campos, con tablero hexagonal
+de 42 casilleros, en una escena Three.js. (Hasta septiembre de 2026 se llamó
+Chacarero; el repo conserva ese nombre.)
 
 **Demo:** https://mred-randomprojects.github.io/chacarero/
 

@@ -1,6 +1,6 @@
 # Guidelines
 
-The rules Maxi set for how Chacarero should feel and how it should be built.
+The rules Maxi set for how Terrateniente (formerly Chacarero) should feel and how it should be built.
 Read them before adding anything. They are ordered by how often they decide
 things.
 

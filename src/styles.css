@@ -3,6 +3,7 @@
   --ink: #1d1a17;
   --muted: #4a443c;
   --red: #c8261f;
+  --walnut: #4a2e1c;
   --green: #1f5e2e;
   --gold: #f2c21c;
   --panel: rgba(247, 242, 228, 0.96);
@@ -42,10 +43,10 @@ body {
 
 h1 {
   margin: 0;
-  font-family: "Lobster", Georgia, serif;
+  font-family: "Alfa Slab One", Georgia, serif;
   font-weight: 400;
-  font-size: 2.2rem;
-  color: var(--red);
+  font-size: 2rem;
+  color: var(--walnut);
   line-height: 1;
 }
 
@@ -107,8 +108,15 @@ button.danger {
   box-shadow: var(--shadow);
 }
 
-.setup-card h1 {
-  font-size: 3rem;
+.setup-card h1.logo-title {
+  display: flex;
+  justify-content: center;
+  margin: -4px 0 4px;
+}
+
+.logo {
+  display: block;
+  max-width: 100%;
 }
 
 .setup .tagline,
@@ -1298,7 +1306,7 @@ button.link {
 }
 
 .top-bar h1 {
-  font-size: 1.7rem;
+  font-size: 1.35rem;
 }
 
 .top-meta {
@@ -1918,9 +1926,9 @@ button.link {
 .trade-header h2 {
   margin: 0;
   flex: 1;
-  font-family: "Lobster", Georgia, serif;
+  font-family: "Alfa Slab One", Georgia, serif;
   font-weight: 400;
-  font-size: 2rem;
+  font-size: 1.6rem;
   color: var(--gold);
 }
 
@@ -2385,9 +2393,9 @@ button.link {
 
 .trade-outcome h2 {
   margin: 8px 0 0;
-  font-family: "Lobster", Georgia, serif;
+  font-family: "Alfa Slab One", Georgia, serif;
   font-weight: 400;
-  font-size: 2.4rem;
+  font-size: 1.9rem;
   color: var(--green);
 }
 
@@ -2447,8 +2455,8 @@ button.link {
   transform: translateX(-50%);
   z-index: 8;
   padding: 6px 26px;
-  font-family: "Lobster", Georgia, serif;
-  font-size: 4rem;
+  font-family: "Alfa Slab One", Georgia, serif;
+  font-size: 3.2rem;
   color: var(--gold);
   text-shadow: 0 0 18px rgba(242, 194, 28, 0.8), 0 4px 10px rgba(0, 0, 0, 0.6);
   pointer-events: none;

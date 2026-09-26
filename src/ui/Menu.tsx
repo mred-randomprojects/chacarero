@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Logo } from "./Logo";
 
 export interface MenuProps {
   readonly savedName: string;
@@ -22,7 +23,9 @@ export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFo
   return (
     <div className="setup">
       <div className="setup-card">
-        <h1>Chacarero</h1>
+        <h1 className="logo-title">
+          <Logo width={400} />
+        </h1>
         <p className="tagline">El juego de campo argentino. Comprá provincias, poblalas de chacras y fundí a los demás.</p>
         {onlineAvailable ? (
           <>

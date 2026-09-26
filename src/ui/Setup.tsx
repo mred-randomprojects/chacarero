@@ -3,6 +3,7 @@ import type { GameSetup, NewPlayer, TokenId } from "../game";
 import { DEFAULT_SETUP, MAX_PLAYERS, MIN_PLAYERS, TOKEN_IDS } from "../game";
 import { GameSetupFields } from "./GameSetupFields";
 import { TokenIcon, TokenPicker } from "./TokenIcon";
+import { Logo } from "./Logo";
 
 export interface SetupProps {
   readonly onStart: (players: readonly NewPlayer[], setup: GameSetup) => void;
@@ -41,7 +42,9 @@ export function Setup({ onStart, onBack, noClock, onNoClock }: SetupProps) {
   return (
     <div className="setup">
       <div className="setup-card">
-        <h1>Chacarero</h1>
+        <h1 className="logo-title">
+          <Logo width={400} />
+        </h1>
         <p className="tagline">El juego de campo argentino. Comprá provincias, poblalas de chacras y fundí a los demás.</p>
         <label className="count">
           Jugadores

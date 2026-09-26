@@ -12,7 +12,8 @@ import { Pawn } from "./Pawn";
 import { PlayerArea } from "./PlayerArea";
 import { seatFrame } from "./seats";
 import { Tile } from "./Tile";
-import { createBankTexture, createSlotTexture, createTitleTexture } from "./tileTexture";
+import { LOGO_H, LOGO_W } from "./logoArt";
+import { createBankTexture, createFeltTexture, createSlotTexture, createTitleTexture } from "./tileTexture";
 
 export const BOARD_LAYOUT: HexLayout = computeHexLayout({ innerRadius: 10, tileDepth: 2.4, cornerExtension: 0.9 });
 
@@ -24,6 +25,8 @@ export const TABLE_RADIUS = 23;
 const FELT_Y = 0.01;
 const TILE_Y = 0.02;
 const DECOR_Y = 0.03;
+/** Width of the logo on the table, in board units (it keeps clear of the card slots and the bank). */
+const TITLE_WIDTH = 12;
 const PAWN_Y = TILE_Y;
 
 /** Upright mesh rotation that lays a Shape drawn in board coordinates flat on the XZ plane. */
@@ -67,7 +70,7 @@ function toShape(points: readonly Vec2[]): Shape {
 }
 
 /**
- * The whole table: a bevelled slab, the felt centre with the title and card
+ * The whole table: a bevelled slab, the plank centre with the logo and card
  * slots, the 42 tiles and the pawns. Board coordinates map to XZ with +y (board)
  * towards -z (world), so the Tranquera ends up at the bottom-right from the default camera.
  */
@@ -86,7 +89,11 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
     });
   }, [layout]);
   const feltGeometry = useMemo(() => new ShapeGeometry(toShape(layout.innerHexagon)), [layout]);
-  const titleTexture = useMemo(() => createTitleTexture(14, 4.4), []);
+  const titleTexture = useMemo(() => createTitleTexture(TITLE_WIDTH), []);
+  const feltTexture = useMemo(() => {
+    const extent = Math.max(...layout.innerHexagon.map((p) => Math.max(Math.abs(p.x), Math.abs(p.y))));
+    return createFeltTexture(2 * extent);
+  }, [layout]);
   const suerteTexture = useMemo(() => createSlotTexture("suerte"), []);
   const yetaTexture = useMemo(() => createSlotTexture("yeta"), []);
   const bankTexture = useMemo(() => createBankTexture(), []);
@@ -96,11 +103,12 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
       slabGeometry.dispose();
       feltGeometry.dispose();
       titleTexture.dispose();
+      feltTexture.dispose();
       suerteTexture.dispose();
       yetaTexture.dispose();
       bankTexture.dispose();
     },
-    [slabGeometry, feltGeometry, titleTexture, suerteTexture, yetaTexture, bankTexture],
+    [slabGeometry, feltGeometry, titleTexture, feltTexture, suerteTexture, yetaTexture, bankTexture],
   );
 
   return (
@@ -133,12 +141,12 @@ export function Board({ hovered, selected, path, onHover, onSelect, onFocus, paw
       </mesh>
 
       <mesh geometry={feltGeometry} rotation={FLAT} position={[0, FELT_Y, 0]} receiveShadow>
-        <meshStandardMaterial color="#b3261e" roughness={1} />
+        <meshStandardMaterial map={feltTexture} roughness={0.85} />
       </mesh>
 
       <mesh rotation={FLAT} position={[0, DECOR_Y, 0]}>
-        <planeGeometry args={[14, 4.4]} />
-        <meshStandardMaterial map={titleTexture} transparent roughness={1} />
+        <planeGeometry args={[TITLE_WIDTH, (TITLE_WIDTH * LOGO_H) / LOGO_W]} />
+        <meshStandardMaterial map={titleTexture} transparent roughness={0.9} />
       </mesh>
       <mesh rotation={FLAT} position={[-4.6, DECOR_Y, -4.2]}>
         <planeGeometry args={[3.2, 2]} />

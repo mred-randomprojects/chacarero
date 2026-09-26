@@ -16,7 +16,7 @@ export interface TopBarProps {
 export function TopBar({ state, roomCode, connection, onShowList, onTrade, onSettings, onLeave }: TopBarProps) {
   return (
     <div className="top-bar">
-      <h1>Chacarero</h1>
+      <h1>Terrateniente</h1>
       <span className="top-meta">
         {roomCode && (
           <>

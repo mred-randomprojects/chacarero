@@ -1,6 +1,6 @@
-# Reglas de Chacarero
+# Reglas de Terrateniente
 
-Chacarero es un juego de compra-venta de campos para 2 a 6 jugadores. Se gana
+Terrateniente es un juego de compra-venta de campos para 2 a 6 jugadores. Se gana
 siendo el último que queda sin quebrar. Estas reglas describen el juego tal
 como lo implementa este repo; son una reescritura propia del reglamento
 tradicional (ver [FUENTES.md](FUENTES.md)).

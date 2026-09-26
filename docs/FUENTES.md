@@ -1,8 +1,8 @@
 # Fuentes de los datos
 
-Chacarero es una reimplementación del clásico juego argentino de compra-venta
-de campos. Ni el nombre ni el arte original se usan: la marca *El Estanciero*
-pertenece a la familia Klavins (Yetem) y está licenciada a ToyCo, así que este
+Terrateniente (antes Chacarero) es una reimplementación del clásico juego
+argentino de compra-venta de campos. Ni el nombre ni el arte original se
+usan: la marca *El Estanciero* pertenece a la familia Klavins (Yetem) y está licenciada a ToyCo, así que este
 proyecto usa un nombre propio y arte propio. Las mecánicas y los números del
 juego no son protegibles y se documentan acá con sus fuentes.
 

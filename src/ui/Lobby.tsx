@@ -5,6 +5,7 @@ import type { RoomView } from "../net/protocol";
 import { inviteLink } from "../net/identity";
 import { GameSetupFields } from "./GameSetupFields";
 import { TokenIcon, TokenPicker } from "./TokenIcon";
+import { Logo } from "./Logo";
 
 export interface LobbyProps {
   readonly room: RoomView;
@@ -41,7 +42,9 @@ export function Lobby({ room, you, connection, onStart, onRename, onChooseToken,
   return (
     <div className="setup">
       <div className="setup-card lobby">
-        <h1>Chacarero</h1>
+        <h1 className="logo-title">
+          <Logo width={400} />
+        </h1>
         <p className="tagline">
           Mesa <strong className="code">{room.code}</strong>
           {connection !== "open" && <span className="offline"> · {connection === "connecting" ? "reconectando…" : "sin conexión"}</span>}

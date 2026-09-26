@@ -2,6 +2,7 @@ import { CanvasTexture, SRGBColorSpace } from "three";
 import type { Deck, Deed, Square } from "../game";
 import { PROVINCE_COLORS, PROVINCE_NAMES, TRANQUERA_BONUS, pesos } from "../game";
 import { DECK_ART, drawDeckSymbol } from "./deckArt";
+import { LOGO_FONT, LOGO_H, LOGO_W, drawLogo, drawPlankTable } from "./logoArt";
 import type { TileLayout } from "./hexLayout";
 
 /** Canvas pixels per board unit. Tiles are ~1.4 × 2.4 units, so this keeps text crisp. */
@@ -14,7 +15,8 @@ const RED_BADGE = "#c8261f";
 const PRICE_BLUE = "#1a5fb4";
 
 export const TILE_FONT = "'Barlow Condensed', 'Arial Narrow', sans-serif";
-export const TITLE_FONT = "'Lobster', 'Georgia', serif";
+/** Display face for titles on the table and the bills: the logo's. */
+export const TITLE_FONT = LOGO_FONT;
 
 interface Frame {
   readonly ctx: CanvasRenderingContext2D;
@@ -273,28 +275,37 @@ export function createTileTexture(tile: TileLayout, square: Square, deed: Deed |
   return texture;
 }
 
-/** Transparent canvas with the game title, for the felt in the middle of the board. */
-export function createTitleTexture(widthUnits: number, heightUnits: number): CanvasTexture {
+/** Transparent canvas with the logo, for the middle of the table. Same 800×320 proportions as the logo. */
+export function createTitleTexture(widthUnits: number): CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil(widthUnits * PX_PER_UNIT);
-  canvas.height = Math.ceil(heightUnits * PX_PER_UNIT);
+  canvas.height = Math.ceil((widthUnits * PX_PER_UNIT * LOGO_H) / LOGO_W);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas not supported");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `${Math.round(heightUnits * 0.55 * PX_PER_UNIT)}px ${TITLE_FONT}`;
-  ctx.lineWidth = heightUnits * 0.03 * PX_PER_UNIT;
-  ctx.strokeStyle = "#f7f2e4";
-  ctx.lineJoin = "round";
-  ctx.strokeText("Chacarero", canvas.width / 2, canvas.height * 0.42);
-  ctx.fillStyle = "#c8261f";
-  ctx.fillText("Chacarero", canvas.width / 2, canvas.height * 0.42);
-  ctx.font = `600 ${Math.round(heightUnits * 0.11 * PX_PER_UNIT)}px ${TILE_FONT}`;
-  ctx.fillStyle = "#f7f2e4";
-  ctx.fillText("UN JUEGO DE CAMPO", canvas.width / 2, canvas.height * 0.8);
+  ctx.scale(canvas.width / LOGO_W, canvas.height / LOGO_H);
+  drawLogo(ctx, { subtitle: "#f3e6c8", shadow: true });
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 8;
+  return texture;
+}
+
+/**
+ * The plank table inside the ring. `size` board units square, centred on the
+ * board, so it maps straight onto the felt's ShapeGeometry (whose UVs are its
+ * board coordinates) with repeat 1/size and offset 0.5.
+ */
+export function createFeltTexture(size: number): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 2048;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas not supported");
+  drawPlankTable(ctx, canvas.width);
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 8;
+  texture.repeat.set(1 / size, 1 / size);
+  texture.offset.set(0.5, 0.5);
   return texture;
 }
 

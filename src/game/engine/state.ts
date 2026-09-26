@@ -238,7 +238,7 @@ function dealHoldings(players: readonly NewPlayer[], perPlayer: number, random: 
  */
 export function createGame({ players, startingCash = STARTING_CASH, dealDeeds = 0, decisionSeconds = DECISION_SECONDS, rollSeconds = null, openingRoll = true, random = Math.random }: CreateGameOptions): GameState {
   if (players.length < 2 || players.length > 6) {
-    throw new Error("Chacarero se juega de 2 a 6 jugadores");
+    throw new Error("Terrateniente se juega de 2 a 6 jugadores");
   }
   if (new Set(players.map((p) => p.id)).size !== players.length) {
     throw new Error("Player ids must be unique");

@@ -1,5 +1,5 @@
 /**
- * Chacarero room server: one Bun process that serves the built client and
+ * Terrateniente room server: one Bun process that serves the built client and
  * hosts the WebSocket rooms. Run with `bun run server/index.ts`.
  *
  * Every room change is broadcast whole to its players (no diffs), and a
@@ -256,4 +256,4 @@ const server = Bun.serve<SocketData>({
   },
 });
 
-console.log(`Chacarero server listening on http://localhost:${server.port} (static: ${STATIC_DIR})`);
+console.log(`Terrateniente server listening on http://localhost:${server.port} (static: ${STATIC_DIR})`);

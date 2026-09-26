@@ -1,5 +1,5 @@
 /**
- * Core domain types for Chacarero.
+ * Core domain types for Terrateniente.
  *
  * Everything here is plain data: the board is a fixed ring of 42 squares, 29
  * of which reference a deed (escritura) that can be bought, rented, built on

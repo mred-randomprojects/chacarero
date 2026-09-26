@@ -44,8 +44,8 @@ export function billTexture(value: Denomination): CanvasTexture {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-  ctx.font = `${Math.round(BILL_H * 0.14)}px ${TITLE_FONT}`;
-  ctx.fillText("Chacarero", BILL_W / 2, 36);
+  ctx.font = `${Math.round(BILL_H * 0.12)}px ${TITLE_FONT}`;
+  ctx.fillText("Terrateniente", BILL_W / 2, 36, BILL_W * 0.6);
   ctx.font = `800 ${Math.round(BILL_H * 0.42)}px ${TILE_FONT}`;
   ctx.fillText(pesos(value), BILL_W / 2, BILL_H / 2 + 8);
   ctx.font = `600 ${Math.round(BILL_H * 0.1)}px ${TILE_FONT}`;
