@@ -495,6 +495,16 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
       three squares Destino had (10, 25, 38), Yeta the two Suerte had (15, 36),
       so the money coming into the game stays about the same. Texts rewritten.
 
+## Batch 8 (2026-09-26): the Terrateniente identity
+
+- [ ] H1. Maxi picks one of the ten identities in
+      `docs/design/terrateniente-identity.html` (open it and use ← →; each
+      slide shows the logo and the board centre it comes with).
+- [ ] H2. Adopt it everywhere the old one shows: the name "Chacarero" → 
+      "Terrateniente" (page title, top bar, setup screen, rules heading),
+      the logo on the felt (`createTitleTexture`), the felt itself (red
+      hexagon today, `Board.tsx`), and any fonts it needs in `index.html`.
+
 ---
 
 ## Structural analysis

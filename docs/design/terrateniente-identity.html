@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Terrateniente — 10 identidades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=Berkshire+Swash&family=Big+Shoulders+Display:wght@800;900&family=Bungee&family=Cinzel:wght@600;800&family=Cormorant+SC:wght@600;700&family=Fraunces:opsz,wght@9..144,900&family=Playfair+Display:wght@800;900&family=Staatliches&display=swap"
+/>
+<style>
+  :root {
+    --bg: #17191c;
+    --panel: #22252a;
+    --ink: #eef0f2;
+    --muted: #9aa1aa;
+    --accent: #e0b44c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Barlow Condensed", system-ui, sans-serif; }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 16px 24px 4px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .02em; }
+  header .count { color: var(--muted); font-size: 18px; }
+  .stage { position: relative; padding: 8px 72px 24px; }
+  .slide { display: none; }
+  .slide.active { display: block; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .meta { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+  .meta h2 { margin: 0; font-size: 40px; font-weight: 800; line-height: 1; }
+  .meta h2 small { font-size: 20px; color: var(--accent); margin-right: 10px; font-weight: 700; }
+  .meta p { margin: 6px 0 0; max-width: 720px; color: #c9ced4; font-size: 19px; line-height: 1.3; font-weight: 500; }
+  .facts { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .fonts { color: var(--muted); font-size: 16px; }
+  .swatches { display: flex; gap: 6px; }
+  .swatches span { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #0006; }
+  .panels { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
+  .panel { background: var(--panel); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .panel .label { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px; }
+  .panel svg { display: block; width: 100%; height: auto; }
+  .hero { flex: 1; display: grid; place-items: center; padding: 18px; }
+  .nav { position: absolute; top: 46%; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #ffffff14; color: var(--ink); font-size: 30px; cursor: pointer; }
+  .nav:hover { background: #ffffff2a; }
+  .prev { left: 10px; }
+  .next { right: 10px; }
+  .dots { display: flex; gap: 8px; justify-content: center; padding: 0 0 22px; flex-wrap: wrap; }
+  .dots button { border: 0; background: #ffffff1c; color: var(--muted); font: 700 16px "Barlow Condensed", sans-serif; padding: 6px 12px; border-radius: 16px; cursor: pointer; }
+  .dots button.on { background: var(--accent); color: #1b1b1b; }
+  @media (max-width: 900px) {
+    .panels { grid-template-columns: 1fr; }
+    .stage { padding: 8px 16px 24px; }
+    .nav { top: auto; bottom: -8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Terrateniente · 10 identidades</h1>
+  <span class="count" id="count"></span>
+  <span class="count">← → para pasar · cada una: logo y el centro del tablero</span>
+</header>
+<div class="stage">
+  <button class="nav prev" id="prev" aria-label="Anterior">‹</button>
+  <div id="slides"></div>
+  <button class="nav next" id="next" aria-label="Siguiente">›</button>
+</div>
+<div class="dots" id="dots"></div>
+
+<script>
+/* ---------- shared helpers ---------- */
+const TAU = Math.PI * 2;
+const pts = (list) => list.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+const hexPoints = (cx, cy, r) => [0, 1, 2, 3, 4, 5].map((i) => [cx + r * Math.cos((i * Math.PI) / 3), cy + r * Math.sin((i * Math.PI) / 3)]);
+/** Deterministic pseudo-random, so every render of a slide is identical. */
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+/** Text squeezed or stretched to an exact width, so every font fits the same box. */
+const fit = (text, x, y, width, attrs) =>
+  `<text x="${x}" y="${y}" text-anchor="middle" textLength="${width}" lengthAdjust="spacingAndGlyphs" ${attrs}>${text}</text>`;
+
+/* The real board, square by square: band colour on campos/routes/companies, full colour on the decks and corners. */
+const PROV = { jujuy: "#e0672c", misiones: "#2f8f4e", salta: "#c23b3b", chubut: "#2d62a8", mendoza: "#6d2b73", rioNegro: "#4fb3c8", cordoba: "#d9a81e", bsas: "#e04f8f" };
+const RUTA = "#2b2b2b", CIA = "#7a5230";
+const SQUARES = [
+  "corner", PROV.jujuy, PROV.jujuy, PROV.jujuy, "tax", PROV.misiones, PROV.misiones,
+  "corner", CIA, PROV.salta, "suerte", PROV.salta, RUTA, PROV.salta,
+  "corner", "yeta", CIA, PROV.chubut, RUTA, PROV.chubut, PROV.chubut,
+  "corner", RUTA, PROV.mendoza, PROV.mendoza, "suerte", PROV.mendoza, RUTA,
+  "corner", PROV.rioNegro, PROV.rioNegro, CIA, PROV.cordoba, PROV.cordoba, PROV.cordoba,
+  "corner", "yeta", PROV.bsas, "suerte", PROV.bsas, PROV.bsas, "tax",
+];
+
+/**
+ * A mock of the board seen from above: the table, the ring of 42 squares
+ * (corners as kites, like the game) and the felt inside, where each design
+ * paints its centre and places its logo.
+ */
+function board(id, design) {
+  const W = 640, H = 560, cx = 320, cy = 280, r = 205, depth = 50;
+  const inner = hexPoints(cx, cy, r);
+  const outerR = r + depth / Math.cos(Math.PI / 6);
+  const outer = hexPoints(cx, cy, outerR);
+  const ext = 0.09;
+  let ring = "";
+  for (let k = 0; k < 6; k++) {
+    const a = inner[(k + 1) % 6], b = inner[(k + 2) % 6];
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy);
+    const n = [dy / len, -dx / len];
+    const mid = [(a[0] + b[0]) / 2 - cx, (a[1] + b[1]) / 2 - cy];
+    if (n[0] * mid[0] + n[1] * mid[1] < 0) { n[0] = -n[0]; n[1] = -n[1]; }
+    const at = (t) => [a[0] + dx * t, a[1] + dy * t];
+    const out = (p, f = 1) => [p[0] + n[0] * depth * f, p[1] + n[1] * depth * f];
+    for (let j = 0; j < 6; j++) {
+      const t0 = ext + ((1 - 2 * ext) * j) / 6, t1 = ext + ((1 - 2 * ext) * (j + 1)) / 6;
+      const p0 = at(t0), p1 = at(t1);
+      const kind = SQUARES[7 * k + 1 + j];
+      const full = kind === "suerte" ? "#2a7fb8" : kind === "yeta" ? "#9a2c3e" : null;
+      ring += `<polygon points="${pts([p0, p1, out(p1), out(p0)])}" fill="${full ?? "#f7f2e4"}" stroke="#2a2622" stroke-width="1.2"/>`;
+      if (!full && kind !== "tax") ring += `<polygon points="${pts([p0, p1, out(p1, 0.22), out(p0, 0.22)])}" fill="${kind}"/>`;
+    }
+    // Corner kite at inner vertex b (shared with the next side).
+    const c = inner[(k + 2) % 6], d = inner[(k + 3) % 6];
+    const ex = d[0] - c[0], ey = d[1] - c[1];
+    const len2 = Math.hypot(ex, ey);
+    const n2 = [ey / len2, -ex / len2];
+    const mid2 = [(c[0] + d[0]) / 2 - cx, (c[1] + d[1]) / 2 - cy];
+    if (n2[0] * mid2[0] + n2[1] * mid2[1] < 0) { n2[0] = -n2[0]; n2[1] = -n2[1]; }
+    const pA = at(1 - ext), pB = [c[0] + ex * ext, c[1] + ey * ext];
+    const kite = [pA, b, pB, [pB[0] + n2[0] * depth, pB[1] + n2[1] * depth], outer[(k + 2) % 6], out(pA)];
+    ring += `<polygon points="${pts(kite)}" fill="#1f5e2e" stroke="#2a2622" stroke-width="1.2"/>`;
+  }
+  const lw = design.boardLogoWidth ?? 380;
+  const lh = lw * 0.4;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="${id}-table" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#2c6b3a"/><stop offset="1" stop-color="#123a1f"/></radialGradient>
+      <clipPath id="${id}-felt"><polygon points="${pts(inner)}"/></clipPath>
+      <filter id="${id}-lift" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity=".45"/></filter>
+    </defs>
+    <rect width="${W}" height="${H}" fill="url(#${id}-table)"/>
+    <polygon points="${pts(outer)}" fill="#1b1714" transform="translate(0 6)" opacity=".5"/>
+    <g clip-path="url(#${id}-felt)">${design.felt(id, { cx, cy, r, x0: cx - r, y0: cy - r, x1: cx + r, y1: cy + r })}</g>
+    ${ring}
+    <polygon points="${pts(outer)}" fill="none" stroke="#1b1714" stroke-width="3"/>
+    ${design.boardPlate ? `<rect x="${cx - lw / 2 - 6}" y="${cy - lh * 0.3}" width="${lw + 12}" height="${lh * 0.62}" rx="14" fill="${design.boardPlate}" filter="url(#${id}-lift)"/>` : ""}
+    <svg x="${cx - lw / 2}" y="${cy - lh / 2 - 6}" width="${lw}" height="${lh}" viewBox="0 0 800 320" filter="${design.lift === false ? "" : `url(#${id}-lift)`}">${design.logo(id + "b")}</svg>
+  </svg>`;
+}
+
+/* ---------- the ten designs ---------- */
+const DESIGNS = [
+  {
+    name: "Portón de estancia",
+    blurb: "The arched sign over an estancia's entrance: two posts, a carved walnut board and the gate (tranquera) below. The felt is a plank table.",
+    fonts: "Alfa Slab One · Barlow Condensed",
+    palette: ["#4a2e1c", "#7a4f2e", "#f3e6c8", "#d9a441"],
+    heroBg: "linear-gradient(#cfe0e8, #eadcbc)",
+    logo: (id) => `
+      <defs>
+        <linearGradient id="${id}-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4228"/><stop offset="1" stop-color="#3f2717"/></linearGradient>
+        <path id="${id}-arc" d="M128 178 Q400 84 672 178"/>
+      </defs>
+      <g stroke="#2a180d" stroke-width="3">
+        <rect x="64" y="46" width="48" height="266" rx="4" fill="url(#${id}-w)"/>
+        <rect x="688" y="46" width="48" height="266" rx="4" fill="url(#${id}-w)"/>
+        <rect x="56" y="36" width="64" height="16" rx="3" fill="#2f1c10"/>
+        <rect x="680" y="36" width="64" height="16" rx="3" fill="#2f1c10"/>
+        <path d="M104 126 Q400 26 696 126 L696 210 Q400 118 104 210 Z" fill="url(#${id}-w)"/>
+        <g fill="#8a5a36" stroke-width="2.5">
+          <rect x="112" y="238" width="576" height="14" rx="3"/>
+          <rect x="112" y="266" width="576" height="14" rx="3"/>
+          <rect x="112" y="294" width="576" height="14" rx="3"/>
+        </g>
+        <path d="M118 306 L398 240 M682 306 L402 240" stroke="#8a5a36" stroke-width="12" stroke-linecap="round"/>
+        <rect x="394" y="232" width="12" height="80" fill="#6b4228"/>
+      </g>
+      <path d="M118 150 Q400 58 682 150" fill="none" stroke="#d9a441" stroke-width="2" opacity=".6"/>
+      <path d="M118 190 Q400 98 682 190" fill="none" stroke="#d9a441" stroke-width="2" opacity=".6"/>
+      <text font-family="Alfa Slab One" font-size="60" fill="#f3e6c8" stroke="#2a180d" stroke-width="1.5" paint-order="stroke">
+        <textPath href="#${id}-arc" startOffset="50%" text-anchor="middle" textLength="520" lengthAdjust="spacingAndGlyphs">TERRATENIENTE</textPath>
+      </text>
+      <circle cx="120" cy="136" r="5" fill="#d9a441"/><circle cx="680" cy="136" r="5" fill="#d9a441"/>
+      ${fit("UN JUEGO DE CAMPO", 400, 226, 220, `font-family="Barlow Condensed" font-weight="700" font-size="22" fill="#4a2e1c" letter-spacing="3"`)}`,
+    felt: (id, b) => {
+      let planks = "";
+      const rand = rng(7);
+      for (let y = b.y0, i = 0; y < b.y1; y += 44, i++) {
+        const shade = ["#7a4f2e", "#865733", "#6f4629", "#83552f"][i % 4];
+        planks += `<rect x="${b.x0}" y="${y}" width="${2 * b.r}" height="44" fill="${shade}"/>`;
+        const seam = b.x0 + 60 + rand() * 280;
+        planks += `<line x1="${seam}" y1="${y}" x2="${seam}" y2="${y + 44}" stroke="#3b2414" stroke-width="2"/>`;
+        for (let g = 0; g < 4; g++) {
+          const gy = y + 8 + g * 9 + rand() * 4;
+          planks += `<path d="M${b.x0} ${gy} Q${b.cx - 80 + rand() * 160} ${gy + (rand() - 0.5) * 10} ${b.x1} ${gy}" stroke="#4a2e1c" stroke-width="1" fill="none" opacity=".35"/>`;
+        }
+        planks += `<line x1="${b.x0}" y1="${y}" x2="${b.x1}" y2="${y}" stroke="#2f1c10" stroke-width="2.5"/>`;
+      }
+      return planks + `<rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-vig)"/>
+        <defs><radialGradient id="${id}-vig"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></radialGradient></defs>`;
+    },
+  },
+  {
+    name: "Fileteado porteño",
+    blurb: "Buenos Aires filete: gilded lettering with a red keyline and shadow, green-and-gold scrolls in the corners, a celeste-and-white ribbon. The felt is black lacquer with gold pinstriping.",
+    fonts: "Berkshire Swash · Barlow Condensed",
+    palette: ["#111111", "#e9b949", "#2f8f4e", "#c8261f", "#74acdf"],
+    heroBg: "#0d0d0d",
+    logo: (id) => {
+      const scroll = `<g fill="none" stroke-linecap="round">
+        <path d="M0 0 C 30 -46, 96 -40, 98 6 C 100 40, 58 52, 44 28 C 34 10, 56 -2, 66 14" stroke="#1d6b3a" stroke-width="11"/>
+        <path d="M0 0 C 30 -46, 96 -40, 98 6 C 100 40, 58 52, 44 28 C 34 10, 56 -2, 66 14" stroke="#7fd38f" stroke-width="3"/>
+        <path d="M8 -8 C 4 -30, 22 -46, 40 -48 C 30 -36, 26 -22, 30 -6 Z" fill="#e9b949" stroke="#8a5d12" stroke-width="2"/>
+        <circle cx="66" cy="14" r="5" fill="#c8261f"/>
+      </g>`;
+      return `
+      <defs>
+        <linearGradient id="${id}-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2b8"/><stop offset=".5" stop-color="#e9b949"/><stop offset="1" stop-color="#a8741c"/></linearGradient>
+      </defs>
+      <rect x="24" y="28" width="752" height="264" rx="26" fill="#111" stroke="#e9b949" stroke-width="5"/>
+      <rect x="40" y="44" width="720" height="232" rx="18" fill="none" stroke="#e9b949" stroke-width="1.5" stroke-dasharray="2 5"/>
+      <g transform="translate(70 92)">${scroll}</g>
+      <g transform="translate(730 92) scale(-1 1)">${scroll}</g>
+      <g transform="translate(70 232) scale(1 -1)">${scroll}</g>
+      <g transform="translate(730 232) scale(-1 -1)">${scroll}</g>
+      ${fit("Terrateniente", 406, 186, 540, `font-family="Berkshire Swash" font-size="108" fill="#5a0d0a"`)}
+      ${fit("Terrateniente", 400, 180, 540, `font-family="Berkshire Swash" font-size="108" fill="url(#${id}-g)" stroke="#c8261f" stroke-width="7" paint-order="stroke"`)}
+      ${fit("Terrateniente", 400, 180, 540, `font-family="Berkshire Swash" font-size="108" fill="none" stroke="#fff6d8" stroke-width="1" opacity=".7"`)}
+      <path d="M268 220 H532 L520 236 L532 252 H268 L280 236 Z" fill="#74acdf"/>
+      <rect x="296" y="228" width="208" height="16" fill="#fff"/>
+      ${fit("JUEGO DE CAMPO", 400, 242, 150, `font-family="Barlow Condensed" font-weight="800" font-size="16" fill="#1a1a1a" letter-spacing="2"`)}`;
+    },
+    felt: (id, b) => {
+      const hex = hexPoints(b.cx, b.cy, b.r - 16);
+      const hex2 = hexPoints(b.cx, b.cy, b.r - 24);
+      let curls = "";
+      // A pair of mirrored filete curls tucked into each corner, pointing inwards.
+      const curl = `<path d="M0 0 C 24 -4, 44 -20, 40 -40 C 37 -54, 18 -56, 14 -44 C 11 -35, 22 -30, 27 -37" fill="none" stroke-linecap="round"/>`;
+      hex.forEach(([x, y], i) => {
+        const ang = i * 60 + 180;
+        for (const flip of [1, -1]) {
+          curls += `<g transform="translate(${x} ${y}) rotate(${ang}) translate(18 0) scale(1 ${flip})">
+            <g stroke="#1d6b3a" stroke-width="7">${curl}</g><g stroke="#e9b949" stroke-width="2.2">${curl}</g></g>`;
+        }
+        curls += `<circle cx="${x}" cy="${y}" r="5" fill="#c8261f" transform="translate(${(b.cx - x) * 0.09} ${(b.cy - y) * 0.09})"/>`;
+      });
+      return `<defs><radialGradient id="${id}-lac" cx="50%" cy="40%" r="65%"><stop offset="0" stop-color="#2a2a2a"/><stop offset="1" stop-color="#050505"/></radialGradient></defs>
+        <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-lac)"/>
+        <polygon points="${pts(hex)}" fill="none" stroke="#e9b949" stroke-width="2.5"/>
+        <polygon points="${pts(hex2)}" fill="none" stroke="#c8261f" stroke-width="1.2"/>
+        ${curls}`;
+    },
+  },
+  {
+    name: "Plano catastral",
+    blurb: "A land surveyor's plan: engraved capitals between double rules, a compass rose, a scale bar. The felt is parchment with contour lines, a grid and plot boundaries.",
+    fonts: "Cinzel · Barlow Condensed",
+    palette: ["#efe4c8", "#1f3a5f", "#8a6d3b", "#b4533a"],
+    heroBg: "#efe4c8",
+    lift: false,
+    logo: (id) => {
+      const rose = [0, 45, 90, 135, 180, 225, 270, 315]
+        .map((a, i) => `<polygon points="0,${i % 2 ? -46 : -78} 9,-9 0,0 -9,-9" transform="rotate(${a})" fill="${i % 2 ? "#8a6d3b" : "#1f3a5f"}"/>`)
+        .join("");
+      return `
+      <g transform="translate(112 160)">
+        <circle r="62" fill="none" stroke="#1f3a5f" stroke-width="1.5"/>
+        <circle r="54" fill="none" stroke="#1f3a5f" stroke-width=".8" stroke-dasharray="2 3"/>
+        ${rose}
+        <circle r="5" fill="#efe4c8" stroke="#1f3a5f" stroke-width="2"/>
+        <text y="-86" text-anchor="middle" font-family="Cinzel" font-weight="800" font-size="18" fill="#1f3a5f">N</text>
+      </g>
+      <g stroke="#1f3a5f"><line x1="210" y1="108" x2="752" y2="108" stroke-width="3"/><line x1="210" y1="115" x2="752" y2="115" stroke-width="1"/>
+        <line x1="210" y1="206" x2="752" y2="206" stroke-width="1"/><line x1="210" y1="213" x2="752" y2="213" stroke-width="3"/></g>
+      ${fit("TERRATENIENTE", 481, 184, 520, `font-family="Cinzel" font-weight="800" font-size="70" fill="#1f3a5f"`)}
+      ${fit("PLANO CATASTRAL · PROVINCIAS ARGENTINAS", 481, 94, 380, `font-family="Cinzel" font-weight="600" font-size="16" fill="#8a6d3b"`)}
+      ${fit("UN JUEGO DE CAMPO", 481, 246, 190, `font-family="Barlow Condensed" font-weight="700" font-size="20" fill="#1f3a5f" letter-spacing="3"`)}
+      <g transform="translate(624 236)">
+        ${[0, 1, 2, 3].map((i) => `<rect x="${i * 32}" y="0" width="32" height="8" fill="${i % 2 ? "#efe4c8" : "#1f3a5f"}" stroke="#1f3a5f"/>`).join("")}
+        <text x="0" y="26" font-family="Barlow Condensed" font-size="14" fill="#1f3a5f">0</text>
+        <text x="128" y="26" text-anchor="end" font-family="Barlow Condensed" font-size="14" fill="#1f3a5f">20 km</text>
+      </g>
+      <text x="112" y="262" text-anchor="middle" font-family="Barlow Condensed" font-size="15" fill="#8a6d3b">34°36′ S · 58°22′ O</text>`;
+    },
+    felt: (id, b) => {
+      let s = `<rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="#efe4c8"/>`;
+      for (let x = b.x0; x < b.x1; x += 26) s += `<line x1="${x}" y1="${b.y0}" x2="${x}" y2="${b.y1}" stroke="#1f3a5f" stroke-width=".5" opacity=".18"/>`;
+      for (let y = b.y0; y < b.y1; y += 26) s += `<line x1="${b.x0}" y1="${y}" x2="${b.x1}" y2="${y}" stroke="#1f3a5f" stroke-width=".5" opacity=".18"/>`;
+      const hills = [[b.cx - 110, b.cy - 70, 11], [b.cx + 120, b.cy + 80, 23], [b.cx + 60, b.cy - 130, 5]];
+      for (const [hx, hy, seed] of hills) {
+        const rand = rng(seed);
+        const waves = [0, 1, 2].map(() => [1 + Math.floor(rand() * 3), rand() * TAU, 0.1 + rand() * 0.15]);
+        for (let ring = 1; ring <= 7; ring++) {
+          let d = "";
+          for (let i = 0; i <= 72; i++) {
+            const a = (i / 72) * TAU;
+            const rad = ring * 16 * (1 + waves.reduce((acc, [f, p, amp]) => acc + amp * Math.sin(f * a + p), 0));
+            d += `${i ? "L" : "M"}${(hx + rad * Math.cos(a)).toFixed(1)} ${(hy + rad * Math.sin(a) * 0.8).toFixed(1)}`;
+          }
+          s += `<path d="${d}Z" fill="none" stroke="#8a6d3b" stroke-width="${ring % 5 === 0 ? 1.6 : 0.8}" opacity=".55"/>`;
+        }
+      }
+      s += `<polyline points="${pts([[b.x0, b.cy + 40], [b.cx - 60, b.cy + 10], [b.cx + 30, b.cy + 60], [b.x1, b.cy + 20]])}" fill="none" stroke="#b4533a" stroke-width="1.5" stroke-dasharray="8 4 2 4"/>`;
+      s += `<polyline points="${pts([[b.cx - 20, b.y0], [b.cx - 40, b.cy - 20], [b.cx - 60, b.cy + 10], [b.cx - 90, b.y1]])}" fill="none" stroke="#b4533a" stroke-width="1.5" stroke-dasharray="8 4 2 4"/>`;
+      return s;
+    },
+  },
+  {
+    name: "Marca de fuego",
+    blurb: "The cattle brand: a T-bar branded into saddle leather, with the name burnt in beneath. The felt is tooled leather with a stitched border.",
+    fonts: "Staatliches · Barlow Condensed",
+    palette: ["#b5773f", "#8a5328", "#2a1409", "#f0dcb4"],
+    heroBg: "radial-gradient(circle at 50% 40%, #c98a4e, #7e4a22)",
+    lift: false,
+    logo: (id) => `
+      <defs>
+        <filter id="${id}-burn" x="-20%" y="-20%" width="140%" height="140%">
+          <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="fat"/>
+          <feGaussianBlur in="fat" stdDeviation="6" result="glow"/>
+          <feFlood flood-color="#5a2a0c" flood-opacity=".75"/><feComposite in2="glow" operator="in" result="scorch"/>
+          <feMerge><feMergeNode in="scorch"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#${id}-burn)" fill="none" stroke="#2a1409" stroke-linecap="round">
+        <circle cx="400" cy="118" r="84" stroke-width="15"/>
+        <path d="M352 80 H448 M400 80 V170" stroke-width="17"/>
+      </g>
+      <g filter="url(#${id}-burn)">
+        ${fit("TERRATENIENTE", 400, 282, 600, `font-family="Staatliches" font-size="80" fill="#2a1409"`)}
+      </g>
+      ${fit("JUEGO", 230, 128, 90, `font-family="Barlow Condensed" font-weight="700" font-size="24" fill="#2a1409" letter-spacing="4"`)}
+      ${fit("DE CAMPO", 570, 128, 110, `font-family="Barlow Condensed" font-weight="700" font-size="24" fill="#2a1409" letter-spacing="4"`)}
+      <line x1="170" y1="140" x2="290" y2="140" stroke="#2a1409" stroke-width="2"/><line x1="510" y1="140" x2="630" y2="140" stroke="#2a1409" stroke-width="2"/>`,
+    felt: (id, b) => `
+      <defs>
+        <radialGradient id="${id}-lea" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#c98a4e"/><stop offset="1" stop-color="#6e3d1a"/></radialGradient>
+        <filter id="${id}-grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" seed="4"/><feColorMatrix values="0 0 0 0 .2  0 0 0 0 .1  0 0 0 0 .03  0 0 0 .55 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+      </defs>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-lea)"/>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="#000" filter="url(#${id}-grain)"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 16))}" fill="none" stroke="#3b1e0a" stroke-width="3" opacity=".6"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 22))}" fill="none" stroke="#f0dcb4" stroke-width="2.2" stroke-dasharray="9 6"/>`,
+  },
+  {
+    name: "Atardecer pampeano",
+    blurb: "Sundown on the pampa: a low sun, an ombú tree and a windmill against a violet sky, with a heavy friendly serif. The felt is the same sky over furrowed wheat.",
+    fonts: "Fraunces Black · Barlow Condensed",
+    palette: ["#2d1b4e", "#f28c5a", "#ffcf5a", "#c9a54a", "#fff4df"],
+    heroBg: "linear-gradient(#2d1b4e 0%, #8c3b6a 48%, #f28c5a 80%, #ffcf5a 100%)",
+    logo: (id) => `
+      <defs>
+        <linearGradient id="${id}-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff7a3d"/></linearGradient>
+        <clipPath id="${id}-sky"><rect x="0" y="0" width="800" height="196"/></clipPath>
+      </defs>
+      <circle cx="400" cy="196" r="112" fill="url(#${id}-sun)" clip-path="url(#${id}-sky)"/>
+      ${[0, 1, 2, 3].map((i) => `<rect x="280" y="${150 + i * 12}" width="240" height="${3 + i}" fill="#8c3b6a" opacity=".55"/>`).join("")}
+      <rect x="60" y="196" width="680" height="10" rx="5" fill="#2d1b4e"/>
+      <g fill="#2d1b4e">
+        <path d="M150 196 C 150 150, 160 150, 166 130 L176 130 C 182 150, 190 160, 188 196 Z"/>
+        <path d="M98 140 C 70 120, 96 70, 140 80 C 150 50, 210 48, 222 80 C 262 70, 280 118, 248 138 C 240 158, 200 160, 170 150 C 140 162, 106 160, 98 140 Z"/>
+        <path d="M612 196 L632 86 L644 86 L664 196 Z" fill="none" stroke="#2d1b4e" stroke-width="6"/>
+        <path d="M622 150 L656 120 M618 176 L660 150 M628 118 L650 100" stroke="#2d1b4e" stroke-width="3"/>
+        <g transform="translate(638 84)">${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<path d="M0 0 L50 -7 L50 7 Z" transform="rotate(${i * 45 + 10})"/>`).join("")}<circle r="7"/></g>
+        <path d="M646 84 L700 70 L704 96 Z"/>
+      </g>
+      ${fit("Terrateniente", 404, 292, 640, `font-family="Fraunces" font-weight="900" font-size="98" fill="#2d1b4e"`)}
+      ${fit("Terrateniente", 400, 288, 640, `font-family="Fraunces" font-weight="900" font-size="98" fill="#fff4df"`)}`,
+    felt: (id, b) => {
+      // Level with the horizon inside the logo, so the two read as one landscape.
+      const hz = b.cy + 11;
+      let furrows = "";
+      for (let i = -24; i <= 24; i++) furrows += `<line x1="${b.cx}" y1="${hz}" x2="${b.cx + i * 38}" y2="${b.y1}" stroke="#8e7a2c" stroke-width="${1 + Math.abs(i) * 0.05}" opacity=".7"/>`;
+      return `<defs>
+          <linearGradient id="${id}-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d1b4e"/><stop offset=".6" stop-color="#8c3b6a"/><stop offset="1" stop-color="#f7a060"/></linearGradient>
+          <linearGradient id="${id}-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b08a3a"/><stop offset="1" stop-color="#e2c064"/></linearGradient>
+        </defs>
+        <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${hz - b.y0}" fill="url(#${id}-s)"/>
+        <rect x="${b.x0}" y="${hz}" width="${2 * b.r}" height="${b.y1 - hz}" fill="url(#${id}-f)"/>
+        ${furrows}
+        <rect x="${b.x0}" y="${hz - 3}" width="${2 * b.r}" height="5" fill="#2d1b4e"/>
+        ${[[-150, -120, 1.3], [130, -150, 1], [40, -110, 0.8]].map(([x, y, s]) => `<circle cx="${b.cx + x}" cy="${b.cy + y}" r="${s * 1.6}" fill="#fff4df" opacity=".8"/>`).join("")}`;
+    },
+  },
+  {
+    name: "Etiqueta de almacén",
+    blurb: "An old yerba mate or almacén label: an oval badge, laurels, a ribbon with the name and 'Industria Argentina'. The felt is green linen with a small diamond print.",
+    fonts: "Playfair Display Black · Barlow Condensed",
+    palette: ["#3d5a2a", "#c9a23a", "#f4ead0", "#2a3d1c"],
+    heroBg: "#2f4622",
+    logo: (id) => {
+      const leaf = (x, y, a) => `<ellipse cx="${x}" cy="${y}" rx="14" ry="6" transform="rotate(${a} ${x} ${y})" fill="#c9a23a"/>`;
+      let laurel = "";
+      for (let i = 0; i < 6; i++) {
+        const t = i / 5;
+        const x = 250 - t * 110, y = 250 - Math.sin(t * 1.4) * 60;
+        laurel += leaf(x, y - 9, -40 + t * 50) + leaf(x - 4, y + 9, 40 + t * 40);
+        laurel += leaf(800 - x, y - 9, 40 - t * 50) + leaf(804 - x, y + 9, -40 - t * 40);
+      }
+      return `
+      <defs><path id="${id}-top" d="M170 142 A 230 58 0 0 1 630 142"/></defs>
+      <ellipse cx="400" cy="160" rx="330" ry="148" fill="#f4ead0" stroke="#3d5a2a" stroke-width="8"/>
+      <ellipse cx="400" cy="160" rx="314" ry="132" fill="none" stroke="#c9a23a" stroke-width="2.5"/>
+      <path d="M140 248 Q200 190 250 250 M660 248 Q600 190 550 250" stroke="#8a6d20" stroke-width="3" fill="none"/>
+      ${laurel}
+      <text font-family="Barlow Condensed" font-weight="800" font-size="24" fill="#3d5a2a" letter-spacing="6">
+        <textPath href="#${id}-top" startOffset="50%" text-anchor="middle">★ UN JUEGO DE CAMPO ★</textPath>
+      </text>
+      <path d="M70 128 H140 V200 H70 L92 164 Z M730 128 H660 V200 H730 L708 164 Z" fill="#2a3d1c"/>
+      <rect x="110" y="118" width="580" height="80" fill="#3d5a2a" stroke="#c9a23a" stroke-width="3"/>
+      ${fit("TERRATENIENTE", 400, 180, 520, `font-family="Playfair Display" font-weight="900" font-size="62" fill="#f4ead0"`)}
+      ${fit("INDUSTRIA ARGENTINA", 400, 250, 170, `font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#3d5a2a" letter-spacing="3"`)}
+      <text x="400" y="282" text-anchor="middle" font-family="Playfair Display" font-weight="800" font-size="16" fill="#c9a23a">EST. 2026</text>`;
+    },
+    felt: (id, b) => `
+      <defs>
+        <pattern id="${id}-dia" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#3d5a2a"/><path d="M14 6 L20 14 L14 22 L8 14 Z" fill="#c9a23a" opacity=".22"/></pattern>
+        <filter id="${id}-lin"><feTurbulence type="fractalNoise" baseFrequency="1.4 .15" numOctaves="2" seed="9"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 .9  0 0 0 .12 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+      </defs>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-dia)"/>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="#fff" filter="url(#${id}-lin)"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 14))}" fill="none" stroke="#c9a23a" stroke-width="3"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 21))}" fill="none" stroke="#c9a23a" stroke-width="1"/>`,
+  },
+  {
+    name: "Parcelas",
+    blurb: "Modern and flat: a hexagon cut into ploughed fields forms the mark, next to a heavy lowercase wordmark. The felt is an aerial patchwork of crops and dirt roads. The most 'Steam 2026' of the set.",
+    fonts: "Archivo Black · Barlow Condensed",
+    palette: ["#f3f1e7", "#6f9a4a", "#d9b45a", "#9a6b3f", "#1d2a22"],
+    heroBg: "#f3f1e7",
+    logo: (id) => {
+      const cx = 150, cy = 160, R = 112;
+      const cols = ["#6f9a4a", "#d9b45a", "#9a6b3f", "#3f7a3a", "#c9d18a", "#b5553a"];
+      const hp = hexPoints(cx, cy, R);
+      let slices = "";
+      for (let i = 0; i < 6; i++) {
+        const a = hp[i], b = hp[(i + 1) % 6];
+        slices += `<defs><pattern id="${id}-r${i}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(${i * 37})"><rect width="10" height="10" fill="${cols[i]}"/><rect width="10" height="3" fill="#000" opacity=".13"/></pattern></defs>`;
+        slices += `<polygon points="${pts([[cx, cy], a, b])}" fill="url(#${id}-r${i})" stroke="#f3f1e7" stroke-width="7" stroke-linejoin="round"/>`;
+      }
+      return `${slices}
+        ${fit("terrateniente", 520, 186, 500, `font-family="Archivo Black" font-size="78" fill="#1d2a22"`)}
+        ${fit("UN JUEGO DE CAMPO", 400, 232, 200, `font-family="Barlow Condensed" font-weight="700" font-size="22" fill="#6f9a4a" letter-spacing="4"`)}`;
+    },
+    boardLogoWidth: 400,
+    boardPlate: "#f3f1e7",
+    felt: (id, b) => {
+      const rand = rng(31);
+      const cols = ["#6f9a4a", "#d9b45a", "#9a6b3f", "#3f7a3a", "#c9d18a", "#b5553a", "#7fa35a", "#e0c475"];
+      let s = `<rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="#e8e1c9"/><defs>`;
+      cols.forEach((c, i) => {
+        s += `<pattern id="${id}-p${i}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(${[0, 90, 45, 135, 20, 70, 110, 160][i]})"><rect width="8" height="8" fill="${c}"/><rect width="8" height="2.4" fill="#000" opacity=".12"/></pattern>`;
+      });
+      s += `</defs><g transform="rotate(-12 ${b.cx} ${b.cy})">`;
+      for (let y = b.y0 - 60; y < b.y1 + 60; ) {
+        const h = 40 + rand() * 50;
+        for (let x = b.x0 - 80; x < b.x1 + 80; ) {
+          const w = 50 + rand() * 90;
+          s += `<rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="${h - 6}" rx="3" fill="url(#${id}-p${Math.floor(rand() * cols.length)})"/>`;
+          x += w;
+        }
+        y += h;
+      }
+      return s + `</g>`;
+    },
+  },
+  {
+    name: "Guarda pampa",
+    blurb: "Woven like a northern poncho or a faja: stepped diamonds in ochre, black and red frame a tall condensed name. The felt is a dark weave ringed by the same guarda.",
+    fonts: "Big Shoulders Display Black · Barlow Condensed",
+    palette: ["#d49a3a", "#1b1714", "#a3261d", "#f1e3c4"],
+    heroBg: "#1b1714",
+    logo: (id) => `
+      <defs>
+        <pattern id="${id}-g" width="60" height="50" patternUnits="userSpaceOnUse">
+          <rect width="60" height="50" fill="#d49a3a"/>
+          <polygon points="22,4 38,4 38,12 46,12 46,20 54,20 54,30 46,30 46,38 38,38 38,46 22,46 22,38 14,38 14,30 6,30 6,20 14,20 14,12 22,12" fill="#1b1714"/>
+          <polygon points="30,14 41,25 30,36 19,25" fill="#f1e3c4"/>
+          <rect x="27" y="22" width="6" height="6" fill="#a3261d"/>
+          <rect x="0" y="0" width="6" height="6" fill="#a3261d"/><rect x="54" y="44" width="6" height="6" fill="#a3261d"/>
+        </pattern>
+      </defs>
+      <rect x="40" y="30" width="720" height="50" fill="url(#${id}-g)"/>
+      <rect x="40" y="240" width="720" height="50" fill="url(#${id}-g)"/>
+      <rect x="40" y="86" width="720" height="148" fill="#1b1714"/>
+      <rect x="40" y="84" width="720" height="4" fill="#a3261d"/><rect x="40" y="232" width="720" height="4" fill="#a3261d"/>
+      ${fit("TERRATENIENTE", 400, 206, 660, `font-family="Big Shoulders Display" font-weight="900" font-size="132" fill="#f1e3c4"`)}`,
+    felt: (id, b) => `
+      <defs>
+        <pattern id="${id}-weave" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#2b2420"/><rect width="6" height="6" fill="#3a2f28"/><rect x="6" y="6" width="6" height="6" fill="#3a2f28"/></pattern>
+        <pattern id="${id}-g" width="60" height="50" patternUnits="userSpaceOnUse">
+          <rect width="60" height="50" fill="#d49a3a"/>
+          <polygon points="22,4 38,4 38,12 46,12 46,20 54,20 54,30 46,30 46,38 38,38 38,46 22,46 22,38 14,38 14,30 6,30 6,20 14,20 14,12 22,12" fill="#1b1714"/>
+          <polygon points="30,14 41,25 30,36 19,25" fill="#f1e3c4"/><rect x="27" y="22" width="6" height="6" fill="#a3261d"/>
+        </pattern>
+      </defs>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-weave)"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 14))}" fill="none" stroke="url(#${id}-g)" stroke-width="28"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 30))}" fill="none" stroke="#a3261d" stroke-width="3"/>`,
+  },
+  {
+    name: "Casa de Moneda",
+    blurb: "Banknote engraving, since money is half the game: guilloché rosettes, an engraved serif with a paper halo, a red serial number. The felt is watermarked paper crossed by guilloché waves.",
+    fonts: "Cormorant SC · Barlow Condensed",
+    palette: ["#eef0e2", "#2f6b55", "#1f3d33", "#b02a2a"],
+    heroBg: "#eef0e2",
+    lift: false,
+    logo: (id) => {
+      const rosette = (cx, cy, R, r, d, turns, color, w) => {
+        let p = "";
+        for (let i = 0; i <= 900; i++) {
+          const t = (i / 900) * TAU * turns;
+          const x = (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
+          const y = (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
+          p += `${i ? "L" : "M"}${(cx + x).toFixed(1)} ${(cy + y).toFixed(1)}`;
+        }
+        return `<path d="${p}" fill="none" stroke="${color}" stroke-width="${w}"/>`;
+      };
+      return `
+      ${rosette(400, 160, 150, 32, 58, 8, "#2f6b55", 0.7)}
+      ${rosette(110, 160, 64, 14, 26, 7, "#2f6b55", 0.6)}
+      ${rosette(690, 160, 64, 14, 26, 7, "#2f6b55", 0.6)}
+      <rect x="40" y="36" width="720" height="248" fill="none" stroke="#1f3d33" stroke-width="3"/>
+      <rect x="50" y="46" width="700" height="228" fill="none" stroke="#1f3d33" stroke-width="1"/>
+      ${fit("35.000", 110, 172, 76, `font-family="Cormorant SC" font-weight="700" font-size="34" fill="#1f3d33"`)}
+      ${fit("35.000", 690, 172, 76, `font-family="Cormorant SC" font-weight="700" font-size="34" fill="#1f3d33"`)}
+      ${fit("TERRATENIENTE", 400, 184, 460, `font-family="Cormorant SC" font-weight="700" font-size="74" fill="#1f3d33" stroke="#eef0e2" stroke-width="8" paint-order="stroke"`)}
+      ${fit("BANCO DEL CAMPO · SERIE A", 400, 88, 250, `font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#2f6b55" letter-spacing="3"`)}
+      ${fit("UN JUEGO DE CAMPO", 400, 244, 190, `font-family="Barlow Condensed" font-weight="700" font-size="20" fill="#1f3d33" letter-spacing="3"`)}
+      <text x="740" y="70" text-anchor="end" font-family="Barlow Condensed" font-weight="700" font-size="20" fill="#b02a2a" letter-spacing="2">A 00000001</text>`;
+    },
+    felt: (id, b) => {
+      let s = `<rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="#eef0e2"/>`;
+      for (let k = 0; k < 34; k++) {
+        let d = "";
+        for (let x = b.x0; x <= b.x1; x += 6) {
+          const y = b.y0 + k * 13 + 9 * Math.sin((x - b.x0) / 34 + k * 0.45) + 4 * Math.sin((x - b.x0) / 11);
+          d += `${x === b.x0 ? "M" : "L"}${x} ${y.toFixed(1)}`;
+        }
+        s += `<path d="${d}" fill="none" stroke="#2f6b55" stroke-width=".7" opacity=".35"/>`;
+      }
+      return s + `<circle cx="${b.cx}" cy="${b.cy}" r="150" fill="#eef0e2" opacity=".85"/>`;
+    },
+  },
+  {
+    name: "Cartel de chapa",
+    blurb: "An enamelled tin sign from a rural store or a tractor dealer: cobalt enamel, a cream border, rivets, a chunky sign-painter face and a little tractor. The felt is the same enamel.",
+    fonts: "Bungee · Barlow Condensed",
+    palette: ["#1d4e89", "#0e2848", "#f4ead0", "#e0b44c"],
+    heroBg: "#d9d4c7",
+    logo: (id) => {
+      const rivet = (x, y) => `<circle cx="${x}" cy="${y}" r="9" fill="url(#${id}-rv)" stroke="#0e2848" stroke-width="1.5"/>`;
+      return `
+      <defs>
+        <radialGradient id="${id}-rv" cx="35%" cy="35%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#8a8f96"/></radialGradient>
+        <linearGradient id="${id}-en" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a63a6"/><stop offset="1" stop-color="#173f70"/></linearGradient>
+      </defs>
+      <rect x="24" y="30" width="752" height="260" rx="36" fill="url(#${id}-en)" stroke="#0e2848" stroke-width="4"/>
+      <rect x="42" y="48" width="716" height="224" rx="24" fill="none" stroke="#f4ead0" stroke-width="7"/>
+      ${rivet(60, 66)}${rivet(740, 66)}${rivet(60, 254)}${rivet(740, 254)}
+      ${fit("TERRATENIENTE", 404, 166, 600, `font-family="Bungee" font-size="72" fill="#0e2848"`)}
+      ${fit("TERRATENIENTE", 400, 162, 600, `font-family="Bungee" font-size="72" fill="#f4ead0"`)}
+      <g transform="translate(250 196)" fill="#e0b44c">
+        <circle cx="18" cy="34" r="18"/><circle cx="18" cy="34" r="7" fill="#1d4e89"/>
+        <circle cx="66" cy="42" r="10"/><circle cx="66" cy="42" r="4" fill="#1d4e89"/>
+        <path d="M4 20 H80 V34 H36 Z"/><rect x="8" y="0" width="28" height="22" rx="3"/><rect x="60" y="4" width="5" height="16"/>
+      </g>
+      ${fit("UN JUEGO DE CAMPO", 450, 236, 190, `font-family="Barlow Condensed" font-weight="800" font-size="24" fill="#e0b44c" letter-spacing="3"`)}
+      <polygon points="120,30 260,30 90,290 24,290 24,200" fill="#fff" opacity=".07"/>`;
+    },
+    felt: (id, b) => `
+      <defs><linearGradient id="${id}-en" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a63a6"/><stop offset="1" stop-color="#143a68"/></linearGradient></defs>
+      <rect x="${b.x0}" y="${b.y0}" width="${2 * b.r}" height="${2 * b.r}" fill="url(#${id}-en)"/>
+      <polygon points="${pts(hexPoints(b.cx, b.cy, b.r - 18))}" fill="none" stroke="#f4ead0" stroke-width="6" stroke-linejoin="round"/>
+      ${hexPoints(b.cx, b.cy, b.r - 38).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#c9ced6" stroke="#0e2848"/>`).join("")}
+      <polygon points="${pts([[b.x0, b.y0], [b.cx - 40, b.y0], [b.x0 + 60, b.y1], [b.x0, b.y1]])}" fill="#fff" opacity=".05"/>`,
+  },
+];
+
+/* ---------- slider ---------- */
+const slidesEl = document.getElementById("slides");
+const dotsEl = document.getElementById("dots");
+DESIGNS.forEach((d, i) => {
+  const id = `d${i}`;
+  const slide = document.createElement("section");
+  slide.className = "slide";
+  slide.innerHTML = `
+    <div class="meta">
+      <div><h2><small>${String(i + 1).padStart(2, "0")}</small>${d.name}</h2><p>${d.blurb}</p></div>
+      <div class="facts"><div class="swatches">${d.palette.map((c) => `<span style="background:${c}" title="${c}"></span>`).join("")}</div><div class="fonts">${d.fonts}</div></div>
+    </div>
+    <div class="panels">
+      <div class="panel"><div class="label">Logo</div><div class="hero" style="background:${d.heroBg}"><svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg">${d.logo(id + "a")}</svg></div></div>
+      <div class="panel"><div class="label">En el tablero</div>${board(id, d)}</div>
+    </div>`;
+  slidesEl.appendChild(slide);
+  const dot = document.createElement("button");
+  dot.textContent = i + 1;
+  dot.title = d.name;
+  dot.onclick = () => show(i);
+  dotsEl.appendChild(dot);
+});
+let current = 0;
+function show(i) {
+  current = (i + DESIGNS.length) % DESIGNS.length;
+  [...slidesEl.children].forEach((s, k) => s.classList.toggle("active", k === current));
+  [...dotsEl.children].forEach((b, k) => b.classList.toggle("on", k === current));
+  document.getElementById("count").textContent = `${current + 1} / ${DESIGNS.length}`;
+  history.replaceState(null, "", `#${current + 1}`);
+}
+document.getElementById("prev").onclick = () => show(current - 1);
+document.getElementById("next").onclick = () => show(current + 1);
+addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") show(current + 1);
+  if (e.key === "ArrowLeft") show(current - 1);
+});
+show(Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+</script>
+</body>
+</html>
