@@ -13,7 +13,8 @@ export interface RoomClientEvents {
 
 const HEARTBEAT_MS = 15_000;
 const RECONNECT_BASE_MS = 800;
-const RECONNECT_MAX_MS = 8_000;
+// Low enough that a deploy (a few seconds down) costs players only a moment more.
+const RECONNECT_MAX_MS = 3_000;
 
 /**
  * Where the room server lives. Set at build time for hosted clients; in
