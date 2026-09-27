@@ -95,12 +95,17 @@ button.danger {
 
 .setup {
   height: 100%;
-  display: grid;
-  place-items: center;
+  display: flex;
   padding: 16px;
+  /* The page itself never scrolls (the table owns the viewport), so a card taller than the
+     window (zoomed in, eight players, a phone held sideways) scrolls here. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .setup-card {
+  /* Auto margins centre the card but, unlike place-items: center, never push its top off-screen. */
+  margin: auto;
   width: min(560px, 100%);
   padding: 24px 28px;
   background: var(--panel);
