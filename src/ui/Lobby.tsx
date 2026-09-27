@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { GameSetup, TokenId } from "../game";
 import { DEFAULT_SETUP } from "../game";
 import type { RoomView } from "../net/protocol";
@@ -23,19 +23,43 @@ function openExtraSeat(code: string): void {
   window.open(`${location.pathname}?mesa=${code}&jugador=${seat}`, "_blank");
 }
 
+/**
+ * Copies the invite link. The clipboard API is refused in some places (in-app
+ * browsers, a page without focus), so fall back to copying the selected
+ * field; false when neither worked, with the link left selected.
+ */
+async function copyLink(input: HTMLInputElement, link: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(link);
+    return true;
+  } catch {
+    input.focus();
+    input.select();
+    try {
+      // Deprecated, but the one way left when the clipboard API says no.
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    }
+  }
+}
+
 /** Waiting room: who is here, the invite link, and the host's start button. */
 export function Lobby({ room, you, connection, onStart, onRename, onChooseToken, onLeave }: LobbyProps) {
   const me = room.players.find((p) => p.playerId === you);
   const isHost = room.hostId === you;
   const [name, setName] = useState(me?.name ?? "");
   const [setup, setSetup] = useState<GameSetup>(DEFAULT_SETUP);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"yes" | "no" | null>(null);
+  const linkInput = useRef<HTMLInputElement>(null);
   const link = inviteLink(room.code);
 
   const copy = () => {
-    void navigator.clipboard?.writeText(link).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1_500);
+    const input = linkInput.current;
+    if (!input) return;
+    void copyLink(input, link).then((ok) => {
+      setCopied(ok ? "yes" : "no");
+      setTimeout(() => setCopied(null), ok ? 1_500 : 4_000);
     });
   };
 
@@ -50,9 +74,9 @@ export function Lobby({ room, you, connection, onStart, onRename, onChooseToken,
           {connection !== "open" && <span className="offline"> · {connection === "connecting" ? "reconectando…" : "sin conexión"}</span>}
         </p>
         <div className="invite">
-          <input type="text" readOnly value={link} onFocus={(e) => e.target.select()} />
+          <input ref={linkInput} type="text" readOnly value={link} onFocus={(e) => e.target.select()} />
           <button type="button" onClick={copy}>
-            {copied ? "¡Copiado!" : "Copiar link"}
+            {copied === "yes" ? "¡Copiado!" : copied === "no" ? "Copialo a mano" : "Copiar link"}
           </button>
         </div>
         <ol className="names">
