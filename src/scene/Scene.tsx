@@ -1,6 +1,7 @@
-import { useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useMemo } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import type { Vector3 } from "three";
+import { PerspectiveCamera } from "three";
 import type { Anchors } from "./anchors";
 import type { BoardProps } from "./Board";
 import { BOARD_LAYOUT, Board, SLAB_MARGIN, TABLE_Y } from "./Board";
@@ -12,6 +13,7 @@ import { CameraRig } from "./CameraRig";
 import { OVERVIEW } from "./cameraViews";
 import type { DiceThrow, PawnObstacle } from "./Dice";
 import { Dice } from "./Dice";
+import { BASE_FOV, fovForAspect } from "./fov";
 import { pawnWorld, throwTarget } from "./pawnSpots";
 import { useFontsReady } from "./useFontsReady";
 
@@ -42,7 +44,7 @@ export function Scene({ goTo, chase, onUserControl, throwerId, shaking, throwing
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [...OVERVIEW.position], fov: 45, near: 0.1, far: 200 }}
+      camera={{ position: [...OVERVIEW.position], fov: BASE_FOV, near: 0.1, far: 200 }}
       gl={{ antialias: true, alpha: true }}
       onPointerMissed={() => board.onHover(null)}
     >
@@ -69,8 +71,22 @@ export function Scene({ goTo, chase, onUserControl, throwerId, shaking, throwing
           <Dice target={target} obstacles={obstacles} shaking={shaking} throwing={throwing} tableY={0} onLanded={onDiceLanded} onPresenting={onDicePresenting} onSettled={onDiceSettled} />
         </>
       )}
+      <NarrowScreenFov />
       <CameraRig goTo={goTo} chase={chase} onUserControl={onUserControl} />
       {import.meta.env.DEV && <DevFrames />}
     </Canvas>
   );
+}
+
+/** Widens the camera on a phone held upright, so the views framed for landscape still show the board's width. */
+function NarrowScreenFov() {
+  const camera = useThree((three) => three.camera);
+  const width = useThree((three) => three.size.width);
+  const height = useThree((three) => three.size.height);
+  useEffect(() => {
+    if (!(camera instanceof PerspectiveCamera) || height === 0) return;
+    camera.fov = fovForAspect(width / height);
+    camera.updateProjectionMatrix();
+  }, [camera, width, height]);
+  return null;
 }
