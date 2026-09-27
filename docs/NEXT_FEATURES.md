@@ -505,6 +505,25 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
       the logo on the felt (`createTitleTexture`), the felt itself (red
       hexagon today, `Board.tsx`), and any fonts it needs in `index.html`.
 
+## Batch 9 (2026-09-27): small screens
+
+- [x] I1. The menu, hot-seat setup and lobby scroll when the card is taller than
+      the window (zoomed in, many players, a phone): `.setup` scrolls and the card
+      centres with auto margins, so its top is never pushed off-screen.
+- [x] I2. Sound on phones: a touch `pointerdown` is not a user activation (only
+      `pointerup`/`touchend` are), so the old one-shot unlock never resumed the
+      audio context on touch devices. `App.tsx` now keeps listening until
+      `sfx.unlocked`.
+- [ ] I3. The in-game HUD on a phone (audit, not built). Portrait 375×812: the
+      player cards and camera bar sit on top of the action panel and its roll
+      button; landscape 844×390: HUD covers nearly all of the table; even 768×1024
+      (tablet) the player cards overlap the action panel. Desktop ≥1000 px is fine.
+      Also: hover-only previews ("Pasá el mouse…") in the Catastro map/grid and the
+      trade screen have no touch equivalent (a tap commits instead of previewing);
+      Alt+click camera jump has no touch form; key chips on buttons are noise on
+      touch; no `viewport-fit=cover`/safe-area insets for notches. Needs a phone
+      layout decision from Maxi before building.
+
 ---
 
 ## Structural analysis
