@@ -514,7 +514,7 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
       `pointerup`/`touchend` are), so the old one-shot unlock never resumed the
       audio context on touch devices. `App.tsx` now keeps listening until
       `sfx.unlocked`.
-- [ ] I3. The in-game HUD on a phone (audit, not built). Portrait 375×812: the
+- [x] I3. The in-game HUD on a phone (audit, then built; see GUIDELINES §8). Portrait 375×812: the
       player cards and camera bar sit on top of the action panel and its roll
       button; landscape 844×390: HUD covers nearly all of the table; even 768×1024
       (tablet) the player cards overlap the action panel. Desktop ≥1000 px is fine.
@@ -523,6 +523,21 @@ Rules, numbers and the 42-square layout stay; what is printed changes.
       Alt+click camera jump has no touch form; key chips on buttons are noise on
       touch; no `viewport-fit=cover`/safe-area insets for notches. Needs a phone
       layout decision from Maxi before building.
+      **Built:** Maxi decided the game must be phone-friendly from now on
+      (GUIDELINES §8). Compact HUD below 1130 px wide or 500 px tall: one-row top
+      bar, a `.dock` (player strip, action bar, camera bar; a column when taller
+      than wide, a row otherwise) with its height in `--dock-height`, the prompt
+      and square panel fitted between. Deed offer: card under the top bar, prompt
+      above the dock, rent ladder dropped (the card prints it). Safe-area insets,
+      touch hints ("tocá"), key badges hidden on touch, no double-tap zoom or iOS
+      callout, a wider field of view on portrait (`src/scene/fov.ts`, tested).
+      Also fixed: the lifted deed kept its 425 px height when CSS narrowed it
+      (stretched card at ≤900 px wide or ≤700 px tall), and the 1024×768 layout
+      where the player cards sat on the action bar and the prompt on the top bar.
+      Verified by measuring overlaps at 375×812, 844×390, 667×375, 768×1024,
+      1024×768, 1180×820 and 1366×768 (opening roll), plus deed offer, auction,
+      Catastro (three tabs), trade and settings on a phone. Not verified on a real
+      device: touch gestures, iOS audio, performance.
 
 ---
 
