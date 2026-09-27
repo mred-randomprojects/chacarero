@@ -81,7 +81,37 @@ of the walking pawn, the card at the seat appears the frame the flying one
 vanishes, the seat peek returns to the exact previous camera). Do this for
 every camera or animation change before calling it done.
 
-## 8. Build exactly what was asked
+## 8. It plays on a phone
+
+Decided by Maxi on 2026-09-27: every screen must work on a phone held either
+way, on a tablet, and in a small window, not only on a desktop. The 3D table
+stays the game (§1); on a small screen the HUD makes room for it rather than
+covering it.
+
+Practically:
+- **Nothing overlaps a button.** Below the desktop width (1130 px) or height
+  (500 px) the HUD is *compact* (the last block of `src/styles.css`): the top bar
+  is one row, the player cards, the action bar and the camera bar stack in one
+  `.dock` at the bottom (a row when the screen is wider than tall), and the
+  prompt and the square panel size themselves to the space between
+  (`--dock-height`, measured in `GameScreen`). A new HUD piece goes into that
+  structure, not into a new absolutely-positioned corner.
+- **Everything scrolls when it does not fit.** The page itself never scrolls
+  (the table owns the viewport), so any screen or panel that can outgrow the
+  window (menus, setup, lobby, prompts, modals) scrolls on its own.
+- **Touch has no hover and no keyboard.** Anything shown on hover must also be
+  reachable by a tap; hints say "tocá" on touch screens (`touchScreen` in
+  `src/ui/pointer.ts`); key badges hide themselves (`@media (hover: none)`), so
+  §5 still holds on a keyboard and costs nothing on a phone. Remember that a
+  touch only counts as a user gesture when the finger lifts (audio unlock).
+- **The camera frames the board on a narrow screen too**: below a 0.75 aspect
+  the field of view opens up so the board's width stays in view
+  (`src/scene/fov.ts`).
+- **Check new UI at phone size before calling it done**: 375×812, 844×390,
+  667×375, 768×1024 and 1024×768 at least, measuring that the HUD pieces do not
+  overlap each other or leave the screen (the same way §7 measures motion).
+
+## 9. Build exactly what was asked
 
 No unrequested features or options — offer extras in one line and let Maxi
 decide. Track batches of work in `docs/NEXT_FEATURES.md` (status boxes plus a
