@@ -10,7 +10,7 @@ declare global {
      * a steady pace and scripted checks can sample it. `run(fps)` takes over,
      * `stop()` hands the loop back to the browser.
      */
-    __chacareroFrames?: { readonly run: (fps?: number) => void; readonly stop: () => void; readonly scene: Scene };
+    __terratenienteFrames?: { readonly run: (fps?: number) => void; readonly stop: () => void; readonly scene: Scene };
   }
 }
 
@@ -26,7 +26,7 @@ export function DevFrames() {
       timer = null;
       setFrameloop("always");
     };
-    window.__chacareroFrames = {
+    window.__terratenienteFrames = {
       run: (fps = 60) => {
         stop();
         setFrameloop("never");

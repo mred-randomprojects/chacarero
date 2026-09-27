@@ -1,10 +1,9 @@
 # Terrateniente
 
 Un juego de campo argentino de compra-venta de campos, con tablero hexagonal
-de 42 casilleros, en una escena Three.js. (Hasta septiembre de 2026 se llamó
-Chacarero; el repo conserva ese nombre.)
+de 42 casilleros, en una escena Three.js.
 
-**Demo:** https://mred-randomprojects.github.io/chacarero/
+**Demo:** https://mred-randomprojects.github.io/terrateniente/
 
 Se juega **online** (armás una mesa, pasás el link, cada uno desde su pantalla)
 o en **modo mesa** (todos por turnos en la misma pantalla, sin servidor ni
@@ -123,7 +122,7 @@ lo mismo, paso a paso. Si refrescás, volvés a tu silla.
 ```bash
 bun install
 bun run server:dev # servidor de mesas en ws://localhost:9902/ws
-bun run dev        # cliente en http://localhost:5173/chacarero/
+bun run dev        # cliente en http://localhost:5173/terrateniente/
 bun run test       # vitest (motor, sala, sonidos, escena)
 bun run typecheck
 bun run lint
@@ -135,13 +134,13 @@ bun run build
 - **Todo en una pantalla, sin servidor**: menú → *Jugar en esta pantalla*,
   marcá *Sin tiempo para decidir* y repartí 3 escrituras por jugador. Con eso
   podés probar canjes (`C`), construcciones, hipotecas y remates desde el
-  primer turno, sin apuro. En desarrollo, `window.__chacarero.getGame()` /
+  primer turno, sin apuro. En desarrollo, `window.__terrateniente.getGame()` /
   `setGame(estado)` en la consola permiten inspeccionar o reemplazar el
   estado de la partida local.
 - **Verificar la cámara y las animaciones sin mirar**: en desarrollo,
-  `window.__chacareroFrames.run(60)` mueve la escena con un temporizador (una
+  `window.__terratenienteFrames.run(60)` mueve la escena con un temporizador (una
   pestaña oculta no anima con `requestAnimationFrame`), y
-  `window.__chacarero.trackers` expone la posición de la cámara y de lo que se
+  `window.__terrateniente.trackers` expone la posición de la cámara y de lo que se
   está moviendo, para muestrear desde la consola o un script.
 - **Online desde una sola PC**: levantá el servidor, armá una mesa y usá
   *Abrir otra pestaña como otro jugador* en la sala (solo en desarrollo), o

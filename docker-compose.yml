@@ -1,11 +1,13 @@
 # Runs next to Piñas Cruzadas on the droplet: same Docker network, so the
-# existing Caddy can reverse-proxy pistasjug.ar/chacarero/* to this container.
+# existing Caddy can reverse-proxy pistasjug.ar/terrateniente/* to this container.
 # Built on the droplet from a checkout of this repo (deploy/remote.sh).
+name: terrateniente
+
 services:
-  chacarero:
+  terrateniente:
     build: .
-    image: chacarero:latest
-    container_name: chacarero
+    image: terrateniente:latest
+    container_name: terrateniente
     restart: unless-stopped
     expose:
       - "9902"
@@ -14,11 +16,11 @@ services:
       - ROOMS_FILE=/data/rooms.json
     # Rooms are saved here on stop and restored on start (server/snapshot.ts).
     volumes:
-      - chacarero-data:/data
+      - terrateniente-data:/data
     stop_grace_period: 10s
 
 volumes:
-  chacarero-data:
+  terrateniente-data:
 
 networks:
   default:

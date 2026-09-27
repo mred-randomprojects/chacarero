@@ -43,7 +43,7 @@ jobs:
       - name: Build
         run: bun run build
         env:
-          VITE_WS_URL: wss://pistasjug.ar/chacarero/ws
+          VITE_WS_URL: wss://pistasjug.ar/terrateniente/ws
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -82,4 +82,4 @@ jobs:
           echo "$DEPLOY_KNOWN_HOSTS" > ~/known_hosts
           ssh -i ~/deploy_key -o UserKnownHostsFile=~/known_hosts root@167.172.140.176 deploy
           # The new container takes a moment to listen; Caddy answers 502 until then.
-          curl -sf --retry 15 --retry-delay 2 --retry-all-errors https://pistasjug.ar/chacarero/health
+          curl -sf --retry 15 --retry-delay 2 --retry-all-errors https://pistasjug.ar/terrateniente/health

@@ -23,7 +23,7 @@ describe("settings", () => {
     vi.stubGlobal("localStorage", storage);
     saveSettings({ ...DEFAULT_SETTINGS, bannerSeconds: 8, muted: true });
     expect(loadSettings()).toMatchObject({ bannerSeconds: 8, muted: true });
-    storage.setItem("chacarero.settings", JSON.stringify({ bannerSeconds: 99, soundVolume: -2, followTurn: "yes" }));
+    storage.setItem("terrateniente.settings", JSON.stringify({ bannerSeconds: 99, soundVolume: -2, followTurn: "yes" }));
     const loaded = loadSettings();
     expect(loaded.bannerSeconds).toBe(15);
     expect(loaded.soundVolume).toBe(0);
@@ -31,7 +31,7 @@ describe("settings", () => {
   });
 
   it("ignores garbage", () => {
-    vi.stubGlobal("localStorage", fakeStorage({ "chacarero.settings": "{not json" }));
+    vi.stubGlobal("localStorage", fakeStorage({ "terrateniente.settings": "{not json" }));
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
   });
 });

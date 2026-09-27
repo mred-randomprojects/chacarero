@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs on the droplet from /root/chacarero, a checkout of main that the caller
+# Runs on the droplet from /root/terrateniente, a checkout of main that the caller
 # has just reset to origin/main. Rebuilds only the layers that changed.
 set -e
 cd "$(dirname "$0")/.."

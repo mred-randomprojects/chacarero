@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   followPawn: true,
 };
 
-const KEY = "chacarero.settings";
+const KEY = "terrateniente.settings";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

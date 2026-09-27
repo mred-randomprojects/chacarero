@@ -591,6 +591,9 @@ Newest entry first. Each entry names the commit(s) so the next agent can `git lo
   cameras by rendering the live scene with a second WebGLRenderer. Kept on
   purpose: the repo, the GitHub Pages path and the localStorage keys still
   say "chacarero" (renaming them would break links and saved settings).
+  Superseded 2026-09-27: everything is Terrateniente now (repo, Pages path
+  /terrateniente/, server path, droplet, localStorage keys, which
+  src/legacyStorage.ts carries over from the old ones on first load).
 
 - **2026-09-26 — batch 7 shipped** (`5ef4b17`). Internals renamed with the
   names, so the code reads like the board: `Province` is the new eight,
@@ -661,7 +664,7 @@ Newest entry first. Each entry names the commit(s) so the next agent can `git lo
   Landing on a rival's deed stops at `awaitingPayment` with the figure at
   3rem; Pagar flies the bills and the camera returns to the pawn.
   Measurement note, again: a hidden browser pane throttles rAF to 1 fps and
-  makes a 0.7 s flight look 2 s late — `__chacareroFrames.run(60)` first.
+  makes a 0.7 s flight look 2 s late — `__terratenienteFrames.run(60)` first.
   D8.2 closed 2026-09-23: the droplet now builds a server-only image from
   main (`./deploy.sh`, ~12 s; see deploy/README.md). Known limits: the L overlay's Catastro has no pins
   (the Mapa tab keeps them); a hurry lasts until the current replay ends, the
@@ -681,7 +684,7 @@ Newest entry first. Each entry names the commit(s) so the next agent can `git lo
   the landing flight went back to Salida), and drawn cards were revealed before
   they were on the table (the request resolved at once). Note for future
   measurements: a hidden browser pane throttles rAF to 1 fps — always
-  `__chacareroFrames.run(60)` first. This browser also had `bannerSeconds: 1`
+  `__terratenienteFrames.run(60)` first. This browser also had `bannerSeconds: 1`
   saved in localStorage from an old test, which shortens every hold.
 - **2026-09-21 — batch 3 captured.** Root causes found by reading: (a) `Pawn`'s
   "teleport when the state jumps" effect fired on every real-state change because

@@ -12,7 +12,7 @@ const ana = { playerId: "ana-0001", name: "Ana" };
 const beto = { playerId: "beto-0001", name: "Beto" };
 
 function file(): string {
-  return join(mkdtempSync(join(tmpdir(), "chacarero-")), "rooms.json");
+  return join(mkdtempSync(join(tmpdir(), "terrateniente-")), "rooms.json");
 }
 
 function playing() {

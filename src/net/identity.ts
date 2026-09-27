@@ -1,7 +1,7 @@
 /** A stable id for this browser, so a refresh reconnects as the same player. */
-const KEY = "chacarero.playerId";
-const NAME_KEY = "chacarero.name";
-const ROOM_KEY = "chacarero.lastRoom";
+const KEY = "terrateniente.playerId";
+const NAME_KEY = "terrateniente.name";
+const ROOM_KEY = "terrateniente.lastRoom";
 
 function randomId(): string {
   const bytes = new Uint8Array(12);

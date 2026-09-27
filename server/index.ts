@@ -37,8 +37,8 @@ import {
 
 const PORT = Number(process.env.PORT ?? 9902);
 const STATIC_DIR = process.env.STATIC_DIR ?? "dist";
-const BASE_PATH = "/chacarero";
-const PAGES_URL = "https://mred-randomprojects.github.io/chacarero/";
+const BASE_PATH = "/terrateniente";
+const PAGES_URL = "https://mred-randomprojects.github.io/terrateniente/";
 const LOBBY_IDLE_MS = 60_000;
 const ROOM_ABANDONED_MS = 30 * 60_000;
 const TICK_MS = 250;
@@ -233,7 +233,7 @@ const server = Bun.serve<SocketData>({
       return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
     }
     if (url.pathname === "/health" || url.pathname === `${BASE_PATH}/health`) return Response.json({ ok: true, rooms: rooms.size });
-    // Static client, built into dist/ with the /chacarero/ base path. The
+    // Static client, built into dist/ with the /terrateniente/ base path. The
     // deployed image has no dist/: the client lives on GitHub Pages.
     const indexFile = Bun.file(`${STATIC_DIR}/index.html`);
     if (!(await indexFile.exists())) return Response.redirect(PAGES_URL, 302);
