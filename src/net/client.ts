@@ -103,6 +103,11 @@ export class RoomClient {
     this.send({ type: "action", playerId: this.playerId, seq, action });
   }
 
+  /** Stops re-joining a room that refused us, so a reconnect does not knock again. */
+  forgetRoom(): void {
+    this.rejoin = null;
+  }
+
   /** Remembers the room to re-join after a reconnect (e.g. when created rather than joined). */
   remember(code: string, name: string): void {
     this.rejoin = { code, name };

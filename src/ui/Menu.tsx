@@ -9,13 +9,15 @@ export interface MenuProps {
   readonly onlineAvailable: boolean;
   readonly connection: "connecting" | "open" | "closed";
   readonly notFound: string | null;
+  /** Why the server refused the last create or join (the table started, is full…). */
+  readonly error: string | null;
   readonly onCreate: (name: string) => void;
   readonly onJoin: (name: string, code: string) => void;
   readonly onLocal: () => void;
 }
 
 /** First screen: play online (create or join a table) or at a shared screen. */
-export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFound, onCreate, onJoin, onLocal }: MenuProps) {
+export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFound, error, onCreate, onJoin, onLocal }: MenuProps) {
   const [name, setName] = useState(savedName);
   const [code, setCode] = useState(inviteCode ?? "");
   const ready = name.trim().length > 0 && connection === "open";
@@ -55,7 +57,8 @@ export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFo
                 </button>
               </div>
             </label>
-            {notFound && <p className="error">No existe la mesa {notFound}.</p>}
+            {notFound && <p className="error">No existe la mesa {notFound}: las mesas se cierran tras media hora sin nadie.</p>}
+            {error && <p className="error">{error}</p>}
             {connection !== "open" && <p className="hint">{connection === "connecting" ? "Conectando con el servidor…" : "Sin conexión con el servidor; reintentando."}</p>}
           </>
         ) : (

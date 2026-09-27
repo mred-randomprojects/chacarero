@@ -21,7 +21,7 @@ export interface OnlineState {
  * state. The room view is replaced whole on every server message; the game
  * screen replays the difference.
  */
-export function useRoomClient(url: string | null, playerId: string): OnlineState & { readonly client: RoomClient | null; readonly clearError: () => void; readonly clearLeft: () => void } {
+export function useRoomClient(url: string | null, playerId: string): OnlineState & { readonly client: RoomClient | null; readonly clearError: () => void; readonly clearLeft: () => void; readonly clearNotFound: () => void } {
   const [state, setState] = useState<OnlineState>({ room: null, you: null, status: "closed", error: null, notFound: null, left: false, clockOffset: 0 });
   const [client, setClient] = useState<RoomClient | null>(null);
 
@@ -44,8 +44,9 @@ export function useRoomClient(url: string | null, playerId: string): OnlineState
 
   const clearError = useCallback(() => setState((s) => ({ ...s, error: null })), []);
   const clearLeft = useCallback(() => setState((s) => ({ ...s, left: false, room: null })), []);
+  const clearNotFound = useCallback(() => setState((s) => ({ ...s, notFound: null })), []);
 
-  return { ...state, client, clearError, clearLeft };
+  return { ...state, client, clearError, clearLeft, clearNotFound };
 }
 
 export interface OnlineSessionOptions {

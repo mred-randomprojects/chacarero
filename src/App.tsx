@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sfx } from "./audio/sfx";
 import type { GameSetup, GameState, NewPlayer } from "./game";
 import { GameScreen } from "./GameScreen";
@@ -63,16 +63,33 @@ export default function App() {
 
   // Coming back to a room: from an invite link, or the room we were in before a refresh.
   const [autoJoined, setAutoJoined] = useState(false);
+  // Whether the join in flight is for the room remembered from an earlier visit, which may be
+  // long gone (an empty room closes after 30 minutes): its refusal is no error to show.
+  const rememberedJoin = useRef(false);
   useEffect(() => {
     if (autoJoined || online.status !== "open" || !online.client) return;
-    const code = inviteCodeFromUrl() ?? getLastRoom();
+    const invite = inviteCodeFromUrl();
+    const code = invite ?? getLastRoom();
     const name = getSavedName();
     if (code && name) {
+      rememberedJoin.current = invite === null;
       online.client.join(code, name);
       setScreen({ type: "online" });
     }
     setAutoJoined(true);
   }, [autoJoined, online.status, online.client]);
+
+  const { clearError, clearNotFound } = online;
+  useEffect(() => {
+    if (online.room) rememberedJoin.current = false;
+    else if (rememberedJoin.current && (online.notFound || online.error)) {
+      rememberedJoin.current = false;
+      saveLastRoom(null);
+      online.client?.forgetRoom();
+      clearError();
+      clearNotFound();
+    } else if (online.error) online.client?.forgetRoom();
+  }, [online.room, online.notFound, online.error, online.client, clearError, clearNotFound]);
 
   useEffect(() => {
     if (online.room) saveLastRoom(online.room.code);
@@ -82,24 +99,29 @@ export default function App() {
   const create = useCallback(
     (name: string) => {
       saveName(name);
+      rememberedJoin.current = false;
+      clearError();
       online.client?.createRoom(name);
       setScreen({ type: "online" });
     },
-    [online.client],
+    [online.client, clearError],
   );
 
   const join = useCallback(
     (name: string, code: string) => {
       saveName(name);
+      rememberedJoin.current = false;
+      clearError();
       online.client?.join(code, name);
       setScreen({ type: "online" });
     },
-    [online.client],
+    [online.client, clearError],
   );
 
   const leaveOnline = useCallback(() => {
     online.client?.leave();
     online.clearLeft();
+    online.clearError();
     saveLastRoom(null);
     history.replaceState(null, "", location.pathname);
     setScreen({ type: "menu" });
@@ -159,6 +181,7 @@ export default function App() {
       onlineAvailable={serverUrl !== null}
       connection={online.status}
       notFound={online.notFound}
+      error={online.error}
       onCreate={create}
       onJoin={join}
       onLocal={() => setScreen({ type: "localSetup" })}
