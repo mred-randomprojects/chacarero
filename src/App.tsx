@@ -45,17 +45,19 @@ export default function App() {
     sfx.setMuted(settings.muted);
   }, [settings]);
 
-  // The audio context needs a user gesture; the first pointer/key event unlocks it.
+  // The audio context needs a user gesture. A touch only counts as one when the finger lifts
+  // (pointerup/touchend; a touch pointerdown does not), and a refused resume is not retried by
+  // the browser, so keep listening until the context actually runs.
   useEffect(() => {
+    const events = ["pointerdown", "pointerup", "touchend", "keydown"] as const;
     const unlock = () => {
       sfx.unlock();
       sfx.preload();
+      if (sfx.unlocked) for (const type of events) window.removeEventListener(type, unlock);
     };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
+    for (const type of events) window.addEventListener(type, unlock);
     return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
+      for (const type of events) window.removeEventListener(type, unlock);
     };
   }, []);
 

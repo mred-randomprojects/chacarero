@@ -77,6 +77,7 @@ class Sfx {
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
   private volume = 0.8;
   private muted = false;
+  private preloaded = false;
   private base = `${import.meta.env.BASE_URL}sounds/`;
 
   /** Master volume, 0-1. */
@@ -96,8 +97,15 @@ class Sfx {
     if (context && context.state === "suspended") void context.resume();
   }
 
-  /** Fetches every sample so the first play is not late. */
+  /** Whether the audio context is running (a gesture has unlocked it). */
+  get unlocked(): boolean {
+    return this.context?.state === "running";
+  }
+
+  /** Fetches every sample so the first play is not late (once; later calls are free). */
   preload(): void {
+    if (this.preloaded) return;
+    this.preloaded = true;
     for (const files of Object.values(LIBRARY)) for (const file of files) void this.load(file);
   }
 
