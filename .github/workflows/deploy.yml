@@ -81,4 +81,5 @@ jobs:
           echo "$DEPLOY_SSH_KEY" > ~/deploy_key
           echo "$DEPLOY_KNOWN_HOSTS" > ~/known_hosts
           ssh -i ~/deploy_key -o UserKnownHostsFile=~/known_hosts root@167.172.140.176 deploy
-          curl -sf https://pistasjug.ar/chacarero/health
+          # The new container takes a moment to listen; Caddy answers 502 until then.
+          curl -sf --retry 15 --retry-delay 2 --retry-all-errors https://pistasjug.ar/chacarero/health

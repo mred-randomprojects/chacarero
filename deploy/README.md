@@ -47,8 +47,18 @@ the Pages site.
 
 SSHes in, resets the checkout to `origin/main` and runs `deploy/remote.sh`
 (`docker compose up -d --build`). Push first: it deploys what is on GitHub.
+Pushing to `main` does this by itself (below), so `./deploy.sh` is only for
+redeploying by hand.
 
-### Automatic on push (optional, one-time setup)
+Games survive a deploy: on SIGTERM the server writes its rooms to
+`/data/rooms.json` (the `chacarero-data` volume) and the new container reads
+them back, with each room's clock paused for the downtime. Clients reconnect
+and re-join on their own, so players see a few seconds of "conectando". The
+file is deleted once read, and ignored if older than 30 minutes. A game saved
+by an older engine is restored as is; if the engine changed in a way that
+breaks it, that room alone is closed (logged as "its clock failed").
+
+### Automatic on push (set up 2026-09-27)
 
 The `server` job in `.github/workflows/deploy.yml` does the same after the
 tests pass, once two repo secrets exist. Its key can only run the deploy:

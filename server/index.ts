@@ -4,12 +4,15 @@
  *
  * Every room change is broadcast whole to its players (no diffs), and a
  * quarter-second ticker fires expired decision clocks and cleans up rooms.
+ * With ROOMS_FILE set, rooms are saved there on SIGTERM and restored on start,
+ * so a deploy only blinks the connection.
  */
 import type { ServerWebSocket } from "bun";
 import type { Dice } from "../src/game";
 import type { ClientMessage, ServerMessage } from "../src/net/protocol";
 import { parseClientMessage } from "../src/net/protocol";
 import type { Room } from "./room";
+import { loadRooms, saveRooms } from "./snapshot";
 import {
   RoomError,
   applyRequest,
@@ -40,6 +43,7 @@ const LOBBY_IDLE_MS = 60_000;
 const ROOM_ABANDONED_MS = 30 * 60_000;
 const TICK_MS = 250;
 const MAX_ROOMS = 500;
+const ROOMS_FILE = process.env.ROOMS_FILE;
 
 interface SocketData {
   playerId: string | null;
@@ -50,6 +54,11 @@ type Socket = ServerWebSocket<SocketData>;
 
 const rooms = new Map<string, Room>();
 const socketsByRoom = new Map<string, Set<Socket>>();
+
+if (ROOMS_FILE) {
+  for (const room of loadRooms(ROOMS_FILE, Date.now(), ROOM_ABANDONED_MS)) rooms.set(room.code, room);
+  if (rooms.size > 0) console.log(`restored ${rooms.size} room(s) from ${ROOMS_FILE}`);
+}
 
 function rollDice(): Dice {
   const bytes = new Uint8Array(2);
@@ -191,8 +200,16 @@ function handle(ws: Socket, message: ClientMessage): void {
 function tick(): void {
   const now = Date.now();
   for (const [code, room] of rooms) {
-    let next = fireDeadline(room, now, rollDice());
-    next = pruneIdle(next, now, LOBBY_IDLE_MS);
+    let next: Room;
+    try {
+      next = pruneIdle(fireDeadline(room, now, rollDice()), now, LOBBY_IDLE_MS);
+    } catch (error) {
+      // One broken room (say, restored from an older engine) must not stop the ticker for the rest.
+      console.error(`room ${code} closed (its clock failed)`, error);
+      rooms.delete(code);
+      socketsByRoom.delete(code);
+      continue;
+    }
     if (next !== room) {
       rooms.set(code, next);
       broadcast(next);
@@ -257,3 +274,19 @@ const server = Bun.serve<SocketData>({
 });
 
 console.log(`Terrateniente server listening on http://localhost:${server.port} (static: ${STATIC_DIR})`);
+
+/** Docker stops the container with SIGTERM: save the rooms for the next process, then exit. */
+function shutdown(signal: string): void {
+  if (ROOMS_FILE) {
+    try {
+      const saved = saveRooms(ROOMS_FILE, rooms.values(), Date.now());
+      console.log(`${signal}: saved ${saved} room(s) to ${ROOMS_FILE}`);
+    } catch (error) {
+      console.error(`${signal}: could not save rooms`, error);
+    }
+  }
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

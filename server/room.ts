@@ -273,3 +273,19 @@ export function toView(room: Room, now: number): RoomView {
     now,
   };
 }
+
+/**
+ * A room saved when the server stopped (a deploy), brought back in the new
+ * process: its clock resumes where it paused, and everyone counts as offline
+ * until their client reconnects, which it does on its own within seconds.
+ */
+export function resumeRoom(room: Room, savedAt: number, now: number): Room {
+  const paused = Math.max(0, now - savedAt);
+  return {
+    ...room,
+    players: room.players.map((p) => ({ ...p, connected: false, lastSeen: now })),
+    deadline: room.deadline === null ? null : room.deadline + paused,
+    shakingPlayerId: null,
+    updatedAt: now,
+  };
+}

@@ -11,6 +11,14 @@ services:
       - "9902"
     environment:
       - PORT=9902
+      - ROOMS_FILE=/data/rooms.json
+    # Rooms are saved here on stop and restored on start (server/snapshot.ts).
+    volumes:
+      - chacarero-data:/data
+    stop_grace_period: 10s
+
+volumes:
+  chacarero-data:
 
 networks:
   default:
