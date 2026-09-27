@@ -20,6 +20,7 @@ import {
 import type { Dispatch } from "./ActionBar";
 import { DeedDetails } from "./DeedDetails";
 import { tradeProposer } from "./perspective";
+import { touchScreen } from "./pointer";
 import { TokenIcon } from "./TokenIcon";
 
 export interface SquarePanelProps {
@@ -125,7 +126,7 @@ export function SquarePanel({ state, you, square, pinned, busy, dispatch, onTrad
   if (!square) {
     return (
       <aside className="panel panel-empty">
-        <p>Pasá el mouse por un casillero para ver su escritura. Hacé clic para fijarla.</p>
+        <p>{touchScreen ? "Tocá un casillero para ver su escritura." : "Pasá el mouse por un casillero para ver su escritura. Hacé clic para fijarla."}</p>
       </aside>
     );
   }

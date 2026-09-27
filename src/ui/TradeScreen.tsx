@@ -8,6 +8,7 @@ import type { Dispatch } from "./ActionBar";
 import { DeedCard, Hand } from "./DeedCard";
 import { GRID_COLUMNS, GRID_ROWS, SLOTS, columnLabel, shortName } from "./deedGrid";
 import { Key } from "./Key";
+import { touchScreen } from "./pointer";
 import { TokenIcon } from "./TokenIcon";
 
 /** A trade being put together on this screen, before it is sent. */
@@ -292,7 +293,7 @@ export function TradeScreen({ state, mode, you, busy, dispatch, onSubmit, onCoun
           <div className="trade-table">
             <Side state={state} owner={me} title={editable ? "Ofrecés" : `${me.name} da`} offer={gives} onChange={editable ? setGives : null} onHover={setHovered} />
             <div className="trade-middle">
-              <div className="trade-preview-slot">{previewId ? <DeedPreview state={state} deedId={previewId} /> : <p className="trade-preview-hint">{editable ? "Pasá el mouse por una escritura para verla grande; clic para ponerla en la mesa." : "Pasá el mouse por una escritura para verla grande."}</p>}</div>
+              <div className="trade-preview-slot">{previewId ? <DeedPreview state={state} deedId={previewId} /> : <p className="trade-preview-hint">{touchScreen ? (editable ? "Tocá una escritura para ponerla en la mesa." : "Tocá una escritura para verla grande.") : editable ? "Pasá el mouse por una escritura para verla grande; clic para ponerla en la mesa." : "Pasá el mouse por una escritura para verla grande."}</p>}</div>
               <Fairness a={offerValue(gives)} b={offerValue(receives)} aPlayer={me} bPlayer={partner} />
               {balance && (
                 <p className="trade-balance">

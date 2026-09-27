@@ -2643,6 +2643,8 @@ button.deed-card:hover {
 }
 
 .lifted-deed .deed-card {
+  /* The img carries width/height attributes; when a media query narrows it, the height must follow. */
+  height: auto;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
 }
 
@@ -2671,5 +2673,372 @@ button.deed-card:hover {
 @media (max-width: 900px), (max-height: 700px) {
   .lifted-deed .deed-card {
     width: 220px !important;
+  }
+}
+
+/* ---------- phones (GUIDELINES §8: every screen must play on a phone) ---------- */
+
+/* On a desktop the dock is not a box: the player cards, the action bar and the camera bar float
+   where they always did. On a phone it stacks them at the bottom (see the compact block below). */
+.dock {
+  display: contents;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* No double-tap zoom on buttons, and no iOS callout while the dice are held. */
+button {
+  touch-action: manipulation;
+}
+
+.dice-button {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* A touch screen has no keyboard to press: the key badges would only be noise. */
+@media (hover: none) {
+  kbd.key {
+    display: none;
+  }
+
+  /* Nothing is ever hovered, so the space kept for the hovered card would stay empty: one line of hint. */
+  .deed-peek-hint,
+  .trade-preview-hint {
+    min-height: 0;
+    padding: 10px 14px;
+  }
+}
+
+.setup {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+/* Compact: anything narrower than the desktop layout needs (about 1130px: log column, prompt, square
+   panel side by side), so phones either way, tablets and small windows. Top bar in one row at the top,
+   the dock at the bottom, the announcements and prompts in between, never on top of the dock's buttons. */
+@media (max-width: 1129px), (max-height: 500px) {
+  .app {
+    --edge-top: max(8px, env(safe-area-inset-top));
+    --edge-left: max(8px, env(safe-area-inset-left));
+    --edge-right: max(8px, env(safe-area-inset-right));
+    --edge-bottom: max(8px, env(safe-area-inset-bottom));
+    /* Top bar height plus a gap: where the stage and the square panel start. */
+    --below-top: calc(var(--edge-top) + 46px);
+    /* What is left between the top bar and the dock. */
+    --room: calc(100% - var(--below-top) - var(--dock-height, 200px) - var(--edge-bottom) - 8px);
+  }
+
+  .left-column {
+    top: var(--edge-top);
+    left: var(--edge-left);
+    width: auto;
+    max-width: calc(100% - var(--edge-left) - var(--edge-right));
+  }
+
+  .top-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 4px 6px 4px 10px;
+  }
+
+  /* The logo is on the felt; the strip keeps the turn and the buttons. */
+  .top-bar h1 {
+    display: none;
+  }
+
+  .top-meta {
+    white-space: nowrap;
+  }
+
+  .top-buttons {
+    flex-basis: auto;
+  }
+
+  .top-buttons button {
+    padding: 6px 10px;
+  }
+
+  .log {
+    display: none;
+  }
+
+  .stage {
+    top: var(--below-top);
+    width: calc(100% - var(--edge-left) - var(--edge-right));
+    max-height: var(--room);
+    overflow-y: auto;
+    gap: 6px;
+  }
+
+  .banner {
+    font-size: 1rem;
+    padding: 8px 12px;
+  }
+
+  .prompt {
+    padding: 10px 12px 10px;
+  }
+
+  .prompt h3 {
+    font-size: 1.15rem;
+  }
+
+  .panel {
+    top: var(--below-top);
+    bottom: auto;
+    left: var(--edge-left);
+    right: var(--edge-right);
+    width: auto;
+    max-height: var(--room);
+    z-index: 6;
+  }
+
+  /* A hint about hovering has no place on a phone; tapping a square opens its panel. */
+  .panel-empty {
+    display: none;
+  }
+
+  .dock {
+    position: absolute;
+    left: var(--edge-left);
+    right: var(--edge-right);
+    bottom: var(--edge-bottom);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .dock > * {
+    pointer-events: auto;
+  }
+
+  /* The player cards become a strip that scrolls sideways; the seats stop being containing blocks so a
+     kick vote floats above the dock instead of being clipped by the strip. */
+  .dock .player-cards {
+    position: static;
+    transform: none;
+    max-width: none;
+    gap: 6px;
+    padding: 3px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dock .player-cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dock .player-seat {
+    position: static;
+  }
+
+  .player-card {
+    flex: none;
+    width: auto;
+    gap: 6px;
+    padding: 4px 8px 4px 4px;
+    border-bottom-width: 4px;
+  }
+
+  .player-card.current {
+    transform: none;
+    box-shadow: 0 0 0 3px var(--gold), var(--shadow);
+  }
+
+  /* TokenIcon sizes itself inline. */
+  .player-card .pc-token {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 17px !important;
+  }
+
+  .pc-name {
+    max-width: 76px;
+    font-size: 0.8rem;
+  }
+
+  .pc-cash {
+    font-size: 1rem;
+  }
+
+  .pc-status {
+    font-size: 0.65rem;
+  }
+
+  .player-card.bank {
+    min-width: 0;
+  }
+
+  .pc-bank-icon {
+    font-size: 1.3rem;
+  }
+
+  .dock .actions {
+    position: static;
+    width: auto;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .dock .camera-bar {
+    position: static;
+    max-width: none;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    padding: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .camera-bar button {
+    flex: none;
+    padding: 6px 9px;
+  }
+
+  /* The deed on offer: the card hangs just below the top bar, its prompt sits just above the dock.
+     The card already prints what the rent ladder beside the prompt would say, so that goes. */
+  .lifted-deed {
+    left: 50%;
+    top: var(--below-top);
+    transform: translateX(-50%);
+    animation-name: lift-in-top;
+  }
+
+  .lifted-deed.leaving {
+    animation-name: lift-out-top;
+  }
+
+  /* As big as the space above the prompt allows (the card is 240:340). */
+  .lifted-deed .deed-card {
+    width: min(210px, 55vw, calc((100vh - 480px) * 0.7)) !important;
+    width: min(210px, 55vw, calc((100dvh - 480px) * 0.7)) !important;
+  }
+
+  .deed-offer-details {
+    display: none;
+  }
+
+  .prompt.deed-offer {
+    grid-template-columns: 1fr;
+  }
+
+  /* The seat number would sit on top of the shortened name. */
+  kbd.pc-key {
+    display: none;
+  }
+
+  /* No lifting inside the strip: it would be clipped. */
+  .player-card:hover:not(:disabled),
+  .player-card.current:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .stage:has(.deed-offer),
+  .stage:has(.prompt.auction) {
+    left: 50%;
+    top: auto;
+    bottom: calc(var(--dock-height, 200px) + var(--edge-bottom) + 8px);
+    transform: translateX(-50%);
+    width: calc(100% - var(--edge-left) - var(--edge-right));
+    max-height: 45%;
+  }
+
+  .watch-trade {
+    top: var(--below-top);
+  }
+}
+
+/* Compact and wider than tall (a phone on its side, a tablet or a small window): the dock is one row
+   (cards, actions, camera), the prompt sits at the top right beside the top bar, the square panel
+   at the left under it. */
+@media (orientation: landscape) and (max-height: 500px), (orientation: landscape) and (max-width: 1129px) {
+  .app {
+    --stage-width: min(440px, calc(100% - 330px));
+  }
+
+  .dock {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .dock .actions {
+    flex: none;
+    width: min(300px, 38%);
+  }
+
+  .dock .player-cards {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dock .camera-bar {
+    flex: none;
+    display: grid;
+    grid-template-columns: auto auto;
+  }
+
+  .stage {
+    top: var(--edge-top);
+    left: auto;
+    right: var(--edge-right);
+    transform: none;
+    width: var(--stage-width);
+    max-height: calc(100% - var(--edge-top) - var(--dock-height, 120px) - var(--edge-bottom) - 8px);
+  }
+
+  .panel {
+    right: auto;
+    width: min(320px, calc(100% - var(--stage-width) - var(--edge-left) - var(--edge-right) - 8px));
+  }
+
+  .lifted-deed {
+    left: 25%;
+    top: calc(50% - var(--dock-height, 120px) / 2);
+    transform: translate(-50%, -50%);
+    animation-name: lift-in;
+  }
+
+  .lifted-deed.leaving {
+    animation-name: lift-out;
+  }
+
+  /* As big as the height above the dock allows (the card is 240:340). */
+  .lifted-deed .deed-card {
+    width: min(240px, calc((100vh - var(--dock-height, 120px) - 40px) * 0.7)) !important;
+    width: min(240px, calc((100dvh - var(--dock-height, 120px) - 40px) * 0.7)) !important;
+  }
+
+  .stage:has(.deed-offer),
+  .stage:has(.prompt.auction) {
+    left: auto;
+    right: var(--edge-right);
+    top: var(--edge-top);
+    bottom: auto;
+    transform: none;
+    width: var(--stage-width);
+    max-height: calc(100% - var(--edge-top) - var(--dock-height, 120px) - var(--edge-bottom) - 8px);
+  }
+}
+
+@keyframes lift-in-top {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 40vh) rotateX(35deg) scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) rotateX(0) scale(1);
+  }
+}
+
+@keyframes lift-out-top {
+  to {
+    opacity: 0;
+    transform: translate(-50%, 20vh) scale(0.7);
   }
 }

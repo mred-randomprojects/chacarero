@@ -11,6 +11,7 @@ import type { Dispatch } from "./ActionBar";
 import { Catastro } from "./Catastro";
 import { DeedCard } from "./DeedCard";
 import { PropertiesTable } from "./PropertiesList";
+import { touchScreen } from "./pointer";
 import { TokenIcon } from "./TokenIcon";
 
 /** The overlay's tabs: the deed registry, the ring map, the management list. */
@@ -210,7 +211,7 @@ function MapStats({ state }: { readonly state: GameState }) {
 
 /** The card of whatever deed the mouse is on, big, with who holds it; a hint when nothing is. */
 function DeedPeek({ state, deedId }: { readonly state: GameState; readonly deedId: DeedId | null }) {
-  if (deedId === null) return <p className="deed-peek-hint">Pasá el mouse por una escritura para verla grande; clic para abrir su casillero.</p>;
+  if (deedId === null) return <p className="deed-peek-hint">{touchScreen ? "Tocá una escritura para abrir su casillero." : "Pasá el mouse por una escritura para verla grande; clic para abrir su casillero."}</p>;
   const holding = state.holdings[deedId];
   const owner = holding ? getPlayer(state, holding.ownerId) : null;
   return (

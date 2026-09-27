@@ -614,6 +614,20 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
     return () => clearTimeout(timer);
   }, [doublesFlash]);
 
+  // On a phone the player cards, the action bar and the camera bar stack in one dock at the
+  // bottom; the prompt and the square panel size themselves to the space left above it.
+  const dock = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = dock.current;
+    const app = node?.parentElement;
+    if (!node || !app) return;
+    const measure = () => app.style.setProperty("--dock-height", `${node.offsetHeight}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="app">
       <Scene
@@ -643,25 +657,35 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
         <TopBar state={game} roomCode={session.roomCode} connection={session.connection} onShowList={openCatastro} onTrade={proposer ? proposeTrade : null} onSettings={() => setShowSettings(true)} onLeave={session.leave} />
         <LogPanel state={game} />
       </div>
-      <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} kickVote={session.kickVote} onVoteKick={session.voteKick} />
       <MoneyFlights />
       {offeredDeed === null && (
         <SquarePanel state={game} you={you} square={shown === null ? null : getSquare(shown)} pinned={selected !== null} busy={busy} dispatch={dispatch} onTradeDeed={tradeDeed} onClose={closePanel} />
       )}
-      <ActionBar
-        state={game}
-        shownPlayer={shownPlayer}
-        cardOnTable={view.cardOnTable}
-        you={you}
-        busy={busy}
-        shaking={shaking}
-        canRoll={canRoll}
-        onShakeStart={startShake}
-        onShakeEnd={releaseDice}
-        onTrade={proposer ? proposeTrade : null}
-        dispatch={dispatch}
-        deadline={session.deadline}
-      />
+      <div className="dock" ref={dock}>
+        <PlayerCards state={game} cash={view.cash} currentId={view.currentPlayerId} you={you} offline={session.offline} onFocus={(playerId) => flyToSeat(sideOf(playerId))} kickVote={session.kickVote} onVoteKick={session.voteKick} />
+        <ActionBar
+          state={game}
+          shownPlayer={shownPlayer}
+          cardOnTable={view.cardOnTable}
+          you={you}
+          busy={busy}
+          shaking={shaking}
+          canRoll={canRoll}
+          onShakeStart={startShake}
+          onShakeEnd={releaseDice}
+          onTrade={proposer ? proposeTrade : null}
+          dispatch={dispatch}
+          deadline={session.deadline}
+        />
+        <CameraBar
+          mode={!director ? "off" : freeLook ? "free" : "following"}
+          onFollow={() => directorCue()}
+          onToggleDirector={() => onSettings({ ...settings, followTurn: !settings.followTurn })}
+          onMySeat={() => flyToSeat(mySide)}
+          onOverview={() => lookAt(OVERVIEW)}
+          onTopDown={() => lookAt(TOP_DOWN)}
+        />
+      </div>
       <div className="stage">
         <Banner state={game} event={playback.current} onHurry={hurry} />
         <Prompt
@@ -678,14 +702,6 @@ export function GameScreen({ session, settings, onSettings, canRestart }: GameSc
           canRestart={canRestart}
         />
       </div>
-      <CameraBar
-        mode={!director ? "off" : freeLook ? "free" : "following"}
-        onFollow={() => directorCue()}
-        onToggleDirector={() => onSettings({ ...settings, followTurn: !settings.followTurn })}
-        onMySeat={() => flyToSeat(mySide)}
-        onOverview={() => lookAt(OVERVIEW)}
-        onTopDown={() => lookAt(TOP_DOWN)}
-      />
       {overlay && (
         <BoardMap
           state={game}
