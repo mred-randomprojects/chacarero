@@ -90,7 +90,11 @@ export function Lobby({ room, you, connection, onStart, onRename, onChooseToken,
                     value={name}
                     maxLength={16}
                     onChange={(e) => setName(e.target.value)}
-                    onBlur={() => name.trim() && name.trim() !== me?.name && onRename(name.trim())}
+                    onBlur={() => {
+                      // A seat always has a name: emptied, the field goes back to the one you had.
+                      if (!name.trim()) setName(me?.name ?? "");
+                      else if (name.trim() !== me?.name) onRename(name.trim());
+                    }}
                   />
                 ) : (
                   <span className="lobby-name">{player.name}</span>
