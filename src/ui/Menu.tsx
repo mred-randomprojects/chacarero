@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Logo } from "./Logo";
 
 export interface MenuProps {
@@ -20,7 +20,27 @@ export interface MenuProps {
 export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFound, error, onCreate, onJoin, onLocal }: MenuProps) {
   const [name, setName] = useState(savedName);
   const [code, setCode] = useState(inviteCode ?? "");
-  const ready = name.trim().length > 0 && connection === "open";
+  // Set when a button was pressed without a name: the hint turns into an error and shakes.
+  const [nudged, setNudged] = useState(0);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const hasName = name.trim().length > 0;
+  const connected = connection === "open";
+  const codeReady = code.trim().length === 4;
+
+  // Without a name nothing online can happen, so the buttons stay pressable and say so
+  // (a greyed-out button that does nothing reads as a bug).
+  const needName = (): boolean => {
+    if (hasName) return false;
+    setNudged((n) => n + 1);
+    nameInput.current?.focus();
+    return true;
+  };
+  const create = () => {
+    if (!needName()) onCreate(name.trim());
+  };
+  const join = () => {
+    if (!needName() && codeReady) onJoin(name.trim(), code.trim());
+  };
 
   return (
     <div className="setup">
@@ -31,12 +51,32 @@ export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFo
         <p className="tagline">El juego de campo argentino. Comprá provincias, poblalas de chacras y fundí a los demás.</p>
         {onlineAvailable ? (
           <>
-            <label className="count">
+            {inviteCode && (
+              <p className="invited">
+                Te invitaron a la mesa <strong className="code">{inviteCode}</strong>. {hasName ? "Tocá Entrar para sentarte." : "Escribí tu nombre y tocá Entrar."}
+              </p>
+            )}
+            <label className={`count name-field${hasName ? "" : " missing"}`}>
               Tu nombre
-              <input type="text" value={name} placeholder="Como te dicen en el campo" maxLength={16} onChange={(e) => setName(e.target.value)} autoFocus />
+              <input
+                ref={nameInput}
+                type="text"
+                value={name}
+                placeholder="Como te dicen en el campo"
+                maxLength={16}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && inviteCode && connected && join()}
+                autoFocus
+              />
+              {!hasName && (
+                <span key={nudged} className={`name-required${nudged > 0 ? " nudged" : ""}`}>
+                  Para armar una mesa o entrar a una, primero poné tu nombre.
+                </span>
+              )}
             </label>
             <div className="menu-row">
-              <button type="button" className="primary" disabled={!ready} onClick={() => onCreate(name.trim())}>
+              {/* Invited, joining is the thing to do; making a table of your own is the side door. */}
+              <button type="button" className={inviteCode ? "create" : "create primary"} disabled={!connected} onClick={create}>
                 Armar una mesa
               </button>
             </div>
@@ -50,16 +90,16 @@ export function Menu({ savedName, inviteCode, onlineAvailable, connection, notFo
                   maxLength={4}
                   className="code-input"
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === "Enter" && ready && code.length === 4 && onJoin(name.trim(), code)}
+                  onKeyDown={(e) => e.key === "Enter" && connected && codeReady && join()}
                 />
-                <button type="button" disabled={!ready || code.trim().length !== 4} onClick={() => onJoin(name.trim(), code.trim())}>
+                <button type="button" className={inviteCode ? "primary" : ""} disabled={!connected || !codeReady} onClick={join}>
                   Entrar
                 </button>
               </div>
             </label>
             {notFound && <p className="error">No existe la mesa {notFound}: las mesas se cierran tras media hora sin nadie.</p>}
             {error && <p className="error">{error}</p>}
-            {connection !== "open" && <p className="hint">{connection === "connecting" ? "Conectando con el servidor…" : "Sin conexión con el servidor; reintentando."}</p>}
+            {!connected && <p className="hint">{connection === "connecting" ? "Conectando con el servidor…" : "Sin conexión con el servidor; reintentando."}</p>}
           </>
         ) : (
           <p className="hint">Esta versión no tiene servidor de mesas; se puede jugar en una sola pantalla.</p>

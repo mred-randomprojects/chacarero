@@ -1017,6 +1017,10 @@ button.danger {
   margin-top: 6px;
 }
 
+.menu-row .create {
+  flex: 1;
+}
+
 .menu-row .primary {
   flex: 1;
   font-size: 1.1rem;
@@ -1028,6 +1032,64 @@ button.danger {
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-weight: 800;
+}
+
+.invited {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: rgba(242, 194, 28, 0.25);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius);
+  font-size: 1.05rem;
+}
+
+.invited .code {
+  letter-spacing: 0.15em;
+}
+
+.name-field.missing input[type="text"] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.name-required {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.name-required.nudged {
+  color: var(--red);
+  font-weight: 700;
+  animation: name-nudge 0.35s;
+}
+
+.name-field.missing:has(.nudged) input[type="text"] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px var(--red);
+}
+
+@keyframes name-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .name-required.nudged {
+    animation: none;
+  }
 }
 
 .setup .error {
